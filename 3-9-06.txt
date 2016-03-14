@@ -1,0 +1,420 @@
+Segmented Virtual Memory of Pentium
+
+MMU translates the Virtual Address to Physical address.
+Memory contains a number of program segments. Each
+segment has a segment descriptor stored in an
+appropriate segment register.
+
+CS
+
+segment descriptor
+Descriptor
+Table
+
+DS
+
+segment descriptor
+
+Memory
+Management
+Unit
+
+1
+
+Segment descriptor
+
+A segment register contains a 16-bit selector
+Index
+
+GDT/
+LDT
+
+13
+
+1
+
+Privilege
+Level
+
+2
+
+Pentium selector
+descriptor
+descriptor
+descriptor
+
+Descriptor Table
+
+LDT (Local Descriptor Table): one per process
+GDT (Global Descriptor Table): one for the system
+
+Pentium can support (1) pure segmentation or (2)
+segmentation and paging
+
+2
+
+M
+
+Example of a descriptor
+Descriptor loaded into MMU.
+
+16
+
+16
+
+Base
+0-15
+Base
+Limit
+24-31 G D 0 16-19
+
+Limit
+0-15
+
+A Code
+
+Base
+16-23
+
+P DPL Type
+
+Descriptor
+
+Segment type
+Granularity bit
+16/32 bit segment
+
+Privilege level
+Presence bit
+
+Segment table entry
+Index
+
+Base
+
+Limit
+
+3
+
+P
+
+G
+
+Others
+
+Selector
+
+Offset
+
+Base
+Limit
+Others
+32-bit Linear Address
+
+Page mode off
+32-bit address is the physical address.
+Page mode on
+32-bit address is a virtual address, and the segment is
+divided into pages.
+
+4
+
+Physical address computed by a 2-level translation.
+10
+Directory
+index
+
+10
+
+12
+
+Offset in
+page table
+
+Offset in
+page
+
+Directory
+Always in M
+Pages of
+Page Table
+in M
+PGD
+
+PMD
+
+5
+
+Pages of program/data
+
+Implementing Protection through VM
+User mode
+User cannot modify some system states, or execute
+certain instructions. The restriction is important so that
+user programs cannot cheat
+Supervisor mode (or kernel mode or privileged
+mode)
+The OS takes control
+A single bit distinguished between the two modes.
+
+Return from exception
+User mode
+
+Supervisor mode
+System Call
+
+6
+
+Memory protection in Pentium
+
+user
+library
+Systems call
+Kernel
+
+0
+1
+2
+3
+
+Each segment belongs to a ring with a designated
+privilege level. Lower numbered rings have higher
+security.
+
+7
+
+Mode switch examples
+Calls towards segments of lower security are
+unrestricted. However, a call to a segment of higher
+security is controlled using call gates. When such a
+call is allowed, the calling process temporarily
+acquires the privilege level of the called program. This
+can open the gates for Trojan horse attacks, but there
+are safeguards against such attacks.
+
+8
+
+Alpha AXP 21264 Virtual Memory
+64–bit virtual address
+21
+
+10
+
+10
+
+Segment level 1
+select
+
+10
+
+level 2
+
+13
+
+level 3
+
+offset
+
++
++
++
+Page table
+base register
+Block
+offset
+
+Physical address
+Page table entry (PTE)
+
+Notes
+Each page table entry is of 64 bits, i.e. 8 bytes.
+Page size = 8 KB, so we need 13 bits for the offset.
+The size of the page table at each level is 1 page.
+A TLB miss can cost up to three levels of memory access.
+
+Linux on IA-64 uses three-level page tables
+9
+
+Advanced Pipelining Techniques
+1. Dynamic Scheduling
+2. Loop Unrolling
+3. Software Pipelining
+4. Dynamic Branch Prediction Units
+5. Register Renaming
+6. Superscalar Processors
+7. VLIW (Very Large Instruction Word) Processors
+8. EPIC (Explicitly Parallel Instruction Computers)
+
+9. IA-64 Features
+
+10
+
+Dynamic Scheduling: CDC 6600 Style
+
+F
+
+D
+
+X
+
+M
+
+W
+
+restructure
+F
+
+I
+
+R
+
+X
+
+M
+
+the pipeline
+
+W
+
+Issue (I) = decode & wait for all
+structural hazards to clear
+Read (R) = read operands
+
+F
+
+I
+
+R
+
+X
+
+M
+
+W
+
+F
+
+I
+
+R
+
+X
+
+M
+
+W
+
+In a dynamic pipeline, instructions can be issued
+out-of-order and they can complete out-of-order.
+First used in CDC 6600.
+Dynamic pipelining will need additional buffer space
+between stages, but will also speedup computation.
+
+11
+
+The Impact of Dynamic Scheduling
+Assume that the processor has an add/subtract unit (2 cycles), a
+multiplier (3 cycles) and a division unit (5 cycles).
+
+Example 1 (speedup)
+With static scheduling
+1. F2 := F4 / F6
+2. F10 := F2 + F8
+
+F I R X X X X X M W
+F I
+
+3. F12 := F6 – F14
+
+F
+
+o
+
+o
+
+o
+
+o
+
+o
+
+o
+
+o
+o
+
+o
+
+o
+
+o
+
+o
+
+o o
+
+R X X M W
+o o
+
+o
+
+I
+
+R X X
+
+With dynamic scheduling
+1. F2 := F4 / F6
+2. F10 := F2 + F8
+3. F12 := F6 – F14
+
+F I R X X X X X M W
+F I
+
+o
+
+o
+
+o
+
+o
+
+o
+
+o
+
+F I R X X M W
+
+12
+
+o
+
+R X X M W
+
+Example 2 (Possibility of new hazards)
+1. F2 := F4 * F6
+2. F8 := F10 * F12
+3. F8 := F14 / F6
+
+F I R X X X M W
+F
+
+o
+
+o
+
+o
+
+o
+
+I
+
+R X X X M W
+
+F I R X X X X X M W*
+
+Note. Verify that this WAW hazard was not possible with
+static scheduling.
+
+13
+
+

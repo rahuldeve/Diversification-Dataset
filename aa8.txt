@@ -1,0 +1,1438 @@
+University of Tokyo: Advanced Algorithms
+
+Summer 2010
+
+Lecture 8 — 10 June
+Lecturer: Christian Sommer
+
+8.1
+
+Scribe: Florian Wagner
+
+Graph Representation in Memory
+
+There are several possibilities to represent a graph G = (V, E) in memory. Let the set of
+nodes be V = {1, 2, . . . , n} with edges E ⊆ V × V , and let m := |E|.
+1
+
+2
+
+3
+
+6
+
+5
+
+4
+
+1. Adjacency matrix
+The adjacency matrix of a graph G = (V, E) is a |V | × |V | matrix A, where each entry
+aij is equal to 1 if there exists an edge e = (vi , vj ) ∈ E and 0 otherwise. In case a
+weight function w : E → R is given, then aij = w vi , vj .
+The adjacency matrix of the graph depicted
+
+0 1 0
+1 0 1
+
+0 1 0
+A=
+0 1 1
+
+0 1 0
+1 0 0
+
+above is
+0
+1
+1
+0
+1
+0
+
+0
+1
+0
+1
+0
+1
+
+
+1
+0
+
+0
+.
+0
+
+1
+0
+
+Note that, since the graph in the example is undirected, the resulting matrix is symmetric. Also, since there are no self loops, each entry in the main diagonal is zero.
+2. Edge List
+In an edge list L, every edge e is stored as a tuple (vi , vj ) in a sorted list. The edge
+list of the graph depicted above is:
+
+	
+L = (1, 2), (1, 6), (2, 3), (2, 4), (2, 5), (3, 4), (4, 5), (5, 6)
+While being a space-efficient way to store the graph, the access times of an edge list
+are slower than the access times of an adjacency matrix (for most edges).
+8-1
+
+3. Adjacency List
+An adjacency list is similar to an edge list: for each node a sorted list of adjacent
+nodes (also termed neighbors) is stored. Likewise, this is an efficient way to represent
+a graph but the access times are slower compared to a matrix (O(lg n) compared to
+O(1)). One way to solve this issue is to use a hash table for each node, containing all
+its neighbors.
+The adjacency list for the example graph is:
+Node
+1
+2
+3
+4
+5
+6
+
+Neighbors
+{2, 6}
+{1, 3, 4, 5}
+{2, 4}
+{2, 3, 5}
+{2, 4, 6}
+{1, 5}
+
+Remark. The optimal representation depends on the type of the graph. For instance, a
+matrix wastes a lot of memory if a sparse graph is given, but it has optimal access times for
+any type of graph.
+
+8.2
+
+Shortest Path Problems
+
+In this section the problems of finding paths p = hv1 , v2 , . . .i and distances d(vstart , vend )
+between vertex pairs will be discussed. The problems can be divided into three categories:
+1. Single source shortest path problem: Find the shortest path from a given source
+s ∈ V to all other nodes v ∈ V . For unweighted graphs, this problem can be solved
+using breadth-first-search in time O(m).
+2. All pairs shortest path problem: Find the shortest path for all pairs (u, v) ∈ V ×V .
+Since an all-pairs shortest paths algorithm must output all the pair-wise distances, the
+running time is at least Ω(n2 ). If the actual paths need to be output explicitly, the
+running time increases to Ω(n3 ).
+The second lower bound follows from a graph on n nodes as in the picture below. We
+first divide the set of nodes into two sets with n3 nodes each and a path with another
+2
+n
+nodes. For at least n9 pairs, any shortest path uses at least n3 edges.
+3
+
+8-2
+
+n
+3
+
+nodes
+
+n
+3
+
+nodes
+
+V1 ⊂ V
+
+n
+3
+
+nodes
+
+V2 ⊂ V
+
+3. All pairs shortest distances: Compute the distances d (instead of the whole path)
+for all pairs (u, v) ∈ V × V . In many scenarios a weight function (such as distance,
+time, or cost) is provided: w : E → R. In the following, we mainly consider unweighted
+graphs (all weights are 1). For these graphs and for a single source, breadth-first search
+(BFS) can be applied. The running time is O(m) for SSSP and O(mn) for APSP.
+For sparse graphs (m = O(n) edges), this is an optimal solution. In the following,
+methods for dense graphs will be discussed.
+Definition The weight of a path p = hv0 , v1 , ..., vk i is defined as
+w(p) =
+
+k
+X
+
+w(vi−1 , vi )
+
+i=1
+
+First, the well-known Floyd-Warshall algorithm is presented. Second, a more advanced
+algorithm by Seidel [Sei95] is explained.
+
+8.3
+
+Floyd-Warshall Algorithm
+
+This algorithm can handle negative weights where negative cycles are not allowed. Below,
+the matrix A is an adjacency matrix A with entries aij and matrix D is a distance matrix
+with entries dij that contain the distances of the shortest path between each pair of nodes i
+and j.
+Observation. We define matrices D(k) (for integers k) as intermediate results. Each entry
+(k)
+dij contains the weight of the shortest path from i to j, such that all intermediate nodes
+are in the set {1, 2, . . . , k}. The entries of D(0) are initialized as follows:
+
+i.e. (vi , vj ) ∈ E
+ aij if aij > 0
+(0)
+0 if i = j
+dij =
+
+∞ otherwise
+
+8-3
+
+Starting with this matrix, the algorithm computes the matrices D(0) for k = 1, 2, . . . , n as
+follows:
+
+
+(k−1)
+(k−1)
+(k)
+(k−1)
+,d
++d
+dij = min
+dij
+| {z } | ik {z kj }
+not using
+
+using node k
+
+node k
+
+Either by adding the node
+k to the set of possible intermediate nodes the distances do not
+(k)
+(k−1) 
+or a shorter path from i through k to j exists.
+change dij = dij
+Algorithm 1: Floyd-Warshall algorithm
+Input: Adjacency matrix A (=: D(0) )
+Output: D(n)
+1 for k ← 1 to n do
+2
+for i ← 1 to n do
+3
+for j ← 1 to n do
+(k)
+(k−1) (k−1)
+(k−1)
+dij ← min(dij , dik + dkj )
+4
+5
+end
+6
+end
+7 end
+The running time of the Floyd-Warshall algorithm (Algorithm 1) is Θ(n3 ), due to its three
+nested loops. An important observation is that the structure of the algorithm is similar to
+matrix multiplication. In the following, the problem of computing the APSP problem will
+be reduced to multiplying two integer matrices.
+
+8.4
+
+Floyd-Warshall vs. Matrix Multiplication
+
+Two matrices A and B are multiplied, in this particular case square matrices n × n, by
+multiplying each row vector of the first matrix with each column vector of the second matrix:
+
+
+
+
+
+
+
+
+
+a11
+a21
+a31
+a41
+a51
+
+a12
+a22
+a32
+a42
+a52
+
+a13
+a23
+a33
+a43
+a53
+
+a14
+a24
+a34
+a44
+a54
+
+a15
+a25
+a35
+a45
+a55
+
+
+
+
+
+
+
+
+
+
+
+b
+ 11
+ b21
+
+
+ b31
+
+ b41
+
+b51
+
+b12
+b22
+b32
+b42
+b52
+
+b13
+b23
+b33
+b43
+b53
+
+b14
+b24
+b34
+b44
+b54
+
+b15
+b25
+b35
+b45
+b55
+
+
+
+
+c11
+
+
+ c
+
+ 21
+ =  c
+
+ 31
+
+ c
+
+ 41
+
+c51
+
+The resulting matrix C with entries cij is calculated as follows:
+C = AB
+8-4
+
+c12
+c22
+c32
+c42
+c52
+
+c13
+c23
+c33
+c43
+c53
+
+c14
+c24
+c34
+c44
+c54
+
+c15
+c25
+c35
+c45
+c55
+
+
+
+
+
+
+
+
+
+⇒ cij =
+
+n
+X
+
+aik · bkj
+
+k=1
+
+The formula for the product of two boolean matrices A and B is the following:
+C =A·B
+⇒ cij =
+
+n
+_
+
+aik ∧ bkj
+
+k=1
+
+Finally, as seen in the Floyd-Warshall algorithm, for calculating the distance matrix, a
+“distance product” is used:
+C =A⊗B
+
+
+⇒ cij = min aik + bkj
+k∈{1..n}
+
+These similarities indicate that the all-pairs shortest paths problem and the integer matrix
+multiplication problem are somewhat related. In the following, we use fast integer matrix
+multiplication to obtain a faster algorithm for the all-pairs shortest paths problem. Matrix
+multiplication implemented with three nested loops runs in time O(n3 ). The more sophisticated algorithm by Strassen [Str69] runs in time O(nlog2 7 ). Currently, the fastest algorithm
+(by Coppersmith and Winograd [CW87]) runs in time O(nω ) for ω = 2.376. Note that any
+algorithm that multiplies two n × n integer matrices must have ω ≥ 2.
+
+8.5
+
+Seidel’s Algorithm
+
+Seidel’s APSP algorithm [Sei95] is based on fast integer matrix multiplication. His algorithm
+can be used for unweighted, undirected graphs.
+
+8.5.1
+
+All Pairs Distances
+
+We begin with an outline of Seidel’s algorithm (see Algorithm 2).
+
+8-5
+
+Algorithm 2: Seidel’s Algorithm (All Pairs Distances)
+1 function APD(A)
+2 begin
+3
+Z ← AA
+
+
+1 if i 6= j and aij = 1 or zij > 0
+let B be a boolean matrix with bij ←
+4
+0 otherwise
+5
+if ∀i, j . i 6= j ⇒ bij = 1 then
+6
+return D ← 2B − A
+7
+end
+8
+else
+9
+T ← AP D(B)
+10
+X ← TA
+
+2tij
+if xij ≥ tij · deg(j)
+return D with dij ←
+11
+2tij − 1 otherwise
+12
+end
+13 end
+In the following, we explain how Algorithm 2 works using the example graph from above.
+At the beginning, the algorithm computes the square graph. Following one edge in the square
+graph amounts to following a path of length one or two in the original graph. In order to
+obtain the adjacency matrix of the square graph, first, the matrix A is squared (one matrix
+multiplication) and stored into Z in line 3. The graph and the matrix for the example are:
+
+
+0
+1
+
+0
+Z = AA = 
+0
+
+0
+1
+
+1
+0
+1
+1
+1
+0
+
+0
+1
+0
+1
+0
+0
+
+0
+1
+1
+0
+1
+0
+
+1
+
+2
+
+3
+
+6
+
+5
+
+4
+
+0
+1
+0
+1
+0
+1
+
+
+1
+0
+1
+0
+
+
+0
+ 0
+
+0
+ 0
+1 0
+0
+1
+
+1
+0
+1
+1
+1
+0
+
+0
+1
+0
+1
+0
+0
+
+0
+1
+1
+0
+1
+0
+
+0
+1
+0
+1
+0
+1
+
+ 
+1
+2
+0
+0
+ 
+
+0
+ = 1
+
+0
+ 1
+1 2
+0
+0
+
+0
+4
+1
+2
+1
+2
+
+1
+1
+2
+1
+2
+0
+
+1
+2
+1
+3
+1
+1
+
+2
+1
+2
+1
+3
+0
+
+
+0
+2
+
+0
+
+1
+
+0
+2
+
+The value of zij indicates the number of distinct paths between i and j of length 2. Second,
+the matrix B (the adjacency matrix of the square graph) is calculated in line 4, having a 1
+in each entry if the nodes are either directly connected by an edge or if there is at least one
+
+8-6
+
+path of length two between these two nodes.
+
+0 1
+1 0
+
+1 1
+B=
+1 1
+
+1 1
+1 1
+
+For the example, B is:
+
+1 1 1 1
+1 1 1 1
+
+0 1 1 0
+
+1 0 1 1
+
+1 1 0 1
+0 1 1 0
+
+Apart from the entries of the main diagonal, only b36 and b63 are 0. Note that there is indeed
+no path of length one or two between nodes 3 and 6 of the graph.
+Next, if all the entries of B (except for the diagonal) are 1, then all pairs of nodes in the
+graph defined by A are connected by a path of length at most 2. It remains to distinguish
+pairs for which the distance is 1 from pairs for which the distance is 2. B is multiplied by
+2 and A is subtracted (line 6). This way, if the path has length 2, then the entry in A is 0
+and the resulting value will be 2. Otherwise, the value of A will be subtracted, yielding 1
+for this entry.
+Otherwise, the algorithm is called recursively on matrix B in line 9. In the recursive
+call, the algorithm starts with the square graph, computes the square of the square graph,
+etc. Let us get back to our example. We use subscript 2 for the names of the matrices in
+the recursive call. The matrix A2 = B is squared:
+
+
+5 4 3 4 4 3
+4 5 3 4 4 3
+
+
+3 3 4 3 3 4
+
+
+Z2 = A2 A2 = BB = 
+
+4
+4
+3
+5
+4
+3
+
+
+4 4 3 4 5 3
+3 3 4 3 3 4
+Next, B2 is computed:
+
+
+0
+1
+
+1
+B2 = 
+1
+
+1
+1
+
+1
+0
+1
+1
+1
+1
+
+1
+1
+0
+1
+1
+1
+
+1
+1
+1
+0
+1
+1
+
+1
+1
+1
+1
+0
+1
+
+
+1
+1
+
+1
+
+1
+
+1
+0
+
+This time, all the entries of B2 are 1, except for the main diagonal. That is, the matrix
+describes a complete graph Kn :
+1
+
+2
+
+3
+
+6
+
+5
+
+4
+
+8-7
+
+The recursion ends, B2 is multiplied by 2 and A2 = B is subtracted. The resulting matrix
+is returned to the first call of the function and stored in T :
+
+
+0 1 1 1 1 1
+1 0 1 1 1 1
+
+
+1 1 0 1 1 2
+
+T =
+1 1 1 0 1 1
+
+
+1 1 1 1 0 1
+1 1 2 1 1 0
+Note that, according to T , the distance from node 3 to node 6 is 2, meaning that, since T
+corresponds to the distance in the square graph, the distance could be either 4 or also (like
+in this example) 3. It remains to distinguish two cases: whether the actual distance from
+node i to node j is 2tij or 2tij − 1. In order to distinguish these two cases, the matrix T is
+multiplied with A and stored in X:
+
+
+0
+1
+
+0
+X = AT = 
+0
+
+0
+1
+
+1
+0
+1
+1
+1
+0
+
+0
+1
+0
+1
+0
+0
+
+0
+1
+1
+0
+1
+0
+
+0
+1
+0
+1
+0
+1
+
+
+1
+0
+
+
+0 1
+
+0
+ 1
+
+0 
+1
+
+1 1
+0
+1
+
+1
+0
+1
+1
+1
+1
+
+1
+1
+0
+1
+1
+2
+
+1
+1
+1
+0
+1
+1
+
+1
+1
+1
+1
+0
+1
+
+ 
+1
+2
+
+
+1 1
+
+2
+ = 3
+
+1 
+2
+2
+
+1
+0
+1
+
+3
+4
+3
+3
+3
+5
+
+2
+1
+2
+1
+2
+2
+
+3
+2
+2
+3
+2
+4
+
+3
+2
+4
+2
+3
+2
+
+
+1
+2
+
+2
+
+2
+
+1
+2
+
+Finally, in line 11 the resulting matrix D is returned, containing, for each of its entries, either
+the original value or the decrement of it. The following four propositions shall explain this
+formula.
+Proposition 8.1. If the distance dij is even, the resulting distance is 2tij and 2tij − 1
+otherwise.
+Proof: If dij is even, i.e. dij = 2s and the shortest path is hv0 , v1 , . . . , v2s i then the path
+hv0 , v2 , v4 , . . . , v2s−2 , v2s i is the shortest path in the modified graph resulting from the square
+matrix. If the distance dij is odd, i.e. dij = 2s − 1, then the shortest path in the modified
+graph is hv0 , v2 , v4 , . . . , v2s−4 , v2s−2 , v2s−1 i.
+
+Next a trivial claim:
+Proposition 8.2. Let i and j be a pair of distinct vertices in G. For any neighbor k of j,
+we have
+dij − 1 ≤ dik ≤ dij + 1
+Proof: By taking one step the distance can only change by 1 or it remains the same,
+depending on whether the neighbor k is the first node on a shortest path from i to j or not
+(see figure below).
+8-8
+
+j
+
+k
+
+j
+i
+
+
+Furthermore, there exists a neighbor k of i such that dik = dij − 1
+Proposition 8.3.
+dij is even → tik ≥ tij for all neighbors k of j
+dij is odd → tik ≤ tij for all neighbors k of j, and
+tik < tij for at least one neighbor k of j
+
+Proof: If dij is even, i.e. dij = 2l, then tij = l. There also exists a k such that dkj ≥ 2l − 1.
+tkj ≥
+
+dkj
+1
+≥l−
+2
+2
+
+Distances are integral, so tkj ≥ tij . The proof for an odd dij is analogous.
+
+
+
+Proposition 8.4. Let Γ(i) be the set of neighbors of node i.
+X
+tkj ≥ tij deg(i) → dij is even
+k∈Γ(i)
+
+X
+
+tkj < tij deg(i) → dij is odd
+
+k∈Γ(i)
+
+Thus, the resulting matrix D for this example is:
+
+0 1 2 2
+1 0 1 1
+
+2 1 0 1
+D=
+2 1 1 0
+
+2 1 2 1
+1 2 3 2
+
+2
+1
+2
+1
+0
+1
+
+
+1
+2
+
+3
+
+2
+
+1
+0
+
+In an unweighted, connected graph, the maximum distance is at most n. In each recursive call
+of Seidel’s algorithm, distances are doubled. The recursion depth is thus at most logarithmic
+in n. Therefore, the total running time is the required time to multiply two integer matrices,
+multiplied by O(log n).
+8-9
+
+8.5.2
+
+All Pairs Shortest Paths
+
+In the following we discuss how to retrieve the actual paths. While Algorithm 2 tells us the
+distance, we do not know which neighbor to “use” without potentially inspecting all of them.
+In the Floyd-Warshall algorithm, these intermediate nodes were computed as a side product.
+In Seidel’s algorithm, we need to compute them. The intermediate nodes “witness” that the
+shortest path distance in the distance matrix is correct. In the following, we will compute
+these “witnesses.”
+Note that when thePadjacency matrix A is multiplied with itself (Z = AA as in line 3),
+then the entry zij =
+k aik bkj contains the number of paths from i to j with length 2.
+Instead, we would like to know one of these neighbors k between node i and node j. More
+precisely, we wish to compute a “witness” for each non-zero entry of the boolean product
+matrix C
+n
+_
+cij =
+aik ∧ bkj .
+k=1
+
+We will now discuss a randomized algorithm to calculate a boolean product witness
+matrix. Again, instead of computing the boolean product matrix and the corresponding
+witnesses using the explicit formula (which requires cubic time), we wish to apply fast integer
+matrix multiplication.
+Reminder:
+AB = C
+
+cij =
+
+A·B =C
+
+cij =
+
+n
+X
+k=1
+n
+_
+
+aik · bkj
+
+(8.1)
+
+aik ∧ bkj
+
+(8.2)
+
+k=1
+
+For the boolean product matrix C := A · B, if cij is 1, then there must be some values k
+for which aik ∧ bkj is 1 — the goal is to find one of these k as a witness. The values cij of
+the integer product matrix (equation 8.1) “count” the number of witnesses; if both aik and
+bkj equal 1 then the value of cij increases by 1. By multiplying column k of matrix A by a
+factor k, the value cij of the integer product matrix increases by k if both aik and bkj are 1:
+c̄ij =
+
+n
+X
+
+k · aik · bkj
+
+k=1
+
+If there is just one witness k (meaning a pair (aik , bkj )), then c̄ij = k and we have found
+a witness. However, since there may be more than one witness k for a path from i to j,
+c̄ij is not necessarily equal to a witness k. At this point, we use randomization. Instead
+of summing over all values k ∈ {1, 2, . . . n}, we sum over random subsets of various sizes
+k ∈ {k1 , k2 , . . . kd }:
+n
+X
+c̄ij =
+k · aik · bkj
+k∈{k1 ,k2 ,...kd }
+
+8-10
+
+In some sense, the algorithm tries to “hit” exactly one witness. The sizes d of the random
+subsets {k1 , k2 , . . . kd } are in {1, 2, 4, 8, . . . }. If for an entry cij there are “many” witnesses
+k, then small values of d are likely to “produce” a witness. If there are only “few” witnesses,
+then large values of d are likely to “produce” a witness.
+Algorithm 3: Seidel’s Algorithm (Boolean Product Witness Matrix)
+Input: Matrices A, B
+1 function BPWM(A, B)
+2 begin
+3
+let W = −AB (witness matrix)
+4
+for l ← 0 to lg n do
+5
+d ← 2l
+6
+repeat ln n times
+7
+begin
+8
+choose d random numbers k1 , k2 , . . . , kd from {1, 2, . . . , n}
+9
+let X be the n × d matrix with columns ki · aki
+10
+let Y be the d × n matrix with rows bki
+11
+C ← XY
+12
+update wij ← cij if cij is a witness
+13
+end
+14
+end
+15
+foreach (i, j) s.t. wij < 0 do
+16
+wij := some witness k for (i, j), computed by trying each k
+17
+end
+18
+return W
+19 end
+In lines 9 and 10
+
+k1 k2
+0 0
+
+k1 0
+
+k1 k2
+
+0 0
+
+k1 0
+
+.. ..
+. .
+{z
+|
+d
+
+the matrices
+
+···
+· · ·
+
+· · ·
+ 1 0
+
+· · ·
+ 1 0
+
+· · · ... ...
+· · ·
+
+...
+}
+
+X and Y are computed, where:
+
+1
+0
+..
+.
+
+0
+1
+..
+.
+
+0
+0
+..
+.
+
+
+
+ 
+1 ··· 
+g
+g
+·
+·
+·
+11
+12
+
+
+
+
+1 · · ·
+n
+ d = g21 g22 · · ·
+
+.. . . 
+..
+.. . .
+
+.
+.
+.
+.
+.
+{z
+}
+|
+n
+
+In line 15 the algorithm computes a witness for those pairs for which the randomized
+procedure was not successfull. We iterate over all pairs (i, j) and if no witness has been
+found so far, then all the values for k ∈ {1, . . . n} are tested.
+
+This algorithm is a Las Vegas algorithm with expected running time O nω log2 n [Sei95,
+Theorem 3].
+8-11
+
+Example
+Matrices A and B:
+
+0
+1
+
+0
+A=
+0
+
+0
+1
+
+1
+0
+1
+1
+1
+0
+
+0
+1
+0
+1
+0
+0
+
+0
+1
+1
+0
+1
+0
+
+0
+1
+0
+1
+0
+1
+
+
+1
+0
+
+0
+
+0
+
+1
+0
+
+
+
+0
+0
+
+1
+B=
+1
+
+1
+0
+
+0
+0
+0
+0
+0
+1
+
+1
+0
+0
+0
+1
+0
+
+1
+0
+0
+0
+0
+1
+
+1
+0
+1
+0
+0
+0
+
+
+0
+1
+
+0
+
+1
+
+0
+0
+
+In the second iteration, we have l = 1 and therefore d = 2 (line 5). Next, let k1 = 3 and let
+k2 = 4. The matrices X and Y are:
+
+
+
+
+0 0
+
+
+
+
+3 4
+
+
+
+
+
+
+1 0 0 0 1 0
+0 4
+
+
+
+
+X=
+Y =
+
+
+3
+0
+1
+0
+0
+0
+0
+1
+
+
+
+
+
+
+
+
+0 4
+0 0
+The resulting matrix
+C is:
+
+
+0 0 0 0 0 0
+
+
+ 7 0 0 0 3 4 
+
+
+
+
+C = XY =  4 0 0 0 0 4 
+ 3 0 0 0 3 0 
+
+
+ 4 0 0 0 0 4 
+
+
+0 0 0 0 0 0
+For entry c25 we found a witness. For entry c21 we were “unlucky”: two witnesses were
+“hit” and their sum does not tell us anything.
+In the following, we give a lower bound on the probability that we find a witness for
+cij . Let i and j be fixed. A witness wij is found if there is exactly one witness amoung
+k1 , k2 , . . . , kd . Let c = cij . Look at the iterations for which d satisfies:
+n
+≤ cd ≤ n
+2
+Since there are c witnesses, the probability that ki “hits” a witness k is c/n. The probability
+that exactly one witness is “hit” is at least
+c d−1 1 
+1 d−1
+1
+c
+d 1−
+≥
+1−
+> .
+n
+n
+2
+d
+2e
+For each value of d, the algorithm chooses ln n random subsets of size d. The probability that
+in ln n rounds no witness is found is proportional to 1/n. The expected number of pairs (i, j)
+for which no witness is found is thus at most O(n). For each of these pairs, a brute-force
+8-12
+
+linear-time algorithm eventually finds a witness. The expected total running time of this
+final step is thus bounded by O(n2 ).
+For the combination of the BPWM and APD algorithms we refer to [Sei95, Algorithm
+APSP, page 402].
+
+8-13
+
+Bibliography
+[CW87] Don Coppersmith and Shmuel Winograd. Matrix multiplication via arithmetic
+progressions. In STOC ’87: Proceedings of the nineteenth annual ACM symposium
+on Theory of computing, pages 1–6, New York, NY, USA, 1987. ACM.
+[Sei95] Raimund Seidel. On the all-pairs-shortest-path problem in unweighted undirected
+graphs. J. Comput. Syst. Sci., 51(3):400–403, 1995.
+[Str69] Volker Strassen. Gaussian elimination is not optimal. Numer. Math., 13:354–356,
+1969.
+
+14
+
+

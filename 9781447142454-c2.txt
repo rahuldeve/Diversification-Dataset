@@ -1,0 +1,743 @@
+Chapter 2
+
+Routing Protocols
+
+
+
+
+
+
+
+
+
+
+
+Keywords Cisco Router RIP Dynamic routing EIGRP Autonomous
+system Metric OSPF Single-area OSPF Multiple-Area OSPF ABR ASBR
+Stub area IS–IS Integrated IS–IS Load balancing Per-packet load balancing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2.1 How to Configure RIP in a Cisco Router
+When would you need this: When you need to implement a routing protocol for a
+small network and you need the configuration to be simple. Routing Information
+Protocol is the simplest that it can get.
+Special Requirements: None.
+1. The first thing to do is to enable the RIP protocol on the router.
+Router(config)#router rip
+2. Identify the networks to be advertised using the ‘network’ command. Using
+this command, you need to identify only the networks that are directly
+connected to the router.
+Router(config-router)#network YOU.RNE.TWR.KID
+If the network is subnetted, you will need to write the main network address
+without the need to write the subnets. For example, if you have the following
+subnets connected to the router (172.16.0.0/24, 172.16.1.0/24, and 172.16.2.0/
+24), you can put them all in single ‘network’ command like this:
+Router(config-router)#network 172.16.0.0
+The router is intelligent enough to figure out which subnets are connected to the
+router.
+
+M. M. Alani, Guide to Cisco Routers Configuration, SpringerBriefs in Computer Science,
+DOI: 10.1007/978-1-4471-4246-1_2, Ó Mohammed M. Alani 2012
+
+5
+
+6
+
+2 Routing Protocols
+
+3. If you need to adjust the timers (update, invalid, holddown, and flush timers)
+use the ‘timers basic’ command. All the four parameters of this command,
+update, invalid, holddown, and flush timer consequently, are in seconds.
+Router(config-router)#timers basic 30 180 180 240
+The example above is set with the default values of the RIP timers. Remember
+to keep the relativity of the timer values. Always keep it as (n 6n 6n 8n). If, for
+example, you set the update timer to 40, you need to make the other timers 240
+240 320 consequently. It is highly recommended that you keep the timers on
+their default values.
+4. You will need to stop the updates from being broadcasted to the Internet, if one
+of the router interfaces is connected to the Internet. For this purpose, use the
+‘passive interface’ command. This command prevents the interface from
+forwarding any RIP broadcasts, but keeps the interface listening to what others
+are saying in RIP.
+Router(config-router)#passive-interface
+INTTYPE INTNUMBER
+where,
+INTTYPE is the type of the interface, such as Serial, Fastethernet, or Ethernet.
+INTNUMBER is the number of the interface such as 0/0 or 0/1/0.
+5. RIP, by nature, sends updates as broadcast. If the router is connected through
+non-broadcast networks (like Frame Relay), you will need to tell RIP to send
+the updates on this network as unicast. This is achieved by the ‘neighbor’
+command.
+Router(config-router)#neighbor NEI.GHB.ORA.DRS
+where NEI.GHB.ORA.DRS is the IP address of the neighbor.
+6. Cisco’s implementation of RIP Version 2 supports authentication, key
+management, route summarization, classless inter-domain routing (CIDR), and
+variable-length subnet masks (VLSMs). By default, the router receives RIP
+Version 1 and Version 2 packets, but sends only Version 1 packets. You can
+configure the router to receive and send only Version 2 packets. To do so, use
+the ‘version’ command.
+Router(config-router)#version 2
+If you like to stick to version one, just replace the 2 in the command above with 1.
+Furthermore, you can control the versions of the updates sent and received on
+each interface to have more flexibility in support of both versions. This is
+achieved by the ‘ip rip send version’ and ‘ip rip receive
+version’ commands.
+
+2.1 How to Configure RIP in a Cisco Router
+
+7
+
+Router(config-if)#ip rip send version 2
+Router(config-if)#ip rip receive version 1
+7. Check the RIP configuration using these commands:
+Router#show ip route
+Router#show ip protocols
+Router#debug ip rip
+
+2.2 How to Configure EIGRP on a Cisco Router
+When would you need this: When you are implementing a routing protocol on a
+large Internetwork and all the networking devices involved are Cisco devices or
+devices supporting EIGRP.
+Special Requirements: EIGRP is a Cisco proprietary protocol. So, either all the
+routers in the Internetwork must be Cisco routers, or the routers should be EIGRP
+capable.
+Before we start, if you have not set the bandwidth of the interfaces, set them
+now. For correct routing decisions, you need to set the bandwidth for the serial
+interfaces depending on the WAN technologies that you are using. This is done
+using the following command on each serial interface:
+Router(config-if)#bandwidth BW
+where BW is the bandwidth of the WAN connection in kilobits per second.
+Next, you can start configuring EIGRP as in the following steps:
+1. Enable EIGRP on the router with the command,
+Router(config)#router eigrp AS
+where AS is the Autonomous System number. The same AS number must be
+used for all the routers that you want to exchange routing information.
+2. Instruct the router to advertise the networks that are directly connected to it.
+Router(config-router)#network NET.WOR.KAD.DRS
+where NET.WOR.KAD.DRS is the network address of a network that is
+directly connected to the router. Repeat this step for each network that is
+directly connected to the specific router that you are configuring. For subnetted
+networks, remember that you need only to write the original network address of
+a group of subnets and the router will automatically identify the subnets.
+For example, if the router is connected to the networks, 172.16.1.0/24,
+172.16.2.0/24, and 172.16.3.0/24, you will need to do one ‘network’ command with the address 172.16.0.0.
+
+8
+
+2 Routing Protocols
+
+3. Although it is not recommended, if you need to change the way the metrics of
+the routes are calculated, you can set them using the command:
+Router(config-router)#metric weights TOS K1 K2 K3 K4 K5
+where,
+tos is the type of service index and the values of k1–k5 are used to calculate
+the metric using the following equation:
+
+
+k2  bandwidth
+k5
+þ k3  delay 
+metric ¼ k1  bandwidth þ
+256  load
+reliability þ k4
+the default values are k1 = k3 = 1 and k2 = k4 = k5 = 0
+if k5 = 0, the formula is reduces to,
+
+
+k2  bandwidth
+þ k3  delay
+metric ¼ k1  bandwidth þ
+256  load
+It is highly recommended that you leave the metric in the default values unless
+you are a highly experienced network designer.
+4. By default, EIGRP packets consume a maximum of 50 % of the link bandwidth, as configured with the ‘bandwidth’ interface configuration command.
+You might want to change that value if a different level of link utilization is
+required or if the configured bandwidth does not match the actual link bandwidth (it may have been configured to influence route metric calculations). Use
+the following command to set the percentage of bandwidth to be used on each
+interface separately:
+Router(config-if)#ip bandwidth-percent eigrp BP
+where BP is the percentage of bandwidth to be used (ex: 70).
+5. You can change the intervals of the hello packets and the holddown timer on
+each interface using command:
+Router(config-if)#ip hello-interval eigrp AS TIME
+where AS is the autonomous system number and TIME is the new hello packet
+interval time in seconds.
+Router(config-if)#ip hold-time eigrp AS TIME
+where AS is the autonomous system number and TIME is the new holddown
+time in seconds.
+6. Check your configuration on the routers after configuring all the routers in the
+internetwork using the following commands:
+To display information about interfaces configured for EIGRP.
+Router#show ip eigrp interfaces INTYPE AS
+
+2.2 How to Configure EIGRP on a Cisco Router
+
+9
+
+Display the EIGRP discovered neighbors.
+Router#show ip eigrp neighbors
+To display the EIGRP topology table for a given process.
+Router#show ip eigrp topology AS
+Or
+Router#show
+ip
+SUB.NET.MAS.K00
+
+eigrp
+
+topology
+
+NET.WOR.KAD.DRS
+
+To display the number of packets sent and received for all or a specified EIGRP
+process.
+Router#show ip eigrp traffic AS
+where,
+INTYPE is the interface type
+AS autonomous system number
+NET.WOR.KAD.DRS and SUB.NET.MAS.K00 are the network address and
+subnet mask.
+Configuring EIGRP Route Authentication (Optional)
+EIGRP route authentication provides MD5 authentication of routing updates
+from the EIGRP routing protocol. The MD5 keyed digest in each EIGRP packet
+prevents the introduction of unauthorized or false routing messages from
+unapproved sources. Before you can enable EIGRP route authentication, you
+must enable EIGRP.
+The steps for setting the EIGRP route authentication are:
+1. Identify a keychain to be used in the authentication,
+Router(config)#key chain NAME
+where NAME is the name of the keychain that will be created
+2. Identify the key number,
+Router(config-keychain)#key NO
+where NO is the number of the key
+3. Identify the key string,
+Router(config-keychain)#key-string STRNG
+where STRNG is the key string
+4. You can stop here or set up a period in which the key will be effective,
+Router(config-keychain)#accept-lifetime START-TIME {INFINITE| END-TIME | DURATION}
+
+10
+
+2 Routing Protocols
+
+Router(config-keychain)#send-lifetime START-TIME {INFINITE |END-TIME | DURATION}
+You can set a start time and either end time, or duration in seconds, or you can
+leave the operation infinite.
+EIGRP Implementation notes:
+1. If you are using discontiguous networks, which is mostly the case, you should
+turn off auto-summarization using the following command:
+Router(config)#no ip auto-summary
+2. You can set manual summary addresses using the following command:
+Router(config-if)#ip summary-address AS MASK
+where AS is the autonomous system number and MASK is the address mask.
+3. When you are using non-broadcast networking technologies such as Frame
+Relay and SMDS, you will need to turn off split-horizon to let EIGRP perform
+efficiently and effectively
+Router(config-if)#no ip split-horizon AS
+where AS is the autonomous system number.
+4. To clear the neighbor table use the command,
+Router#clear ip eigrp neighbors
+
+2.3 How to Configure Single-Area OSPF on a Cisco Router
+When would you need this: When you need to set up dynamic routing.
+Special Requirements: None.
+OSPF is one of the most widely used dynamic routing protocols. Cisco’s
+version of OSPF is compatible with non-Cisco routers. If your network is large,
+jump into Sect. 2.4. Single-area OSPF is suitable for small-to-medium
+internetworks. An area is a logical grouping of routers running OSPF. All routers
+in the same area share the same topology database. Multiple-Area OSPF is used
+for large networks to prevent their topology databases from becoming out of the
+capability of the router.
+Single-area OSPF configuration is as follows:
+1. Since OSPF best route calculations rely solely on bandwidth, you need to set up
+the bandwidth of the serial interface involved in the routing process using the
+following command on the interface:
+Router(config-if)#bandwidth BW
+
+2.3 How to Configure Single-Area OSPF on a Cisco Router
+
+11
+
+where BW is the bandwidth of the connection in kilobits per second.
+Remember that this command does not change the actual bandwidth. It only
+changes the bandwidth being seen by the routing protocol for the purpose of
+best path calculation.
+2. Instruct the router to activate the OSPF routing process:
+Router(config)#router ospf PN
+where PN is the process number of OSPF. This process number is of local
+significance. It does not have to be the same on all routers.
+3. Instruct the router to advertise the directly connected networks:
+Router(config-router)#network NET.WOR.KAD.DRS WIL.DCA.RDM.ASK area 0
+where,
+NET.WOR.KAD.DRS is the network address of a directly connected network.
+WIL.DCA.RDM.ASK is the wildcard mask of the network address.
+Since we are setting a single-area OSPF, we will always use ‘‘area 0’’.
+4. Repeat step 3 for every network that is
+directly connected to the router.
+If you finished the first fours steps on all the
+routers involved in the process, everything
+should work just fine. If you want to do more
+configurations, there are a few optional advanced
+steps to go through:
+1. To change the selection process of the DR
+(Designated Router) and BDR (Backup Designated Router) use the following command
+to change the router’s OSPF priority on a
+certain interface:
+
+Note
+If you are not familiar with
+the wildcard mask, just
+invert the subnet mask and
+you will get the wildcard
+mask (ex: S/N Mask of
+255.255.255.0
+becomes
+Wildcard
+Mask
+of
+0.0.0.255, S/N Mask of
+255.255.255.192 becomes
+0.0.0.63)
+
+Router(config)#ip ospf priority PP
+where PP is the priority (0–255). The router with the highest priority becomes
+the DR. A priority of 0 means that this router will never be elected as DR.
+2. To restart the whole process of DR and BDR elections use the command:
+Router#clear ip ospf process *
+3. To change the cost of a certain link in the OSPF process use the following
+command:
+Router(config-if)#ip ospf cost CC
+where CC is the suggested cost (0–65,535)
+For troubleshooting, you can use the following commands:
+
+12
+
+2 Routing Protocols
+
+1. To show the OSPF processes information:
+Router#show ip ospf
+2. To show the OSPF database of the topology:
+Router#show ip ospf database
+3. To show the OSPF operation on the interfaces:
+Router#show ip ospf interface
+4. To show the OSPF neighbors table:
+Router#show ip ospf neighbor
+5. To debug all the OSPF process events:
+Router#debug ip ospf events
+
+2.4 How to Configure Multiple-Area OSPF on a Cisco Router
+When would you need this: When you need to set up dynamic routing for a large
+network and not all your routers are Cisco routers.
+Special Requirements: None.
+OSPF is one of the most widely used dynamic routing protocols. Cisco’s
+version of OSPF is compatible with non-Cisco routers. If your network is not too
+large, Sect. 2.3 describes the steps of configuring single-area OSPF.
+As defined in the previous section, an area is a logical grouping of routers
+running OSPF. All routers in the same area share the same topology database.
+Multiple-Area OSPF is used for large networks to prevent their topology databases
+from becoming out of the capability of the router.
+When you design the areas and assign them IP addresses, remember to assign IP
+addresses that can be summarized. Make sure that all IP addresses in an area can
+be summarized into a single address with a different subnet mask. This is very
+important in reducing the amount of routing information exchanged between
+routers. (This, basically, is the idea behind creating multiple areas instead of one).
+Area 0, or sometimes referred to as Backbone Area, will act as the center of the
+universe for all the other areas. All areas must be connected to Area 0. On the edge
+of each area, the router connected to another area is called Area Border Router
+(ABR). If not all areas can be connected to Area 0, there is a solution called Virtual
+Links that is discussed later in Sect. 2.5.
+Let us move on to the configuration. For the sake of clearness, the ABR router
+that you plan to put into area 0 will be called ‘‘Area 0 ABR’’. The ABR at the
+border of other areas will be called ‘‘Area X ABR’’
+
+2.4 How to Configure Multiple-Area OSPF on a Cisco Router
+
+13
+
+2.4.1 Configuration of Area 0 ABR
+1. OSPF best route calculations rely solely on bandwidth. Hence, you need to set
+up the bandwidth of the serial interface involved in the routing process using
+the following command on the interface:
+Router(config-if)#bandwidth BW
+where BW is the bandwidth of the connection in kilobits per second.
+Remember that this command does not change the actual bandwidth, it only
+changes the bandwidth being seen by the routing protocol for the purpose of
+best path calculation.
+2. Instruct the router to activate the OSPF routing process:
+Router(config)#router ospf PN
+where PN is the process number of OSPF. This process number is of local
+significance. It does not have to be the same on all routers.
+3. Instruct the router to advertise the directly connected networks of area 0
+Router(config-router)#network NET.WOR.KAD.DRS
+WIL.DCA.RDM.ASK area 0
+where,
+NET.WOR.KAD.DRS is the network address
+of a directly connected network.
+WIL.DCA.RDM.ASK is the wildcard mask of
+the network address.
+4. Repeat step 3 for every network that is directly
+connected to the router and is part of Area 0
+5. Instruct the router to advertise the directly
+connected network of area X
+Router(config-router)#network
+NET.WOR.KAD.DRS WIL.
+DCA.RDM.ASK area X
+
+Note
+If you are not familiar
+with the wildcard mask,
+just invert the subnet
+mask and you will get
+the wildcard mask (ex:
+S/N Mask of 255.255.
+255.0 becomes Wildcard
+Mask of 0.0.0.255, S/N
+Mask of 255.255.255.192
+becomes 0.0.0.63)
+
+where,
+NET.WOR.KAD.DRS is the network address of the directly connected network
+that connects area 0 to area X.
+WIL.DCA.RDM.ASK is the wildcard mask of the network address.
+X is the area number.
+6. Configure the range of IP addresses for the whole area (similar to a summaryaddress):
+
+14
+
+2 Routing Protocols
+
+Router(config-router)#area 0 range NNN.NNN.NNN.NNN SUB.
+NET.MAS.K00
+where,
+NNN.NNN.NNN.NNN is the network address that summarizes all the networks
+in the area 0
+SUB.NET.MAS.K00 is the subnet mask for the summarized address
+This command reduces the size of the topology database, which is important in
+the backbone area.
+
+2.4.2 Configuration of Area X ABR
+1. As mentioned earlier, OSPF best route calculations relies solely on Bandwidth.
+Hence, you need to set up the bandwidth of the serial interface involved in the
+routing process using the following command on the interface:
+Router(config-if)#bandwidth BW
+where BW is the bandwidth of the connection in kilobits per second.
+Remember that this command does not change the actual bandwidth. It only
+changes the bandwidth being seen by the routing protocol for the purpose of
+best path calculation.
+2. Instruct the router to activate the OSPF routing process:
+Router(config)#router ospf PN
+where PN is the process number of OSPF. This process number is of local
+significance. It does not have to be the same on all routers.
+3. Instruct the router to advertise the directly connected networks of area X
+Router(config-router)#network NET.WOR.KAD.DRS
+WIL.DCA.RDM.ASK area X
+where,
+NET.WOR.KAD.DRS is the network address of the directly connected network
+that is in Area X.
+WIL.DCA.RDM.ASK is the wildcard mask of the network address.
+X is the area number.
+4. Repeat step 3 for every network that is directly connected to the router and is a
+part of Area X
+5. Instruct the router to advertise the directly connected network of area 0
+Router(config-router)#network NET.WOR.KAD.DRS
+WIL.DCA.RDM.ASK area 0
+
+2.4 How to Configure Multiple-Area OSPF on a Cisco Router
+
+15
+
+where,
+NET.WOR.KAD.DRS is the network address of a directly connected network
+that connects area 0 and area X.
+WIL.DCA.RDM.ASK is the wildcard mask of the network address.
+X is the area number.
+6. Configure the range of IP addresses for all the networks in area X (similar to a
+summary-address):
+Router(config-router)#area X range NNN.NNN.NNN.NNN
+SUB.NET.MAS.K00
+where,
+NNN.NNN.NNN.NNN is the network address that summarizes all the networks
+in the area X.
+SUB.NET.MAS.K00 is the subnet mask for the summarized address.
+
+2.4.3 Other Commands
+You can use the following commands in troubleshooting:
+1. To show the OSPF processes information:
+Router#show ip ospf
+2. To show the OSPF database of the topology:
+Router#show ip ospf database
+3. To show the OSPF operation on the interfaces:
+Router#show ip ospf interface
+4. To show the OSPF neighbors table:
+Router#show ip ospf neighbor
+5. To debug all the OSPF process events:
+Router#debug ip ospf events
+If you want more OSPF to configure, jump on to the next Sect. 2.5.
+
+2.5 More about Multiple-Area OSPF Configuration
+This article is a continuation of the previous section on Configuration of
+Multiple-Area OSPF on Cisco Routers. Refer to the previous section for the
+essential configuration of Multiple-Area OSPF.
+
+16
+
+2 Routing Protocols
+
+1. ASBR
+A router is called Autonomous System Boundary Router (ASBR) when it
+connects the OSPF area to a different autonomous system. This router should be
+configured with a summary-address to summarize routes received into OSPF
+via redistribution:
+Router(config-router)#summary-address
+SUB.NET.MAS.K00
+
+SUM.MAR.RYA.DRS
+
+where
+SUM.MAR.RYA.DRS is the summary-address for the summarized subnets
+SUB.NET.MAS.K00 is the subnet mask of the summarized address.
+This command is usually issued at the router connecting the internetwork to the
+Internet.
+2. Stub Areas
+Stub areas in OSPF are areas where only one ABR is there, or where co-located
+ABRs exist. For this kind of areas, the following configuration can be made to
+reduce the routing traffic between the ABRs:
+Router(config-router)#area X stub
+where X is the area number.
+This command should be issued on both ABR; the stub area ABR and the
+Area 0 ABR that is connected to the stub area. If more than one router exists in
+the stub area, the previous command needs to be issued on all routers of the
+stub area.
+Usually, if there is only one router in the stub area, instead of defining all
+directly connected networks, the following command is used:
+Router(config-router)#network 0.0.0.0 255.255.255.255
+area X
+where X is the area number.
+3. Virtual-Links
+By design, all OSPF areas must be connected to Area 0. If there is an area that
+cannot be directly connected to Area 0, you will have to use a Virtual-Link.
+Remember that despite the fact that configuration of the virtual-link is simple,
+many things can go wrong in a virtual-link, and it is not a recommended
+solution.
+To implement a virtual-link between Area 0 ABR and Area X ABR (where
+Area X is not directly connected to Area 0), we need to create logical loopback
+interfaces on both routers and link them together:
+On Area 0 ABR:
+
+2.5 More about Multiple-Area OSPF Configuration
+
+17
+
+Router(config)#int loopback 0
+Router(config-if)#ip address ARE.A0L.OOP.BCK SUB.NET.
+MAS.K00
+Router(config-if)#exit
+Router(config)#router ospf PP
+Router(config)#area X virtual-link ARE.AXL.OOP.BCK
+where,
+ARE.A0L.OOP.BCK is an IP address that you assign to the logical interface of
+Area 0 ABR. This address will be used by the Area X ABR to connect virtually.
+SUB.NET.MAS.K00 is the subnet mask that you assign to the logical interface.
+PP is the process-id of OSPF on the Area 0 ABR.
+ARE.AXL.OOP.BCK is the IP address that you assign to the logical interface
+of the Area X ABR.
+On Area X ABR:
+Router(config)#int loopback 0
+Router(config-if)#ip address ARE.AXL.OOP.BCK SUB.NET.
+MAS.K00
+Router(config-if)#exit
+Router(config)#router ospf PP
+Router(config)#area X virtual-link ARE.A0L.OOP.BCK
+where,
+ARE.AXL.OOP.BCK is an IP address that you assign to the logical interface of
+Area X ABR. This address will be used by the Area 0 ABR to connect virtually.
+SUB.NET.MAS.K00 is the subnet mask that you assign to the logical interface.
+PP is the process-id of OSPF on the Area X ABR.
+ARE.A0L.OOP.BCK is the IP address that you assigned to the logical interface
+of the Area 0 ABR.
+4. Some additional show commands to show the virtual-links currently configured
+the ABRs information, respectively:
+Router#show ip ospf virtual-links
+Router#show ip ospf border-routers
+
+2.6 How to Configure Integrated IS–IS on a Cisco Router
+When would you need this: When you need to set up dynamic routing for a large
+network and not all your routers are Cisco routers. It is being currently used to
+support MPLS routing and IPv6 routing.
+
+18
+
+2 Routing Protocols
+
+Special Requirements: None.
+IS–IS is an old interior gateway protocol. It is a routing protocol that was aimed to
+replace TCP/IP, but failed to. Anyway, why are we discussing this old protocol?
+Because new interest in it has appeared over the past few years. This interest is
+caused by the fact that IS–IS protocol is independent, ToS-supporting, and really
+scalable.
+The cornerstone of IS–IS operation is having a properly addressed internetwork
+for IS–IS. This means that your subnets must be addressed in a summarizable way
+such that you can express the LANs connected to the router as a summarized
+address.
+Let us move on to the configuration:
+1. Create an LoopBack interface (logical interface) on the router and give it an IP
+address of your choice. Remember that this IP address will be part of the
+Network Entity Title (NET) address.
+Router(config)#int loopback 0
+Router(config-if)#ip address IPA.DDR.ESS.LO0 SUB.NET.
+MAS.K00
+where,
+IPA.DDR.ESS.LO0 is the IP address you want to assign to the loopback
+interface.
+SUB.NET.MAS.K00 is the subnet mask that you want to assign to the loopback
+interface.
+2. Write down the NET address that you will assign to the router. There are many
+ways of creating NET address. We will not discuss them now. We will use the
+router’s loopback address as the system ID as follows:
+AA.BBBB.CCCC.DDDD.EEEE.FF
+where,
+AA is the AFI. We will use ‘‘49’’ here as the AFI. This ‘‘49’’ means that we are
+making up our own NET address.
+BBBB is the area number (ex: 0001, or 0002). Remember that no more than 3
+routers can operate in a single IS–IS area. You should start from 1.
+CCCC.DDDD.EEEE is the loopback IP address of the router. Previously defined
+as IPA.DDR.ESS.LO0, here it should be rewritten as IPAD.DRES.SLO0
+(ex: 172.16.0.254 becomes 172.016.000.254 which becomes 1720.1600.0254)
+FF is the SEL. We will use ‘‘00’’ here. This ‘‘00’’ value means that this whole
+identifier is the NET of the device.
+A quick example: For a router with loopback address of 192.168.0.1, and the
+area is 1, the NET can be written as 49.0001.1921.6800.0001.00
+
+2.6 How to Configure Integrated IS–IS on a Cisco Router
+
+19
+
+3. Enable the IS–IS routing process on the router:
+Router(config)#router isis
+4. Configure the NET that you have written down earlier:
+Router(config-router)#net AA.BBBB.CCCC.DDDD.EEEE.FF
+where AA.BBBB.CCCC.DDDD.EEEE.FF is the NET you have assigned to the
+router.
+5. Configure route summarization only on the routers connected to other areas:
+Router(config-router)#summary-address
+SUB.NET.MAS.K01
+
+SUM.MAR.YAD.RES
+
+where,
+SUM.MAR.YAD.RES is the address summarizing all the networks of the area.
+SUB.NET.MAS.K01 is the subnetmask used for the summarization.
+6. Enable IS–IS for IP on the serial interfaces that will be involved in the routing
+process:
+Router(config-if)#ip router isis
+7. Repeat this configuration on all the routers that you want to involve in the IS–IS
+routing process. Remember that each router must have its own NET address
+and a maximum of three routers in each area.
+What we have introduced here is a very
+simplified introduction to the configuration of IS–IS. There are many other configuration scenarios that need to be
+tackled in order to use IS–IS in a large
+network such as configure IS–IS for
+NBMA networks, or configuring different
+IS–IS levels.
+For troubleshooting, you can use the following commands:
+Router#show clns neighbor
+Router#show clns interface
+
+Note
+If you are wondering why this
+protocol is called ‘‘Intermediate-System-to-IntermediateSystem’’, it was because a PC
+is thought of as an End-System, and the router as an
+Intermediate-System.
+Since
+this protocol is aimed to provide routing
+information
+exchange between routers, it
+was named ‘‘IS–IS’’ protocol.
+
+Router#show isis database
+Router#show isis database detail
+
+20
+
+2 Routing Protocols
+
+2.7 How to Configure Load Balancing in a Cisco Router
+When would you need this: When you are using a dynamic routing protocol, and
+have more than one path to destination networks.
+Special Requirements: None
+The first fact to be set is that all router platforms support load balancing. In a short
+description, load balancing is the operation in which the router forwards packets in
+different routes to the same destination. This happens when there is more than one
+path available for the same destination network.
+There are two types of load balancing:
+1. Multiple entries to the same destination with equal metrics.
+In this situation, protocols such as RIP, RIPv2, IGRP, EIGRP, and OSPF
+automatically does the operation and no configuration is needed.
+2. Multiple entries to the same destination with different metrics.
+With a complex metric calculation method, like the ones used in IGRP and
+EIGRP, it is rare to get equal metrics for different paths to the same destination.
+In this case, configuration is needed.
+You can configure something called variance. The variance value determines
+the percentage that you are willing tolerate in choosing a secondary path. If the
+value of the variance is chosen to be 1, this means that only the paths with equal
+best metric will be used. And a value of 1.2, for example, means that the best
+path as well as the paths with a metric up to 1.2 of best path’s metric will be
+used.
+A numerical example is,
+For a variance of 1.3, if the best path’s metric is 1000, paths of metric in the
+range of 1,000–1,300 will also be used. Keep in mind that we are talking about
+multiple paths to the same destination.
+One more important note is that we are talking about paths derived from the
+same routing protocol, i.e., paths with the same administrative distance.
+The configuration of unequal path load balancing for IGRP and EIGRP is done
+with a single command:
+Router(config-router)#variance X
+where X represents the value of the variance that you want to use.
+
+2.7.1 Per-Packet and Per-Destination Load Balancing
+There are two types of load balancing; Per-Packet and Per-Destination. In PerPacket load balancing, packets going to the same destination are sent over different paths. This way you will guarantee that all paths to the destination network
+
+2.7 How to Configure Load Balancing in a Cisco Router
+
+21
+
+are being used. But using this method causes increased load on the routers’
+resources and low-end routers may crash. Also, the packets may arrive out of order
+because of different network latencies in different paths.
+Using the Per-Destination load balancing, packets going to one destination
+pass through one path. This way you will lower the load on the router. But the
+different paths will not be utilized to the best.
+To activate Per-Destination load balancing issue the following command on the
+interface that you want to use this method of load balancing,
+Router(config-if)#ip route-cache
+And to activate Per-Packet load balancing use,
+Router(config-if)#no ip route-cache
+Newer switching schemes such as Cisco Express Forwarding (CEF) allow you
+to do per-packet and per-destination load balancing more quickly. However, this
+method requires some extra resources to deal with maintaining CEF entries and
+adjacencies.
+
+http://www.springer.com/978-1-4471-4245-4
+
+

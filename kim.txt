@@ -1,0 +1,1617 @@
+Spatial Data Structures
+
+Hanan Samet
+
+Computer Science Department and
+
+Institute of Advanced Computer Studies and
+
+Center for Automation Research
+
+University of Maryland
+College Park, MD 
+
+Abstract
+
+An overview is presented of the use of spatial data structures in spatial databases. The focus
+is on hierarchical data structures, including a number of variants of quadtrees, which sort
+the data with respect to the space occupied by it. Such techniques are known as spatial
+indexing methods. Hierarchical data structures are based on the principle of recursive
+decomposition. They are attractive because they are compact and depending on the nature
+of the data they save space as well as time and also facilitate operations such as search.
+Examples are given of the use of these data structures in the representation of dierent data
+types such as regions, points, rectangles, lines, and volumes.
+
+Keywords and phrases: spatial databases, hierarchical spatial data structures, points, lines,
+rectangles, quadtrees, octrees, r-tree, r
+
++-tree image processing.
+
+This work was supported in part by the National Science Foundation under Grant IRI		. Ap-
+pears in Modern Database Systems: The Object Model, Interoperability, and Beyond, W. Kim, ed., Addison
+WesleyACM Press, Reading, MA, 		, -.
+
+ Introduction
+
+Spatial data consists of spatial objects made up of points, lines, regions, rectangles, surfaces,
+volumes, and even data of higher dimension which includes time. Examples of spatial data
+include cities, rivers, roads, counties, states, crop coverages, mountain ranges, parts in a
+CAD system, etc. Examples of spatial properties include the extent of a given river, or the
+boundary of a given county, etc. Often it is also desirable to attach non-spatial attribute
+information such as elevation heights, city names, etc. to the spatial data. Spatial databases
+facilitate the storage and ecient processing of spatial and non-spatial information ideally
+without favoring one over the other. Such databases are nding increasing use in appli-
+cations in environmental monitoring, space, urban planning, resource management, and
+geographic information systems GIS Buchmann et al. 		; Gunther and Schek 		.
+
+A common way to deal with spatial data is to store it explicitly by parametrizing it and
+thereby obtaining a reduction to a point in a possibly higher dimensional space. This is
+usually quite easy to do in a conventional database management system since the system is
+just a collection of records, where each record has many elds. In particular, we simply add
+a eld or several elds to the record that deals with the desired item of spatial information.
+This approach is ne if we just want to perform a simple retrieval of the data.
+
+However, if our query involves the space occupied by the data and hence other records
+by virtue of their proximity, then the situation is not so straightforward. In such a case
+we need to be able to retrieve records based on some spatial properties which are not
+stored explicitly in the database. For example, in a roads database, we may not wish to
+force the user to specify explicitly which roads intersect which other roads or regions. The
+problem is that the potential volume of such information may be very large and the cost
+of preprocessing it high, while the cost of computing it on the y may be quite reasonable,
+especially if the spatial data is stored in an appropriate manner. Thus we prefer to store
+the data implicitly so that a wide class of spatial queries can be handled. In particular, we
+need not know the types of queries a priori.
+
+Being able to respond to spatial queries in a exible manner places a premium on the
+appropriate representation of the spatial data. In order to be able to deal with proximity
+queries the data must be sorted. Of course, all database management systems sort the
+data. The issue is which keys do they sort on. In the case of spatial data, the sort should be
+based on all of the spatial keys, which means that, unlike conventional database management
+systems, the sort is based on the space occupied by the data. Such techniques are known
+as spatial indexing methods.
+
+One approach to the representation of spatial data is to separate it structurally from
+the nonspatial data while maintaining appropriate links between the two Aref and Samet
+		a. This leads to a much higher bandwidth for the retrieval of the spatial data. In
+such a case, the spatial operations are performed directly on the spatial data structures.
+This provides the freedom to choose a more appropriate spatial structure than the imposed
+non-spatial structure e.g., a relational database. In such a case, a spatial processor can
+be used that is specically designed for eciently dealing with the part of the queries that
+involve proximity relations and search, and a relational database management system for
+the part of the queries that involve non-spatial data. Its proper functioning depends on the
+existence of a query optimizer to determine the appropriate processor for each part of the
+
+
+
+query Aref and Samet 		b.
+
+As an example of the type of query to be posed to a spatial database system, consider
+a request to nd the names of the roads that pass through the University of Maryland
+region". This requires the extraction of the region locations of all the database records
+whose region name" eld has the value University of Maryland" and build a map A.
+Next, map A is intersected with the road map B to yield a new map C with the selected
+roads. Now, create a new relation having just one attribute which is the relevant road
+names of the roads in map C. Of course, there are other approaches to answering the above
+query. Their eciency depends on the nature of the data and its volume.
+
+In the rest of this review we concentrate on the data structures used by the spatial
+processor. In particular, we focus on hierarchical data structures. They are based on the
+principle of recursive decomposition similar to divide and conquer methods. The term
+quadtree is often used to describe many elements of this class of data structures. We
+concentrate primarily on region, point, rectangle, and line data. For a more extensive
+treatment of this subject, see Samet 		a; Samet 		b.
+
+Our presentation is organized as follows. Section  describes a number of dierent
+methods of indexing spatial data. Section  focusses on region data and also briey reviews
+the historical background of the origins of hierarchical spatial data structures such as the
+quadtree. Sections , , and  describe hierarchical representations for point, rectangle,
+and line data, respectively, as well as give examples of their utility. Section  contains
+concluding remarks in the context of a geographic information system that makes use of
+these concepts.
+
+ Spatial Indexing
+
+Each record in a database management system can be conceptualized as a point in a multi-
+dimensional space. This analogy is used by many researchers e.g., Hinrichs and Nievergelt
+	; Jagadish 		 to deal with spatial data as well by use of suitable transformations
+that map the spatial object henceforth we just use the term object into a point termed a
+representative point in either the same e.g., Jagadish 		, lower e.g., Orenstein and
+Merrett 	, or higher e.g., Hinrichs and Nievergelt 	 dimensional spaces. This
+analogy is not always appropriate for spatial data. One problem is that the dimensionality
+of the representative point may be too high Orenstein 		. One solution is to approxi-
+mate the spatial object by reducing the dimensionality of the representative point. Another
+more serious problem is that use of these transformations does not preserve proximity.
+
+To see the drawback of just mapping spatial data into points in another space, consider
+the representation of a database of line segments. We use the term polygonal map to refer
+to such a line segment database, consisting of vertices and edges, regardless of whether or
+not the line segments are connected to each other. Such a database can arise in a network
+of roads, power lines, rail lines, etc. Using a representative point e.g., Jagadish 		,
+each line segment can be represented by its endpoints. This means that each line segment
+is represented by a tuple of four items i.e., a pair of x coordinate values and a pair of y
+coordinate values. Thus, in eect, we have constructed a mapping from a two-dimensional
+
+Of course, there are other mappings but they have similar drawbacks. We shall use this example in the
+
+rest of this section.
+
+
+
+space i.e., the space from which the lines are drawn to a four-dimensional space i.e., the
+space containing the representative point corresponding to the line.
+
+This mapping is ne for storage purposes and for queries that only involve the points
+that comprise the line segments including their endpoints. For example, nding all the
+line segments that intersect a given point or set of points or a given line segment. However,
+it is not good for queries that involve points or sets of points that are not part of the line
+segments as they are not transformed to the higher dimensional space by the mapping.
+Answering such a query involves performing a search in the space from which the lines are
+drawn rather than in the space into which they are mapped.
+
+As a more concrete example of the shortcoming of the mapping approach suppose that
+we want to detect if two lines are near each other, or, alternatively, to nd the nearest line to
+a given point or line. This is dicult to do in the four-dimensional space since proximity in
+the two-dimensional space from which the lines are drawn is not necessarily preserved in the
+four-dimensional space into which the lines are mapped. In other words, although the two
+lines may be very close to each other, the Euclidean distance between their representative
+points may be quite large.
+
+Thus we need dierent representations for spatial data. One way to overcome these
+problems is to use data structures that are based on spatial occupancy. Spatial occupancy
+methods decompose the space from which the data is drawn e.g., the two-dimensional
+space containing the lines into regions called buckets. They are also commonly known as
+bucketing methods. Traditionally, bucketing methods such as the grid le Nievergelt et al.
+	, bang le Freeston 	, lsd trees Henrich et al. 		, buddy trees Seeger and
+Kriegel 		, etc. have always been applied to the transformed data i.e., the representative
+points. In contrast, we are applying the bucketing methods to the space from which the
+data is drawn i.e., two-dimensions in the case of a collection of line segments.
+
+There are four principal approaches to decomposing the space from which the data
+is drawn. One approach buckets the data based on the concept of a minimum bounding
+or enclosing rectangle.
+In this case, objects are grouped hopefully by proximity into
+hierarchies, and then stored in another structure such as a b-tree Comer 		. The r-tree
+e.g., Beckmann et al. 		; Guttman 	 is an example of this approach.
+
+The r-tree and its variants are designed to organize a collection of arbitrary spatial
+objects most notably two-dimensional rectangles by representing them as d-dimensional
+rectangles. Each node in the tree corresponds to the smallest d-dimensional rectangle that
+encloses its son nodes. Leaf nodes contain pointers to the actual objects in the database,
+instead of sons. The objects are represented by the smallest aligned rectangle containing
+them.
+
+Often the nodes correspond to disk pages and, thus, the parameters dening the tree
+are chosen so that a small number of nodes is visited during a spatial query. Note that the
+bounding rectangles corresponding to dierent nodes may overlap. Also, an object may be
+spatially contained in several nodes, yet it is only associated with one node. This means
+that a spatial query may often require several nodes to be visited before ascertaining the
+presence or absence of a particular object.
+
+The basic rules for the formation of an r-tree are very similar to those for a b-tree.
+All leaf nodes appear at the same level. Each entry in a leaf node is a -tuple of the form
+
+
+
+R,O such that R is the smallest rectangle that spatially contains object O. Each entry
+in a non-leaf node is a -tuple of the form R,P  such that R is the smallest rectangle that
+spatially contains the rectangles in the child node pointed at by P . An r-tree of order
+m,M  means that each node in the tree, with the exception of the root, contains between
+m  dM=e and M entries. The root node has at least two entries unless it is a leaf node.
+
+g
+
+d
+
+a b
+
+h
+
+i
+
+c
+
+e
+
+f
+
+Figure : Example collection of line segments embedded in a  grid.
+
+For example, consider the collection of line segments given in Figure  shown embedded
+in a    grid. Let M =  and m = . One possible r-tree for this collection is given in
+Figure a. Figure b shows the spatial extent of the bounding rectangles of the nodes in
+Figure a, with broken lines denoting the rectangles corresponding to the subtrees rooted
+at the non-leaf nodes. Note that the r-tree is not unique. Its structure depends heavily
+on the order in which the individual line segments were inserted into and possibly deleted
+from the tree.
+
+R1 R2
+
+R3 R4
+
+R5 R6
+
+a b
+
+d
+
+g h
+
+c i
+
+e f
+
+(a)
+
+R1
+
+R3
+
+h
+
+g
+
+d
+
+R4
+
+a b
+
+R2
+
+Q
+
+i
+
+R5
+
+c
+
+(b)
+
+R6
+
+e
+
+f
+
+Figure : a R-tree for the collection of line segments in Figure , and b the spatial
+extents of the bounding rectangles.
+
+The drawback of these methods is that they do not result in a disjoint decomposition of
+space. The problem is that an object is only associated with one bounding rectangle e.g.,
+line segment i in Figure is associated with rectangle R, yet it passes through R, R, R,
+and R. In the worst case, this means that when we wish to determine which object is
+associated with a particular point e.g., the containing rectangle in a rectangle database,
+or an intersecting line in a line segment database in the two-dimensional space from which
+the objects are drawn, we may have to search the entire database.
+
+For example, suppose we wish to determine the identity of the line segment in the
+collection of line segments given in Figure  that passes through point Q. Since Q can be in
+either of R or R, we must search both of their subtrees. Searching R rst, we nd that Q
+could only be contained in R. Searching R does not lead to the line segment that contains
+Q even though Q is in a portion of bounding rectangle R that is in R. Thus, we must search
+
+
+
+R and we nd that Q can only be contained in R. Searching R results in locating i, the
+desired line segment.
+
+The other approaches are based on a decomposition of space into disjoint cells, which
+are mapped into buckets. Their common property is that the objects are decomposed into
+disjoint subobjects such that each of the subobjects is associated with a dierent cell. They
+dier in the degree of regularity imposed by their underlying decomposition rules and by
+the way in which the cells are aggregated. The price paid for the disjointness is that in
+order to determine the area covered by a particular object, we have to retrieve all the cells
+that it occupies. This price is also paid when we want to delete an object. Fortunately,
+deletion is not so common in these databases. A related drawback is that when we wish
+to determine all the objects that occur in a particular region we often retrieve many of the
+objects more than once. This is particularly problematic when the result of the operation
+serves as input to another operation via composition of functions. For example, suppose we
+wish to compute the perimeter of all the objects in a given region. Clearly, each objects
+perimeter should only be computed once. Eliminating the duplicates is a serious issue
+see Aref and Samet 		 for a discussion of how to deal with this problem in a database
+of line segments.
+
+The rst method based on disjointness partitions the objects into arbitrary disjoint
+subobjects and then groups the subobjects in another structure such as a b-tree. The
+partition and the subsequent groupings are such that the bounding rectangles are disjoint
++-tree Sellis et al. 	 and the cell tree Gunther
+at each level of the structure. The r
+	 are examples of this approach. They dier in the data with which they deal. The
++-tree deals with collections of objects that are bounded by rectangles, while the cell tree
+
+r
+deals with convex polyhedra.
+
+The r
+
++-tree is an extension of the k-d-b-tree Robinson 	. The r
+
++-tree is motivated
+by a desire to avoid overlap among the bounding rectangles. Each object is associated with
+all the bounding rectangles that it intersects. All bounding rectangles in the tree with the
+exception of the bounding rectangles for the objects at the leaf nodes are non-overlapping
+. The result is that there may be several paths starting at the root to the same object.
+This may lead to an increase in the height of the tree. However, retrieval time is sped up.
+
+R1 R2
+
+R3 R4
+
+R5 R6
+
+d
+
+g h
+
+c
+
+h i
+
+a b
+
+e i
+
+c
+
+f i
+
+R2
+
+R5
+
+b
+
+a
+
+R4
+
+R6
+
+h
+
+d
+
+i
+
+c
+
+e
+
+f
+
+R1
+
+g
+
+R3
+
+(a)
+
+(b)
+
+Figure : a R+-tree for the collection of line segments in Figure  and b the spatial
+extents of the bounding rectangles.
+
+Figure  is an example of one possible r
+
++-tree for the collection of line segments in
+
+From a theoretical viewpoint, the bounding rectangles for the objects at the leaf nodes should also be
+disjoint. However, this may be impossible e.g., when the objects are line segments where many line segments
+intersect at a point.
+
+
+
+Figure . This particular tree is of order , although in general it is not possible to
+guarantee that all nodes will always have a minimum of  entries. In particular, the expected
+b-tree performance guarantees are not valid i.e., pages are not guaranteed to be m=M full
+unless we are willing to perform very complicated record insertion and deletion procedures.
+Notice that line segments c and h appear in two dierent nodes, while line segment i
++-tree is
+appears in three dierent nodes. Of course, other variants are possible since the r
+not unique.
+
+Methods such as the r
+
++-tree and the cell tree as well as the r
+
+-tree Beckmann et al.
+		 have the drawback that the decomposition is data-dependent. This means that it is
+dicult to perform tasks that require composition of dierent operations and data sets e.g.,
+set-theoretic operations such as overlay. In contrast, the remaining two methods, while
+also yielding a disjoint decomposition, have a greater degree of data-independence. They
+are based on a regular decomposition. The space can be decomposed either into blocks
+of uniform size e.g., the uniform grid Franklin 	 or adapt the decomposition to the
+distribution of the data e.g., a quadtree-based approach such as Samet and Webber 	.
+In the former case, all the blocks are of the same size e.g., the    grid in Figure .
+In the latter case, the widths of the blocks are restricted to be powers of two, and their
+positions are also restricted.
+
+The uniform grid is ideal for uniformly distributed data, while quadtree-based ap-
+proaches are suited for arbitrarily distributed data. In the case of uniformly distributed
+data, quadtree-based approaches degenerate to a uniform grid, albeit they have a higher
+overhead. Both the uniform grid and the quadtree-based approaches lend themselves to
+set-theoretic operations and thus they are ideal for tasks which require the composition
+of dierent operations and data sets.
+In general, since spatial data is not usually uni-
+formly distributed, the quadtree-based regular decomposition approach is more exible.
+The drawback of quadtree-like methods is their sensitivity to positioning in the sense that
+the placement of the objects relative to the decomposition lines of the space in which they
+are embedded eects their storage costs and the amount of decomposition that takes place.
+This is overcome to a large extent by using a bucketing adaptation that decomposes a block
+only if it contains more than n objects.
+
+All of the spatial occupancy methods discussed above are characterized as employing
+spatial indexing because with each block the only information that is stored is whether or
+not the block is occupied by the object or part of the object. This information is usually in
+the form of a pointer to a descriptor of the object. For example, in the case of a collection
+of line segments in the uniform grid of Figure , the shaded block only records the fact that
+a line segment crosses it or passes through it. The part of the line segment that passes
+through the block or terminates within it is termed a q-edge. Each q-edge in the block
+is represented by a pointer to a record containing the endpoints of the line segment of
+which the q-edge is a part Nelson and Samet 	. This pointer is really nothing more
+than a spatial index and hence the use of this term to characterize this approach. Thus no
+information is associated with the shaded block as to what part of the line i.e., q-edge
+crosses it. This information can be obtained by clipping Foley et al. 		 the original line
+segment to the block. This is important for often the precision necessary to compute these
+intersection points is not available.
+
+
+
+ Region Data
+
+A region can be represented either by its interior or by its boundary. In this section we
+focus on the representations of regions by their interior, while the use of a boundary is
+discussed in Section  in the context of collections of line segments as found, for example, in
+polygonal maps. The most common region representation is the image array. In this case,
+we have a collection of picture elements termed pixels. Since the number of elements in
+the array can be quite large, there is interest in reducing its size by aggregating similar i.e.,
+homogeneous or equal-valued pixels. There are two basic approaches. The rst approach
+breaks up the array into   m blocks Rutovitz 	. This is a row representation and
+is known as a runlength code. A more general approach treats the region as a union of
+maximal square blocks or blocks of any other desired shape that may possibly overlap.
+Usually the blocks are specied by their centers and radii. This representation is called the
+medial axis transformation MAT Blum 	.
+
+When the maximal blocks are required to be disjoint, to have standard sizes squares
+whose sides are powers of two, and to be at standard locations as a result of a halving
+process in both the x and y directions, the result is known as a region quadtree Klinger
+	.
+It is based on the successive subdivision of the image array into four equal-size
+quadrants. If the array does not consist entirely of s or entirely of s i.e., the region does
+not cover the entire array, it is then subdivided into quadrants, subquadrants, etc., until
+blocks are obtained possibly    blocks that consist entirely of s or entirely of s. Thus,
+the region quadtree can be characterized as a variable resolution data structure.
+
+As an example of the region quadtree, consider the region shown in Figure a which is
+represented by the 
+  binary array in Figure b. Observe that the s correspond to
+pixels that are in the region and the s correspond to pixels that are outside the region.
+The resulting blocks for the array of Figure b are shown in Figure c. This process is
+represented by a tree of degree .
+
+00
+
+0 0 0 0
+0
+0
+0
+0
+0
+0
+0
+
+0 0
+0 0 0 0 0 0 0
+1 1
+1
+0
+1
+1
+1
+0
+1
+1
+1
+0
+1 1
+1
+0
+00
+1
+0
+0 0 0
+0
+
+0
+0
+0
+0
+0
+1
+1
+1
+1
+1
+1 1
+
+1
+1
+1
+1
+1
+1
+
+(a)
+
+(b)
+
+1
+
+2
+
+4
+
+6
+
+7 8
+9 10
+
+13
+
+11
+
+12
+
+15 16
+17 18
+
+3
+
+5
+
+14
+
+19
+
+(c)
+
+NW
+
+B
+
+NE
+
+1
+
+SE
+
+A
+
+SW
+C
+
+D
+
+F
+
+E
+
+2
+
+3
+
+4
+
+5
+
+6
+
+11 12
+
+13 14
+
+19
+
+7
+
+8
+
+9 10
+
+15 16 17 18
+
+(d)
+
+Figure : a Sample region, b its binary array representation, c its maximal blocks with
+the blocks in the region being shaded, and d the corresponding quadtree.
+
+In the tree representation, the root node corresponds to the entire array. Each son of
+a node represents a quadrant labeled in order nw, ne, sw, se of the region represented
+by that node. The leaf nodes of the tree correspond to those blocks for which no further
+subdivision is necessary. A leaf node is said to be black or white, depending on whether
+its corresponding block is entirely inside or entirely outside of the represented region. All
+non-leaf nodes are said to be gray. The quadtree representation for Figure c is shown in
+
+
+
+Figure d. Of course, quadtrees can also be used to represent non-binary images. In this
+case, the same merging criteria is applied to each color. For example, in the case of a landuse
+map, simply merge all wheat growing regions, and likewise for corn, rice, etc. Samet et al.
+	.
+
+The term quadtree is often used in a more general senses to describe a class of hierarchical
+data structures whose common property is that they are based on the principle of recursive
+decomposition of space. They can be dierentiated on the following bases:
+
+. the type of data that they are used to represent,
+
+. the principle guiding the decomposition process, and
+
+. the resolution variable or not.
+
+Currently, they are used for points, rectangles, regions, curves, surfaces, and volumes see
+the remaining sections for further details on the adaptation of the quadtree to them. The
+decomposition may be into equal parts on each level termed a regular decomposition, or
+it may be governed by the input. The resolution of the decomposition i.e., the number
+of times that the decomposition process is applied may be xed beforehand or it may be
+governed by properties of the input data.
+
+Unfortunately, the term quadtree has taken on more than one meaning. The region
+quadtree, as shown above, is a partition of space into a set of squares whose sides are all
+a power of two long. A similar partition of space into rectangular quadrants is termed a
+point quadtree Finkel and Bentley 	. It is an adaptation of the binary search tree to
+two dimensions which can be easily extended to an arbitrary number of dimensions. It
+is primarily used to represent multidimensional point data where the rectangular regions
+need not be square. The quadtree is also often confused with the pyramid Tanimoto and
+Pavlidis 	. The pyramid is a multiresolution representation which is an exponentially
+tapering stack of arrays, each one-quarter the size of the previous array. In contrast, the
+region quadtree is a variable resolution data structure.
+
+The distinction between a quadtree and a pyramid is important in the domain of spatial
+databases, and can be easily seen by considering the types of spatial queries. There are
+two principal types Aref and Samet 		. The rst is location-based.
+In this case, we
+are searching for the nature of the feature associated with a particular location or in its
+proximity. For example, what is the feature at location X?", what is the nearest city
+to location X?", or what is the nearest road to location X?" The second is feature-based.
+In this case, we are probing for the presence or absence of a feature, as well as seeking
+its actual location. For example, does wheat grow anywhere in California?", what crops
+grow in California?", or where is wheat grown in California?"
+
+Location-based queries are easy to answer with a quadtree representation as they involve
+descending the tree until nding the object. If a nearest neighbor is desired, then the search
+is continued in the neighborhood of the node containing the object. This search can also
+be achieved by unwinding the process used to access the node containing the object. On
+the other hand, feature-based queries are more dicult. The problem is that there is no
+indexing by features. The indexing is only based on spatial occupancy. The goal is to
+process the query without examining every location in space. The pyramid is useful for
+
+
+
+such queries since the nodes that are not at the maximum level of resolution i.e., at the
+bottom level contain summary information. Thus we could view these nodes as feature
+vectors which indicate whether or not a feature is present at a higher level of resolution.
+Therefore, by examining the root of the pyramid i.e., the node that represents the entire
+image we can quickly tell if a feature is present without having to examine every location.
+
+For example, consider the block decomposition of the non-binary image in Figure a.
+Its truncated pyramid is given in Figure b. The values of a nonleaf node p in the truncated
+pyramid indicate if the feature is present in the subtrees of p. In the interest of saving space,
+the pyramid is not shown in its entirety here.
+
+{A,B,C,D,E,F}
+
+{B,C,F}
+
+{B,C,D,E}
+
+{A,B,C,D,E,F}
+
+AA
+
+AAA
+AAA
+AAA
+AAA
+AAA
+
+AAAA
+AA
+AAAA
+AA
+AAAA
+AA
+AA
+AAAA
+AAA
+A
+AA
+AA
+AAA
+A
+A
+AA
+AAAAA
+AAA
+AA
+AAA
+AA
+AA
+AA
+AA
+AAA
+AA
+AA
+AA
+A
+D
+E
+B
+AAF
+AA
+AA
+C
+AA
+AA
+
+AA
+
+(a)
+
+AA
+AA
+
+AA
+AA
+
+AA
+AA
+
+AA
+AA
+{B,C,E}
+
+AA
+AA
+
+AA
+AA
+
+AA
+AA
+
+AA
+AA
+
+{A,B,C,E}
+
+AA
+AA
+
+AAAA
+
+AAAA
+
+(b)
+
+Figure : a Sample non-binary image, and b its corresponding truncated pyramid.
+
+Quadtree-like data structures can also be used to represent images in three dimensions
+and higher. The octree Hunter 	; Meagher 	 data structure is the three-dimensional
+analog of the quadtree. It is constructed in the following manner. We start with an image
+in the form of a cubical volume and recursively subdivide it into eight congruent disjoint
+cubes called octants until blocks are obtained of a uniform color or a predetermined level
+of decomposition is reached. Figure a is an example of a simple three-dimensional object
+whose raster octree block decomposition is given in Figure b and whose tree representation
+is given in Figure c.
+
+14 15
+
+4
+
+11
+
+12
+
+9 10
+5
+6
+
+1
+
+13
+
+2
+
+A
+
+B
+
+1 2 3 4
+
+13 14 15
+
+(a)
+
+(b)
+
+1098765
+
+(c)
+
+11
+
+12
+
+Figure : a Example three-dimensional object; b its octree block decomposition; and c
+its tree representation.
+
+The quadtree is particularly useful for performing set operations as they form the basis
+of most complicated queries. For example, to nd the names of the roads that pass through
+the University of Maryland region," we will need to intersect a region map with a line map.
+For a binary image, set-theoretic operations such as union and intersection are quite simple
+to implement Hunter and Steiglitz 		.
+
+In particular, the intersection of two quadtrees yields a black node only when the
+corresponding regions in both quadtrees are black. This operation is performed by si-
+multaneously traversing three quadtrees. The rst two trees correspond to the trees being
+
+	
+
+intersected and the third tree represents the result of the operation. If any of the input
+nodes are white, then the result is white. When corresponding nodes in the input trees
+are gray, then their sons are recursively processed and a check is made for the mergibility
+of white leaf nodes. The worst-case execution time of this algorithm is proportional to
+the sum of the number of nodes in the two input quadtrees, although it is possible for
+the intersection algorithm to visit fewer nodes than the sum of the nodes in the two input
+quadtrees.
+
+Performing the set operations on an image represented by a region quadtree is much more
+ecient than when the image is represented by a boundary representation e.g., vectors as
+it makes use of global data. In particular, to be ecient, a vector-based solution must sort
+the boundaries of the region with respect to the space which they occupy, while in the case
+of a region quadtree, the regions are already sorted.
+
+One of the motivations for the development of hierarchical data structures such as the
+quadtree is a desire to save space. The original formulation of the quadtree encodes it as a
+tree structure that uses pointers. This requires additional overhead to encode the internal
+nodes of the tree. In order to further reduce the space requirements, two other approaches
+have been proposed. The rst treats the image as a collection of leaf nodes where each
+leaf is encoded by a pair of numbers. The rst is a base  number termed a locational
+code, corresponding to a sequence of directional codes that locate the leaf along a path
+from the root of the quadtree e.g., Gargantini 	. It is analogous to taking the binary
+representation of the x and y coordinates of a designated pixel in the block e.g., the one at
+the lower left corner and interleaving them i.e., alternating the bits for each coordinate.
+The second number indicates the depth at which the leaf node is found or alternatively its
+size.
+
+The second, termed a DF-expression, represents the image in the form of a traversal of
+the nodes of its quadtree Kawaguchi and Endo 	. It is very compact as each node type
+can be encoded with two bits. However, it is not easy to use when random access to nodes is
+desired. For a static collection of nodes, an ecient implementation of the pointer-based rep-
+resentation is often more economical spacewise than a locational code representation Samet
+and Webber 		. This is especially true for images of higher dimension.
+
+Nevertheless, depending on the particular implementation of the quadtree we may not
+necessarily save space e.g., in many cases a binary array representation may still be more
+economical than a quadtree. However, the eects of the underlying hierarchical aggregation
+on the execution time of the algorithms are more important. Most quadtree algorithms are
+simply preorder traversals of the quadtree and, thus, their execution time is generally a
+linear function of the number of nodes in the quadtree. A key to the analysis of the
+execution time of quadtree algorithms is the Quadtree Complexity Theorem Hunter 	
+which states that the number of nodes in a quadtree region representation is Op + q for a
+q
+ q image with perimeter p measured in pixel-widths. In all but the most pathological
+cases e.g., a small square of unit width centered in a large image, the q factor is negligible
+and thus the number of nodes is Op.
+
+The Quadtree Complexity Theorem holds for three-dimensional data Meagher 	
+where perimeter is replaced by surface area, as well as for objects of higher dimensions d
+for which it is proportional to the size of the d (cid:0) -dimensional interfaces between these
+objects.
+
+
+
+The Quadtree Complexity Theorem also directly impacts the analysis of the execution
+time of algorithms. In particular, most algorithms that execute on a quadtree representation
+of an image instead of an array representation have an execution time that is proportional
+to the number of blocks in the image rather than the number of pixels. In its most general
+case, this means that the application of a quadtree algorithm to a problem in d-dimensional
+space executes in time proportional to the analogous array-based algorithm in the d (cid:0) -
+dimensional space of the surface of the original d-dimensional image. Therefore, quadtrees
+act like dimension-reducing devices.
+
+ Point Data
+
+Multidimensional point data can be represented in a variety of ways. The representation ul-
+timately chosen for a specic task is inuenced by the type of operations to be performed on
+the data. Our focus is on dynamic les i.e., the amount of data can grow and shrink at will
+and on applications involving search. In Section  we briey mentioned the point quadtree.
+In higher dimensions i.e., greater than  it is preferable to use the k-d tree Bentley 	
+as every node has degree  since the partitions cycle through the dierent attributes.
+
+There are many dierent representations for point data. Most of them are some variants
+of the bucket methods discussed in Section . These include the grid le and excell which
+are described in Section . For more details, see Samet 		b. In this section we present
+the pr quadtree p for point and r for region Orenstein 	; Samet 		b as it is based
+on a regular decomposition. It is an adaptation of the region quadtree to point data which
+associates data points that need not be discrete with quadrants. The pr quadtree is
+organized in the same way as the region quadtree. The dierence is that leaf nodes are
+either empty i.e., white or contain a data point i.e., black and its coordinate values.
+A quadrant contains at most one data point. For example, Figure  is a pr quadtree
+corresponding to some point data.
+
+(0,100)
+
+(100,100)
+
+(62,77)
+Toronto
+
+(82,65)
+Buffalo
+
+(35,42)
+Chicago
+
+(5,45)
+Denver
+
+(27,35)
+
+Omaha
+
+(85,15)
+Atlanta
+
+(52,10)
+Mobile
+
+(90,5)
+Miami
+
+(0,0)
+
+(100,0)
+
+(a)
+
+A
+
+B
+
+C
+
+E
+
+Toronto
+
+Buffalo Denver
+
+Mobile
+
+D
+
+F
+
+Chicago Omaha
+
+Atlanta
+
+Miami
+
+(b)
+
+Figure : A PR quadtree.
+
+The shape of the pr quadtree is independent of the order in which data points are
+inserted into it. The disadvantage of the pr quadtree is that the maximum level of de-
+composition depends on the minimum separation between two points. In particular, if two
+points are very close, then the decomposition can be very deep. This can be overcome by
+viewing the blocks or nodes as buckets with capacity c and only decomposing a block when
+it contains more than c points. Of course, bucketing methods such as the r-tree and the
+
++-tree can also be used.
+
+r
+
+
+
+pr quadtrees, as well as other quadtree-like representations for point data, are especially
+attractive in applications that involve search. A typical query is one that requests the
+determination of all records within a specied distance of a given record - e.g., all cities
+within  miles of Washington, DC. The eciency of the pr quadtree lies in its role as a
+pruning device on the amount of search that is required. Thus many records will not need
+to be examined. For example, suppose that in the hypothetical database of Figure  we
+wish to nd all cities within  units of a data point with coordinates ,. In such a case,
+there is no need to search the nw, ne, and sw quadrants of the root i.e., ,. Thus
+we can restrict our search to the se quadrant of the tree rooted at root. Similarly, there
+is no need to search the nw, ne, and sw quadrants of the tree rooted at the se quadrant
+i.e., ,. Note that the search ranges are usually orthogonally dened regions such as
+rectangles, boxes, etc. Other shapes are also feasible as the above example demonstrated
+i.e., a circle.
+
+ Rectangle Data
+
+The rectangle data type lies somewhere between the point and region data types. Rectan-
+gles are often used to approximate other objects in an image for which they serve as the
+minimum rectilinear enclosing object. For example, bounding rectangles can be used in
+cartographic applications to approximate objects such as lakes, forests, hills, etc. In such
+a case, the approximation gives an indication of the existence of an object. Of course, the
+exact boundaries of the object are also stored; but they are only accessed if greater precision
+is needed. For such applications, the number of elements in the collection is usually small,
+and most often the sizes of the rectangles are of the same order of magnitude as the space
+from which they are drawn.
+
+Rectangles are also used in vlsi design rule checking as a model of chip components for
+the analysis of their proper placement. Again, the rectangles serve as minimum enclosing
+objects. In this application, the size of the collection is quite large e.g., millions of com-
+ponents and the sizes of the rectangles are several orders of magnitude smaller than the
+space from which they are drawn.
+
+The representation that is used depends heavily on the problem environment.
+
+If the
+environment is static, then frequently the solutions are based on the use of the plane-sweep
+paradigm Preparata and Shamos 	, which usually yields optimal solutions in time and
+space. However, the addition of a single object to the database forces the re-execution
+of the algorithm on the entire database. We are primarily interested in dynamic problem
+environments. The data structures that are chosen for the collection of the rectangles are
+dierentiated by the way in which each rectangle is represented.
+
+One representation discussed in Section  reduces each rectangle to a point in a higher
+dimensional space, and then treats the problem as if we have a collection of points Hinrichs
+and Nievergelt 	. Each rectangle is a Cartesian product of two one-dimensional intervals
+where each interval is represented by its centroid and extent. Each set of intervals in a
+particular dimension is, in turn, represented by a grid le Nievergelt et al. 	.
+
+The grid le is a two-level grid for storing multidimensional points.
+
+It uses a grid
+directory a two-dimensional array of grid blocks for two-dimensional point data on disk
+indicating the address of the bucket i.e., page that contains the data associated with the
+
+
+
+grid block. A set of linear scales actually a pair of one-dimensional arrays in the case of
+two-dimensional data are kept in core. The linear scales access the grid block in the grid
+directory on disk that is associated with a particular point. The grid le guarantees access
+to any record with two disk operations  that is, one for each level of the grid. The rst
+access is to the grid block, while the second access is to the grid bucket. The linear scales
+are necessary because the grid lines in the grid directory can be in arbitrary positions.
+
+In contrast, excell Tamminen 	 also guarantees access to any record with two disk
+operations but makes use of regular decomposition. This means that the linear scales are
+not necessary. However, a grid partition results in doubling the size of the grid directory.
+
+The second representation is region-based in the sense that the subdivision of the space
+from which the rectangles are drawn depends on the physical extent of the rectangle - not
+just one point. Representing the collection of rectangles, in turn, with a tree-like data
+structure has the advantage that there is a relation between the depth of node in the tree
+and the size of the rectangles that are associated with it. Interestingly, some of the region-
+based solutions make use of the same data structures that are used in the solutions based
+on the plane-sweep paradigm.
+
+There are three types of region-based solutions currently in use. The rst two solutions
++-tree discussed in Section  to store rectangle data i.e., in
+adapt the r-tree and the r
+this case the objects are rectangles instead of line segments as in Figures  and . The
+third is a quadtree-based approach and uses the mx-cif quadtree Kedem 	.
+
+In the mx-cif quadtree each rectangle is associated with the quadtree node corresponding
+to the smallest block which contains it in its entirety. Subdivision ceases whenever a nodes
+block contains no rectangles. Alternatively, subdivision can also cease once a quadtree block
+is smaller than a predetermined threshold size. This threshold is often chosen to be equal
+to the expected size of the rectangle Kedem 	. For example, Figure  is the mx-cif
+quadtree for a collection of rectangles. Note that rectangle F occupies an entire block and
+hence it is associated with the blocks father. Also rectangles can be associated with both
+terminal and non-terminal nodes.
+
+A
+
+B
+
+C
+
+D
+
+F
+
+G
+
+E
+
+(a)
+
+{A,E}
+
+{G}
+
+{B,C,D}
+
+D
+
+B
+
+{F}
+
+E
+
+(b)
+
+(c)
+
+(d)
+
+Figure : a Collection of rectangles and the block decomposition induced by the MX-CIF
+quadtree; b the tree representation of a; the binary trees for the y axes passing through
+the root of the tree in b, and d the NE son of the root of the tree in b.
+
+It should be clear that more than one rectangle can be associated with a given enclosing
+block and, thus, often we nd it useful to be able to dierentiate between them. This is done
+in the following manner Kedem 	. Let P be a quadtree node with centroid CX,CY ,
+and let S be the set of rectangles that are associated with P . Members of S are organized
+into two sets according to their intersection or collinearity of their sides with the lines
+passing through the centroid of P s block  that is, all members of S that intersect the line
+
+
+
+x = CX form one set and all members of S that intersect the line y = CY form the other
+set.
+
+If a rectangle intersects both lines i.e., it contains the centroid of P s block, then
+we adopt the convention that it is stored with the set associated with the line through
+x = CX. These subsets are implemented as binary trees really tries, which in actuality
+are one-dimensional analogs of the mx-cif quadtree. For example, Figure c and Figure d
+illustrate the binary trees associated with the y axes passing through the root and the ne
+son of the root of the mx-cif quadtree of Figure c, respectively. Interestingly, the mx-cif
+quadtree is a two-dimensional analog of the interval tree Edelsbrunner 	, which is a
+data structure that is used to support optimal solutions based on the plane-sweep paradigm
+to some rectangle problems.
+
+ Line Data
+
+Section  was devoted to the region quadtree, an approach to region representation that
+is based on a description of the regions interior. In this section, we focus on a represen-
+tation that species the boundaries of regions. The simplest representation is the polygon
+consisting of vectors which are usually specied in the form of lists of pairs of x and y
+coordinate values corresponding to their start and end points. The vectors are usually
+ordered according to their connectivity. One of the most common representations is the
+chain code Freeman 	 which is an approximation of a polygons boundary by use of a
+sequence of unit vectors in the four principal directions. Using such representations, given
+a random point in space, it is very dicult to nd the nearest line to it as the lines are not
+sorted. Nevertheless, the vector representation is used in many commercial systems e.g.,
+arcinfo Peuquet and Marble 		 on account of its compactness.
+
+In this section we concentrate on the use of bucketing methods. There are a number
+of choices see Hoel and Samet 		 for an empirical comparison. The rst two are the
++-tree which have already been explained in Section . The third uses
+r-tree and the r
+regular decomposition to adaptively sort the line segments into buckets of varying size.
+There is a one-to-one correspondence between buckets and blocks in the two-dimensional
+space from which the line segments are drawn. There are a number of approaches to this
+problem Samet 		b. They dier by being either vertex-based or edge-based. Their
+implementations make use of the same basic data structure. All are built by applying the
+same principle of repeatedly breaking up the collection of vertices and edges making up the
+polygonal map into groups of four blocks of equal size termed brothers until obtaining a
+subset that is suciently simple so that it can be organized by some other data structure.
+This is achieved by successively weakening the denition of what constitutes a legal block,
+thereby enabling more information to be stored in each bucket.
+
+The pm quadtree family Samet and Webber 	 is vertex-based. We illustrate the
+pm quadtree. It is based on a decomposition rule stipulating that partitioning occurs as
+long as a block contains more than one line segment unless the line segments are all incident
+at the same vertex which is also in the same block e.g., Figure 	. A similar representation
+has been devised for three-dimensional images e.g., Ayala et al. 	. The decomposition
+criteria are such that no node contains more than one face, edge, or vertex unless the faces
+all meet at the same vertex or are adjacent to the same edge. This representation is quite
+useful since its space requirements for polyhedral objects are signicantly smaller than those
+
+
+
+h
+
+g
+
+d
+
+a
+
+b
+
+i
+
+c
+
+e
+
+f
+
+Figure 	: PM quadtree for the collection of line segments of Figure .
+
+of a conventional octree.
+
+The pmr quadtree Nelson and Samet 	; Nelson and Samet 	 is an edge-based
+variant of the pm quadtree see also edge-excell Tamminen 	.
+It makes use of
+a probabilistic splitting rule. A block is permitted to contain a variable number of line
+segments. The pmr quadtree is constructed by inserting them one-by-one into an initially
+empty structure consisting of one block. Each line segment is inserted into all of the blocks
+that it intersects or occupies in its entirety. During this process, the occupancy of each
+aected block is checked to see if the insertion causes it to exceed a predetermined splitting
+threshold. If the splitting threshold is exceeded, then the block is split once, and only once,
+into four blocks of equal size. The rationale is to avoid splitting a node many times when
+there are a few very close lines in a block.
+In this manner, we avoid pathologically bad
+cases. For more details, see Nelson and Samet 	.
+
+A line segment is deleted from a pmr quadtree by removing it from all the blocks that
+it intersects or occupies in its entirety. During this process, the occupancy of the block and
+its siblings the ones that were created when its predecessor was split is checked to see if
+the deletion causes the total number of line segments in them to be less than the splitting
+threshold. If the splitting threshold exceeds the occupancy of the block and its siblings,
+then they are merged and the merging process is recursively reapplied to the resulting block
+and its siblings. Notice the asymmetry between splitting and merging rules.
+
+a
+
+b
+
+c
+
+(a)
+
+a
+
+b
+
+c
+
+e
+f
+
+(c)
+
+g
+
+d
+
+a b
+
+e
+
+c
+
+(b)
+
+d
+
+a
+
+h
+
+g
+
+d
+
+b
+
+c
+
+e
+f
+
+(d)
+
+h
+
+g
+
+d
+
+a
+
+b
+
+i
+
+c
+
+e
+
+f
+
+(e)
+
+Figure : PMR quadtree for the collection of line segments of Figure . a  e illustrate
+snapshots of the construction process with the nal PMR quadtree given in e.
+
+Figure e is an example of a pmr quadtree corresponding to a set of 	 edges labeled
+ai inserted in increasing order. Observe that the shape of the pmr quadtree for a given
+polygonal map is not unique; instead it depends on the order in which the lines are inserted
+
+
+
+into it. In contrast, the shape of the pm quadtree is unique. Figure ae shows some of
+the steps in the process of building the pmr quadtree of Figure e. This structure assumes
+that the splitting threshold value is two. In each part of Figure ae, the line segment that
+caused the subdivision is denoted by a thick line, while the gray regions indicate the blocks
+where a subdivision has taken place. The insertion of line segments c, e, g, h, and i cause
+the subdivisions in parts a, b, c, d, and e, respectively, of Figure . The insertion of line
+segment i causes three blocks to be subdivided i.e., the se block in the sw quadrant, the
+se quadrant, and the sw block in the ne quadrant. The nal result is shown in Figure e.
+Note the dierence from the pm quadtree in Figure 	  that is, the ne block of the sw
+quadrant is decomposed in the pm quadtree while the se block of the sw quadrant is not
+decomposed in the pm quadtree.
+
+The pmr quadtree is very good for answering queries such as nding the nearest line
+to a given point Hoel and Samet 		. It is preferred over the pm quadtree as it results
+in far fewer subdivisions. In particular, in the pmr quadtree there is no need to subdivide
+in order to separate line segments that are very close" or whose vertices are very close,"
+which is the case for the pm quadtree. This is important since four blocks are created at
+each subdivision step. Thus when many subdivision steps occur, many empty blocks are
+created and thus the storage requirements of the pmr quadtree are considerably lower than
+those of the pm quadtree. Generally, as the splitting threshold is increased, the storage
+requirements of the pmr quadtree decrease while the time necessary to perform operations
+on it will increase. Another advantage of the pmr quadtree over the pm quadtree is that
+by virtue of being edge based, it can easily deal with nonplanar graphs.
+
+Observe that although a bucket in the pmr quadtree can contain more line segments
+than the splitting threshold, this is not a problem. In fact, it can be shown Samet 		b
+that the maximum number of line segments in a bucket is bounded by the sum of the
+splitting threshold and the depth of the block i.e., the number of times the original space
+has been decomposed to yield this block.
+
+ Concluding Remarks
+
+The use of hierarchical data structures in spatial databases enables the focussing of compu-
+tational resources on the interesting subsets of data. Thus, there is no need to expend work
+where the payo is small. Although many of the operations for which they are used can often
+be performed equally as eciently, or more so, with other data structures, hierarchical data
+structures are attractive because of their conceptual clarity and ease of implementation.
+
+When the hierarchical data structures are based on the principle of regular decompo-
+sition, we have the added benet of a spatial index. All features, be they regions, points,
+rectangles, lines, volumes, etc., can be represented by maps which are in registration. This
+means that a query such as nding the names of the roads that pass through the Univer-
+sity of Maryland region" can be executed by simply overlaying the region and road maps
+even though they represent data of dierent types. The overlay performs an intersection
+operation where the common feature is the area spanned by the University of Maryland
+and the roads that pass through it i.e., a spatial join.
+
+In fact, such a system, known as quilt, has been built Shaer et al. 		 for repre-
+senting geographic information using the quadtree variants described here. In this case, the
+
+
+
+quadtree is implemented as a collection of leaf nodes where each leaf node is represented
+by its locational code, which is a spatial index. The collection is in turn represented as a
+b-tree. There are leaf nodes corresponding to region, point, and line data.
+
+The disadvantage of quadtree methods is that they are shift sensitive in the sense that
+their space requirements are dependent on the position of the origin. However, for compli-
+cated images the optimal positioning of the origin will usually lead to little improvement in
+the space requirements. The process of obtaining this optimal positioning is computation-
+ally expensive and is usually not worth the eort Li et al. 	.
+
+The fact that we are working in a digitized space may also lead to problems. For
+example, the rotation operation is not generally invertible. In particular, a rotated square
+usually cannot be represented accurately by a collection of rectilinear squares. However,
+when we rotate by 	, then the rotation is invertible. This problem arises whenever one
+uses a digitized representation. Thus, it is also common to the array representation.
+
+ Acknowledgements
+
+The assistance of Erik G. Hoel in the preparation of the gures is greatly appreciated.
+
+References
+
+Aref, W. G. and Samet, H. 		. Ecient processing of window queries in the pyramid data
+structure. In Proceedings of the 	th ACM SIGACT-SIGMOD-SIGART Symposium on Principles
+of Database Systems PODS, Nashville, TN, Apr., pp. .
+
+Aref, W. G. and Samet, H. 		a. Extending a dbms with spatial operations. In Gunther,
+O. and Schek, H.-J., Eds., Advances in Spatial Databases, pp. 		. Lecture Notes in
+Computer Science . Springer-Verlag, Berlin.
+
+Aref, W. G. and Samet, H. 		b. Optimization strategies for spatial query processing.
+In Lohman, G., Ed., Proceedings of the Seventeenth International Conference on Very Large
+Databases VLDB, Barcelona, Spain, Sept., pp. 	.
+
+Aref, W. G. and Samet, H. 		. Uniquely reporting spatial objects: yet another operation
+for comparing spatial data structures. In Proceedings of the Fifth International Symposium on
+Spatial Data Handling, volume , Charleston, SC, Aug., pp. 	.
+
+Ayala, D., Brunet, P., Juan, R., and Navazo, I. 	. Object representation by means of
+nonminimal division quadtrees and octrees. ACM Transactions on Graphics, ,  Jan., 	.
+
+Beckmann, N., Kriegel, H. P., Schneider, R., and Seeger, B. 		. The r-tree: an
+ecient and robust access method for points and rectangles.
+In Proceedings of the SIGMOD
+Conference, Atlantic City, NJ, June, pp. .
+
+Bentley, J. L. 	. Multidimensional binary search trees used for associative searching.
+Communications of the ACM, , 	 Sept., 	.
+
+Blum, H. 	. A transformation for extracting new descriptors of shape. In Wathen-Dunn,
+W., Ed., Models for the Perception of Speech and Visual Form, pp. . MIT Press, Cam-
+bridge, MA.
+
+Buchmann, A., Gunther, O., Smith, T. R., and Wang, Y.-F., Eds. 		. Design and
+Implementation of Large Spatial Databases. Lecture Notes in Computer Science 	. Springer-
+Verlag, Berlin.
+
+
+
+Comer, D. 		. The ubiquitous btree. ACM Computing Surveys, ,  June, .
+
+Edelsbrunner, H. 	. Dynamic rectangle intersection searching. Institute for Information
+Processing Report , Institute for Information Processing, Technical University of Graz, Graz,
+Austria, Feb..
+
+Finkel, R. and Bentley, J. 	. Quad trees: a data structure for retrieval on composite
+keys. Acta Informatica, , , 	.
+
+Foley, J. D., van Dam, A., Feiner, S. K., and Hughes, J. F. 		. Computer Graphics:
+Principles and Practice. Addison-Wesley, Reading, MA, second edition.
+
+Franklin, W. R. 	. Adaptive grids for geometric operations. Cartographica, ,  & 
+Summer & Autumn, .
+
+Freeman, H. 	. Computer processing of linedrawing images. ACM Computing Surveys, ,
+ Mar., 	.
+
+Freeston, M. 	. The BANG le: a new kind of grid le. In Proceedings of the SIGMOD
+Conference, San Francisco, May, pp. 	.
+
+Gargantini, I. 	. An eective way to represent quadtrees. Communications of the ACM,
+,  Dec., 		.
+
+Gunther, O. 	. Ecient structures for geometric data management. PhD thesis, Electronics
+Research Laboratory, College of Engineering, University of California at Berkeley, Berkeley, CA.
+Lecture Notes in Computer Science , Springer-Verlag, Berlin, 	.
+
+Gunther, O. and Schek, H.-J., Eds. 		. Advances in Spatial Databases. Lecture Notes in
+Computer Science . Springer-Verlag, Berlin.
+
+Guttman, A. 	. Rtrees: a dynamic index structure for spatial searching. In Proceedings of
+the SIGMOD Conference, Boston, June, pp. .
+
+Henrich, A., Six, H. W., and Widmayer, P. 		. The lsd tree: spatial access to mul-
+tidimensional point and non-point data. In Apers, P. M. G. and Wiederhold, G., Eds.,
+Proceedings of the Fifteenth International Conference on Very Large Databases VLDB, Ams-
+terdam, Aug., pp. .
+
+Hinrichs, K. and Nievergelt, J. 	. The grid le: a data structure designed to support
+In Nagl, M. and J. Perl, e., Eds., Proceedings of
+proximity queries on spatial objects.
+the WG International Workshop on Graphtheoretic Concepts in Computer Science, Truner
+Verlag, Linz, Austria, , pp. .
+
+Hoel, E. G. and Samet, H. 		. Ecient processing of spatial queries in line segment
+In Gunther, O. and Schek, H.-J., Eds., Advances in Spatial Databases, pp.
+databases.
+. Lecture Notes in Computer Science . Springer-Verlag, Berlin.
+
+Hoel, E. G. and Samet, H. 		. A qualitative comparison study of data structures for
+large line segment databases. In Proceedings of the SIGMOD Conference, San Diego, June, pp.
+.
+
+Hunter, G. M. 	. Ecient computation and data structures for graphics. PhD thesis,
+Department of Electrical Engineering and Computer Science, Princeton University, Princeton,
+NJ.
+
+Hunter, G. M. and Steiglitz, K. 		. Operations on images using quad trees.
+Transactions on Pattern Analysis and Machine Intelligence, ,  Apr., .
+
+IEEE
+
+
+
+Jagadish, H. V. 		. On indexing line segments. In McLeod, D., Sacks-Davis, R., and
+Schek, H., Eds., Proceedings of the Sixteenth International Conference on Very Large Databases
+VLDB, Brisbane, Australia, Aug., pp. .
+
+Kawaguchi, E. and Endo, T. 	. On a method of binary picture representation and its ap-
+plication to data compression. IEEE Transactions on Pattern Analysis and Machine Intelligence,
+,  Jan., .
+
+Kedem, G. 	. The quadcif tree: a data structure for hierarchical online algorithms. In
+Proceedings of the Nineteenth Design Automation Conference, Las Vegas, June, pp. .
+
+Klinger, A. 	. Patterns and search statistics. In Rustagi, J. S., Ed., Optimizing Methods
+in Statistics, pp. . Academic Press, New York.
+
+Li, M., Grosky, W. I., and Jain, R. 	. Normalized quadtrees with respect to translations.
+Computer Graphics and Image Processing, ,  Sept., .
+
+Meagher, D. 	. Octree encoding: a new technique for the representation, the manipulation,
+and display of arbitrary d objects by computer. Technical Report IPLTR, Electrical
+and Systems Engineering Technical Report, Rensselaer Polytechnic Institute, Troy, NY, Oct..
+
+Meagher, D. 	. Geometric modeling using octree encoding. Computer Graphics and Image
+Processing, 	,  June, 	.
+
+Nelson, R. C. and Samet, H. 	. A consistent hierarchical representation for vector data.
+Computer Graphics, ,  Aug., 	. also Proceedings of the SIGGRAPH Conference,
+Dallas, August 	.
+
+Nelson, R. C. and Samet, H. 	. A population analysis for hierarchical data structures. In
+Proceedings of the SIGMOD Conference, May, pp. .
+
+Nievergelt, J., Hinterberger, H., and Sevcik, K. C. 	. The grid le: an adaptable,
+symmetric multikey le structure. ACM Transactions on Database Systems, 	,  Mar., .
+
+Orenstein, J. A. 	. Multidimensional tries used for associative searching.
+Processing Letters, ,  June, .
+
+Information
+
+Orenstein, J. A. 		. Redundancy in spatial databases.
+Conference, Portland, OR, June, pp. 	.
+
+In Proceedings of the SIGMOD
+
+Orenstein, J. A. and Merrett, T. H. 	. A class of data structures for associative
+searching.
+In Proceedings of the Third ACM SIGACTSIGMOD Symposium on Principles of
+Database Systems, Waterloo, Canada, Apr., pp. 	.
+
+Peuquet, D. J. and Marble, D. F. 		. ARCINFO: An example of a contemporary
+geographic information system. In Peuquet, D. J. and Marble, D. F., Eds., Introductory
+Readings In Geographic Information Systems, pp. 			. Taylor & Francis, London.
+
+Preparata, F. P. and Shamos, M. I. 	. Computational Geometry: An Introduction.
+SpringerVerlag, New York.
+
+Robinson, J. T. 	. The kdbtree: a search structure for large multidimensional dynamic
+indexes. In Proceedings of the SIGMOD Conference, Ann Arbor, MI, Apr., pp. .
+
+Rutovitz, D. 	. Data structures for operations on digital images. In et al., G. C. C.,
+Ed., Pictorial Pattern Recognition, pp. . Thompson Book Co., Washington, DC.
+
+Samet, H. 		a. Applications of Spatial Data Structures: Computer Graphics, Image Process-
+ing, and GIS. Addison-Wesley, Reading, MA.
+
+	
+
+Samet, H. 		b. The Design and Analysis of Spatial Data Structures. Addison-Wesley, Reading,
+MA.
+
+Samet, H., Rosenfeld, A., Shaffer, C. A., and Webber, R. E. 	. A geographic
+information system using quadtrees. Pattern Recognition, ,  NovemberDecember, .
+
+Samet, H. and Webber, R. E. 	. Storing a collection of polygons using quadtrees. ACM
+Transactions on Graphics, ,  July, . also Proceedings of Computer Vision and Pattern
+Recognition  , Washington, DC, June 	, ; and University of Maryland Computer
+Science TR.
+
+Samet, H. and Webber, R. E. 		. A comparison of the space requirements of multi
+dimensional quadtreebased le structures. Visual Computer, ,  Dec., 		. also Univer-
+sity of Maryland Computer Science TR.
+
+Seeger, B. and Kriegel, H. P. 		. The buddy-tree: an ecient and robust access method
+for spatial data base systems. In McLeod, D., Sacks-Davis, R., and Schek, H., Eds., Pro-
+ceedings of the Sixteenth International Conference on Very Large Databases VLDB, Brisbane,
+Australia, Aug., pp. 	.
+
+Sellis, T., Roussopoulos, N., and Faloutsos, C. 	. The r+-tree: a dynamic index for
+multi-dimensional objects. In Stocker, P. M. and Kent, W., Eds., Proceedings of the Thir-
+teenth International Conference on Very Large Databases VLDB, Brighton, England, Sept.,
+pp. .
+
+Shaffer, C. A., Samet, H., and Nelson, R. C. 		. quilt: A geographic information
+system based on quadtrees,.
+International Journal of Geographical Information Systems, , 
+AprilJune, .
+
+Tamminen, M. 	. The excell method for ecient geometric access to data. Acta Polytechnica
+Scandinavica, Mathematics and Computer Science Series, No. , Helsinki, Finland.
+
+Tanimoto, S. and Pavlidis, T. 	. A hierarchical data structure for picture processing.
+Computer Graphics and Image Processing, ,  June, 	.
+
+
+

@@ -1,0 +1,737 @@
+CS 70
+Fall 2009
+
+Discrete Mathematics and Probability Theory
+Note 12
+Satish Rao,David Tse
+
+Two Killer Applications
+In this lecture, we will see two (cid:147)killer apps(cid:148) of elementary probability in Computer Science.
+
+1. Suppose a hash function distributes keys evenly over a table of size n. How many (randomly chosen)
+
+keys can we hash before the probability of a collision exceeds (say) 1
+2?
+
+2. Consider the following simple load balancing scenario. We are given m jobs and n machines; we
+allocate each job to a machine uniformly at random and independently of all other jobs. What is a
+likely value for the maximum load on any machine?
+
+As we shall see, both of these questions can be tackled by an analysis of the balls-and-bins probability space
+which we have already encountered.
+
+Application 1: Hash functions
+As you may recall, a hash table is a data structure that supports the storage of sets of keys from a (large)
+universe U (say, the names of all 250m people in the US). The operations supported are ADDing a key to the
+set, DELETEing a key from the set, and testing MEMBERship of a key in the set. The hash function h maps U
+to a table T of modest size. To ADD a key x to our set, we evaluate h(x) (i.e., apply the hash function to the
+key) and store x at the location h(x) in the table T. All keys in our set that are mapped to the same table
+location are stored in a simple linked list. The operations DELETE and MEMBER are implemented in similar
+fashion, by evaluating h(x) and searching the linked list at h(x). Note that the ef(cid:2)ciency of a hash function
+depends on having only few collisions (cid:151) i.e., keys that map to the same location. This is because the search
+time for DELETE and MEMBER operations is proportional to the length of the corresponding linked list.
+The question we are interested in here is the following: suppose our hash table T has size n, and that our
+hash function h distributes U evenly over T.1 Assume that the keys we want to store are chosen uniformly at
+random and independently from the universe U. What is the largest number, m, of keys we can store before
+the probability of a collision reaches 1
+2?
+Lets begin by seeing how this problem can be put into the balls and bins framework. The balls will be
+the m keys to be stored, and the bins will be the n locations in the hash table T. Since the keys are chosen
+uniformly and independently from U, and since the hash function distributes keys evenly over the table, we
+can see each key (ball) as choosing a hash table location (bin) uniformly and independently from T. Thus
+the probability space corresponding to this hashing experiment is exactly the same as the balls and bins
+space.
+We are interested in the event A that there is no collision, or equivalently, that all m balls land in different
+bins. Clearly Pr[A] will decrease as m increases (with n (cid:2)xed). Our goal is to (cid:2)nd the largest value of m
+1I.e., jUj = an (the size of U is an integer multiple a of the size of T), and for each y 2 T, the number of keys x 2 U for which
+
+h(x) = y is exactly a.
+
+CS 70, Fall 2009, Note 12
+
+1
+
+such that Pr[A] remains above 1
+2. [Note: Really we are looking at different sample spaces here, one for each
+value of m. So it would be more correct to write Prm rather than just Pr, to make clear which sample space
+we are talking about. However, we will omit this detail.]
+Lets (cid:2)x the value of m and try to compute Pr[A]. Since our probability space is uniform (each outcome has
+probability 1
+nm ), its enough just to count the number of outcomes in A. In how many ways can we arrange m
+balls in n bins so that no bin contains more than one ball? Well, there are n places to put the (cid:2)rst ball, then
+n(cid:0) 1 remaining places for the second ball (since it cannot go in the same bin as the (cid:2)rst), n(cid:0) 2 places for
+the third ball, and so on. Thus the total number of such arrangements is
+
+n(cid:2) (n(cid:0) 1)(cid:2) (n(cid:0) 2)(cid:2)(cid:1)(cid:1)(cid:1)(cid:2) (n(cid:0) m + 2)(cid:2) (n(cid:0) m + 1):
+
+This formula is valid as long as m (cid:20) n: if m > n then clearly the answer is zero. From now on, well assume
+that m (cid:20) n.
+Now we can calculate the probability of no collision:
+
+Pr[A] =
+
+n(n(cid:0) 1)(n(cid:0) 2) : : : (n(cid:0) m + 1)
+n
+n (cid:2)
+= (cid:16)1(cid:0)
+
+nm
+n(cid:0) 2
+n(cid:0) 1
+n (cid:2)(cid:1)(cid:1)(cid:1)(cid:2)
+n (cid:2)
+n
+1
+2
+n(cid:17)(cid:2)(cid:16)1(cid:0)
+n(cid:17)(cid:2)(cid:1)(cid:1)(cid:1)(cid:2)(cid:16)1(cid:0)
+
+=
+
+n(cid:0) m + 1
+
+m(cid:0) 1
+n (cid:17):
+
+(1)
+
+Before going on, lets pause to observe that we could compute Pr[A] in a different way, as follows. View the
+probability space as a sequence of choices, one for each ball. For 1 (cid:20) i (cid:20) m, let Ai be the event that the ith
+ball lands in a different bin from balls 1;2; : : : ;i(cid:0) 1. Then
+
+n
+
+m(cid:0)1
+i=1 Ai]
+
+Pr[A] = Pr[T
+
+i=1 Ai] = Pr[A1](cid:2) Pr[A2jA1](cid:2) Pr[A3jA1 \ A2](cid:2)(cid:1)(cid:1)(cid:1)(cid:2) Pr[AmjT
+
+m(cid:0) 1
+n (cid:17):
+
+= 1(cid:2)
+= (cid:16)1(cid:0)
+
+n(cid:0) 2
+n(cid:0) 1
+n(cid:0) m + 1
+n (cid:2)(cid:1)(cid:1)(cid:1)(cid:2)
+n (cid:2)
+n
+2
+1
+n(cid:17)(cid:2)(cid:1)(cid:1)(cid:1)(cid:2)(cid:16)1(cid:0)
+n(cid:17)(cid:2)(cid:16)1(cid:0)
+Fortunately, we get the same answer as before!
+[You should make sure you see how we obtained the
+conditional probabilities in the second line above. For example, Pr[A3jA1 \ A2] is the probability that the
+third ball lands in a different bin from the (cid:2)rst two balls, given that those two balls also landed in different
+bins. This means that the third ball has n(cid:0) 2 possible bin choices out of a total of n.]
+Essentially, we are now done with our problem: equation (1) gives an exact formula for the probability of
+no collision when m keys are hashed. All we need to do now is plug values m = 1;2;3; : : : into (1) until we
+(cid:2)nd that Pr[A] drops below 1
+But this is not really satisfactory: it would be much more useful to have a formula that gives the (cid:147)critical(cid:148)
+value of m directly, rather than having to compute Pr[A] for m = 1;2;3; : : :. Note that we would have to do
+this computation separately for each different value of n we are interested in: i.e., whenever we change the
+size of our hash table.
+So what remains is to (cid:147)turn equation (1) around(cid:148), so that it tells us the value of m at which Pr[A] drops
+below 1
+2. To do this, lets take logs: this is a good thing to do because it turns the product into a sum, which
+is easier to handle. We get
+
+2. The corresponding value of m (minus 1) is what we want.
+
+ln(Pr[A]) = ln(cid:16)1(cid:0)
+
+1
+n(cid:17) + ln(cid:16)1(cid:0)
+
+2
+n(cid:17) +(cid:1)(cid:1)(cid:1) + ln(cid:16)1(cid:0)
+
+m(cid:0) 1
+n (cid:17);
+
+CS 70, Fall 2009, Note 12
+
+(2)
+
+2
+
+2 + x3
+
+where (cid:147)ln(cid:148) denotes natural (base e) logarithm. Now we can make use of a standard approximation for
+logarithms: namely, if x is small then ln(1(cid:0) x) (cid:25) (cid:0)x. This comes from the Taylor series expansion
+
+x2
+2 (cid:0)
+
+ln(1(cid:0) x) = (cid:0)x(cid:0)
+
+2. In other words, we have
+
+3 +(cid:1)(cid:1)(cid:1) ), which is at most 2x2 when
+
+x3
+3 (cid:0) : : : :
+So by replacing ln(1(cid:0)x) by (cid:0)x we are making an error of at most ( x2
+x (cid:20) 1
+(cid:0)x (cid:21) ln(1(cid:0) x) (cid:21) (cid:0)x(cid:0) 2x2:
+And if x is small then the error term 2x2 will be much smaller than the main term (cid:0)x. Rather than carry
+around the error term 2x2 everywhere, in what follows well just write ln(1(cid:0) x) (cid:25) (cid:0)x, secure in the knowl-
+edge that we could make this approximation precise if necessary.
+Now lets plug this approximation into equation (2):
+2
+1
+n (cid:0)
+n (cid:0)
+m(cid:0)1
+1
+(cid:229)
+i
+n
+i=1
+m(m(cid:0) 1)
+m2
+2n :
+
+ln(Pr[A]) (cid:25) (cid:0)
+= (cid:0)
+
+3
+n (cid:0) : : :(cid:0)
+
+m(cid:0) 1
+n
+
+= (cid:0)
+
+(cid:25) (cid:0)
+
+2n
+
+n ; 2
+Note that weve used the approximation for ln(1(cid:0)x) with x = 1
+n . So our approximation should
+be good provided all these are small, i.e., provided n is fairly big and m is quite a bit smaller than n. Once
+were done, well see that the approximation is actually pretty good even for modest sizes of n.
+Now we can undo the logs in (3) to get our expression for Pr[A]:
+
+n ; : : : ; m(cid:0)1
+
+n ; 3
+
+Pr[A] (cid:25) e(cid:0) m2
+
+2n :
+
+The (cid:2)nal step is to (cid:2)gure out for what value of m this probability becomes 1
+that e(cid:0) m2
+
+2n (cid:21) 1
+
+2. This means we must have
+m2
+2n (cid:21) ln( 1
+
+(cid:0)
+
+2 ) = (cid:0)ln2;
+
+or equivalently
+
+(3)
+
+(4)
+
+2. So we want the largest m such
+
+m (cid:20) p(2ln2)n (cid:25) 1:177pn:
+
+So the bottom line is that we can hash approximately m = b1:177pnc keys before the probability of a colli-
+sion reaches 1
+2.
+Recall that our calculation was only approximate; so we should go back and get a feel for how much error
+we made. We can do this by using equation (1) to compute the exact value m = m0 at which Pr[A] drops
+2, for a few sample values of n. Then we can compare these values with our estimate m = 1:177pn.
+below 1
+
+n
+1:177pn
+exact m0
+
+10
+3.7
+4
+
+20
+5.3
+5
+
+50
+8.3
+8
+
+100
+11.8
+12
+
+200
+16.6
+16
+
+365
+22.5
+22
+
+500
+26.3
+26
+
+1000
+37.3
+37
+
+104
+118
+118
+
+105
+372
+372
+
+106
+1177
+1177
+
+CS 70, Fall 2009, Note 12
+
+3
+
+From the table, we see that our approximation is very good even for small values of n. When n is large, the
+error in the approximation becomes negligible.
+
+Why 1
+2?
+
+2. Is there anything special about 1
+Our hashing question asked when the probability of a collision rises to 1
+2?
+Not at all. What we did was to (approximately) compute Pr[A] (the probability of no collision) as a function
+of m, and then (cid:2)nd the largest value of m for which our estimate is smaller than 1
+2. If instead we were
+interested in keeping the collision probability below (say) 0.05 (= 5%), we would just replace 1
+2 by 0.95 in
+equation (4). If you work through the last piece of algebra again, youll see that this gives us the critical
+value m = p(2ln(20=19))n (cid:25) 0:32pn, which of course is a bit smaller than before because our collision
+probability is now smaller. But no matter what (cid:147)con(cid:2)dence(cid:148) probability we specify, our critical value of m
+will always be cpn for some constant c (which depends on the con(cid:2)dence).
+
+The birthday paradox revisited
+
+Recall from a previous lecture the birthday (cid:147)paradox(cid:148): what is the probability that, in a group of m people,
+no two people have the same birthday? The problem we have solved above is essentially just a generalization
+of the birthday problem: the bins are the birthdays and the balls are the people, and we want the probability
+that there is no collision. The above table at n = 365 tells us for what value of m this probability drops
+below 1
+
+2: namely, 23.
+
+Application 2: Load balancing
+One of the most pressing practical issues in distributed computing is how to spread the workload in a
+distributed system among its processors. This is a huge question, still very much unsolved in general. Here
+we investigate an extremely simple scenario that is both fundamental in its own right and also establishes a
+baseline against which more sophisticated methods should be judged.
+Suppose we have m identical jobs and n identical processors. Our task is to assign the jobs to the processors
+in such a way that no processor is too heavily loaded. Of course, there is a simple optimal solution here: just
+divide up the jobs as evenly as possible, so that each processor receives either d m
+n c jobs. However, this
+solution requires a lot of centralized control, and/or a lot of communication: the workload has to be balanced
+evenly either by a powerful centralized scheduler that talks to all the processors, or by the exchange of many
+messages between jobs and processors. This kind of operation is very costly in most distributed systems.
+The question therefore is: What can we do with little or no overhead in scheduling and communication cost?
+The (cid:2)rst idea that comes to mind here is: : : balls and bins! I.e., each job simply selects a processor uniformly
+at random and independently of all others, and goes to that processor.
+(Make sure you believe that the
+probability space for this experiment is the same as the one for balls and bins.) This scheme requires no
+communication. However, presumably it wont in general achieve an optimal balancing of the load. Let X
+be the maximum loading of any processor under our randomized scheme. Note that X isnt a (cid:2)xed number:
+its value depends on the outcome of our balls and bins experiment.2 So, as designers or users of this load
+balancing scheme, what should be our question?
+
+n e or b m
+
+Q: Find the smallest value k such that
+
+2In fact, X is called a random variable: well de(cid:2)ne this properly in the next lecture.
+
+Pr[X (cid:21) k] (cid:20) 1
+2 :
+
+CS 70, Fall 2009, Note 12
+
+4
+
+If we have such a value k, then well know that, with good probability (at least 1
+2), the maximum load on
+any processor in our system wont exceed k. This will give us a good idea about the performance of the
+system. Of course, as with our hashing application, theres nothing special about the value 1
+2: were just
+using this for illustration. As you can check later, essentially the same analysis can be used to (cid:2)nd k such
+that Pr[X (cid:21) k] (cid:20) 0:05 (i.e., 95% con(cid:2)dence), or any other value we like. Indeed, we can even (cid:2)nd the ks for
+several different con(cid:2)dence levels and thus build up a more detailed picture of the behavior of the scheme.
+To simplify our problem, well also assume from now on that m = n (i.e., the number of jobs is the same as
+the number of processors). With a bit more work, we could generalize our analysis to other values of m.
+From Application 1 we know that we get collisions already when m (cid:25) 1:177pn. So when m = n the
+maximum load will certainly be larger than 1 (with good probability). But how large will it be? If we try to
+analyze the maximum load directly, we run into the problem that it depends on the number of jobs at every
+processor (or equivalently, the number of balls in every bin). Since the load in one bin depends on those in
+the others, this becomes very tricky. Instead, what well do is analyze the load in any one bin, say bin 1; this
+will be fairly easy. Call the load in bin 1 X1 (another random variable). What well do is (cid:2)nd k such that
+
+Since all the bins are identical, we will then know that, for the same k,
+
+Pr[X1 (cid:21) k] (cid:20) 1
+2n :
+
+(5)
+
+Pr[Xi (cid:21) k] (cid:20) 1
+
+2n
+
+for i = 1;2; : : : ;n;
+
+where Xi is the load in bin i. But now, since the event X (cid:21) k is exactly the union of the events Xi (cid:21) k (why?),
+we can use the (cid:147)Union Bound(cid:148) from the previous lecture:
+Pr[X (cid:21) k] = Pr[Sn
+(cid:20) (cid:229)n
+= n(cid:2) 1
+= 1
+2 :
+
+i=1(Xi (cid:21) k)]
+i=1 Pr[Xi (cid:21) k]
+
+2n
+
+Its worth standing back to notice what we did here: we wanted to conclude that Pr[A] (cid:20) 1
+2, where A is
+n
+i=1 Ai, for much simpler
+the event that X (cid:21) k. We couldnt analyze A directly, but we knew that A = S
+events Ai (namely, Ai is the event that Xi (cid:21) k). Since there are n events Ai, and all have the same probability,
+it is enough for us to show that Pr[Ai] (cid:20) 1
+2n; the union bound then guarantees that Pr[A] (cid:20) 1
+2. This kind of
+reasoning is very common in applications of probability in Computer Science.
+Now lets get back to our problem. Recall that weve reduced our task to (cid:2)nding k such that
+
+where X1 is the load in bin 1. Its not hard to write down an exact expression for Pr[X1 = j], the probability
+that the load in bin 1 is precisely j:
+
+Pr[X1 (cid:21) k] (cid:20) 1
+2n ;
+
+Pr[X1 = j] =(cid:18)n
+
+j(cid:19)(cid:0)1
+n(cid:0) j
+(cid:0)1(cid:0) 1
+n(cid:1)
+n(cid:1)
+This can be seen by viewing each ball as a biased coin toss: Heads corresponds to the ball landing in bin 1,
+Tails to all other outcomes. So the Heads probability is 1
+n; and all coin tosses are (mutually) independent.
+As we saw in earlier lectures, (6) gives the probability of exactly j Heads in n tosses.
+Thus we have
+
+(6)
+
+:
+
+j
+
+Pr[X1 (cid:21) k] =
+
+CS 70, Fall 2009, Note 12
+
+n
+(cid:229)
+j=k
+
+Pr[X1 = j] =
+
+n
+j=k(cid:18)n
+(cid:229)
+
+j
+
+j(cid:19)(cid:0) 1
+n(cid:1)
+
+n(cid:0) j
+
+(cid:0)1(cid:0) 1
+n(cid:1)
+
+:
+
+(7)
+
+5
+
+Now in some sense we are done: we could try plugging values k = 1;2; : : : into (7) until the probability drops
+below 1
+2n. However, as in the hashing example, it will be much more useful if we can massage equation (7)
+into a cleaner form from which we can read off the value of k more directly. So once again we need to do a
+few calculations and approximations:
+
+Pr[X1 (cid:21) k] =
+
+(cid:20)
+
+=
+
+j
+
+j
+
+n
+j=k(cid:18)n
+j(cid:19)(cid:0)1
+n(cid:0) j
+(cid:229)
+(cid:0)1(cid:0) 1
+n(cid:1)
+n(cid:1)
+n
+(cid:229)
+j=k(cid:16) ne
+(cid:0) 1
+j (cid:17)
+n(cid:1)
+n
+(cid:229)
+j=k(cid:16) e
+j(cid:17)
+
+j
+
+j
+
+(8)
+
+n )n(cid:0) j term. It will turn out that we didnt lose too much by doing these things.
+
+In the second line here, we used the standard approximation3 ( n
+the (1(cid:0) 1
+Now were already down to a much cleaner form in (8). To (cid:2)nish up, we just need to sum the series. Again,
+well make an approximation to simplify our task, and hope that it doesnt cost us too much. The terms in
+the series in (8) go down at each step by a factor of at least e
+k. So we can bound the series by a geometric
+series, which is easy to sum:
+
+j ) j, and we also tossed away
+
+j(cid:1) (cid:20) ( ne
+
+j ) j (cid:20)(cid:0)n
+
+;
+
+(9)
+
+j
+
+n
+(cid:229)
+j=k(cid:16) e
+j(cid:17)
+
+(cid:20)(cid:0) e
+k(cid:1)
+
+k(cid:16)1 + e
+
+k +(cid:0) e
+k(cid:1)
+
+2
+
+k
+
++(cid:1)(cid:1)(cid:1)(cid:17) (cid:20) 2(cid:0) e
+k(cid:1)
+
+where the second inequality holds provided we assume that k (cid:21) 2e (which it will be, as we shall see in a
+moment).
+So what we have now shown is the following:
+
+k
+
+Pr[X1 (cid:21) k] (cid:20) 2(cid:0) e
+k(cid:1)
+
+(10)
+(provided k (cid:21) 2e). Note that, even though we have made a few approximations, inequality (10) is completely
+valid: all our approximations were (cid:147)(cid:20)(cid:148), so we always have an upper bound on Pr[X1 (cid:21) k]. [You should go
+back through all the steps and check this.]
+Recall from (5) that our goal is to make the probability in (10) less than 1
+2n. We can ensure this by choosing k
+so that
+
+(11)
+Now we are in good shape: given any value n for the number of jobs/processors, we just need to (cid:2)nd the
+smallest value k = k0 that satis(cid:2)es inequality (11). We will then know that, with probability at least 1
+2, the
+maximum load on any processor is at most k0. The table below shows the values of k0 for some sample
+values of n. It is recommended that you perform the experiment and compare these values of k0 with what
+happens in practice.
+
+(cid:20) 1
+4n :
+
+(cid:0) e
+k(cid:1)
+
+k
+
+n
+exact k0
+ln(4n)
+2lnn
+lnlnn
+
+10
+6
+3.7
+5.6
+
+20
+6
+4.4
+5.4
+
+50
+7
+5.3
+5.8
+
+100
+7
+6.0
+6.0
+
+500
+8
+7.6
+6.8
+
+1000
+
+8
+8.3
+7.2
+
+104
+9
+10.6
+8.2
+
+105
+10
+13.9
+9.4
+
+106
+11
+15.2
+10.6
+
+107
+12
+17.5
+11.6
+
+108
+13
+19.8
+12.6
+
+1015
+19
+36
+20
+
+3Computer scientists and mathematicians carry around a little bag of tricks for replacing complicated expressions like (cid:0)n
+simpler approximations. This is just one of these. It isnt too hard to prove the lower bound, i.e., that (cid:0)n
+is a bit trickier, and makes use of another approximation for n! known as Stirlings approximation, which implies that j! (cid:21) (
+We wont discuss the details here.
+
+j(cid:1) with
+j ) j. The upper bound
+j
+e ) j.
+
+j(cid:1) (cid:21) ( n
+
+CS 70, Fall 2009, Note 12
+
+6
+
+Can we come up with a formula for k0 as a function of n (as we did for the hashing problem)? Well, lets
+take logs in (11):
+
+k(lnk(cid:0) 1) (cid:21) ln(4n):
+
+(12)
+From this, we might guess that k = ln(4n) is a good value for k0. Plugging in this value of k makes the left-
+hand side of (12) equal to ln(4n)(ln ln(4n)(cid:0)1), which is certainly bigger than ln(4n) provided lnln(4n) (cid:21) 2,
+i.e., n (cid:21) 1
+(cid:25) 405. So for n (cid:21) 405 we can claim that the maximum load is (with probability at least 1
+2)
+no larger than ln(4n). The table above plots the values of ln(4n) for comparison with k0. As expected, the
+estimate is quite good for small n, but becomes rather pessimistic when n is large.
+For large n we can do better as follows. If we plug the value k = lnn
+becomes
+
+4ee2
+
+lnn
+lnlnn (lnlnn(cid:0) lnlnlnn(cid:0) 1) = lnn(cid:18)1(cid:0)
+
+lnlnn into the left-hand side of (12), it
+lnlnlnn + 1
+lnlnn (cid:19) :
+
+(13)
+
+Now when n is large this is just barely smaller than the right-hand side, ln(4n). Why? (cid:151) Because the second
+term inside the parentheses goes to zero as n ! ,4 and because ln(4n) = lnn + ln4, which is very close to
+lnn when n is large (since ln4 is a (cid:2)xed small constant). So we can conclude that, for large values of n, the
+quantity lnn
+lnlnn should be a pretty good estimate of k0. Actually for this estimate to become good n has to be
+(literally) astronomically large. For more civilized values of n, we get a better estimate by taking k = 2lnn
+lnlnn.
+The extra factor of 2 helps to wipe out the lower order terms (i.e., the second term in the parenthesis in (13)
+and the ln4) more quickly. The table above also shows the behavior of this estimate for various values of n.
+Finally, here is one punchline from Application 2. Lets say the total US population is about 250 million.
+Suppose we mail 250 million items of junk mail, each one with a random US address. Then (see the above
+table) with probability at least 1
+
+2, no one person anywhere will receive more than about a dozen items!
+
+4To see this, note that it is of the form lnz+1
+
+z where z = lnlnn, and of course lnz
+
+z ! 0 as z ! .
+
+CS 70, Fall 2009, Note 12
+
+7
+

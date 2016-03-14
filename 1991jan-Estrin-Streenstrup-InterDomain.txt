@@ -1,0 +1,647 @@
+	
+
+Inter Domain Policy Routing : Overview of Architecture an d
+Protocols
+Deborah Estrin and Martha Steenstrup l
+
+1 Introductio n
+The Open Routing Working Group of the IETF ha s
+developed an architecture for policy routing among administrative domains . The Inter-Domain Policy Routing (IDPR) architecture allows routing decisions to b e
+made on the basis of administrative policy, in additio n
+to connectivity and type of service .
+This paper summarizes the key concepts and protocols developed . For more detailed discussion, we refe r
+the reader to [11, 18, 2] . The IDPR protocols described
+were designed in collaboration with : H . Bowns, L . Breslau, I . Castineyra, D . Estrin, M . Lepp, T . Li, M . Little ,
+K . Obraczka, M . Steenstrup, G . Tsudik, and R . Wood burn .
+
+2 IDPR, Basic Concept s
+IDPR uses a link-state style routing protocol, along wit h
+source routing and explicit advertisement of policy an d
+topology information . The source routes specify th e
+administrative domains (ADs) that compose a source destination path ; the particular links and routers transited within ADs are transparent to the source and ma y
+change during the course of a session . Source routes
+are computed based on topology and policy informatio n
+advertised by each participating transit AD (see definitions in Section 3 . Policy information specifies whic h
+traffic the particular AD will carry, e .g ., an AD ca n
+limit the types of service made available to particula r
+endpoint ADs . The routing updates (topology and policy information) are advertised to all AD-level routing
+elements so that source routes can be computed appropriately .
+Elsewhere the considerations that motivate the design of IDPR protocols are detailed[4, 11, 2, 6] . On e
+of the key characteristics of IDPR is the use of source
+routing . Source routing, combined with explicit expression of policies in routing updates, allows transit AD s
+to apply source-specific policies and allows source AD s
+to apply local route selection criteria . Hop by hop protocols do not efficiently support the large set of policie s
+and types of service that we anticipate will arise in th e
+global inter-AD internet . For example, in order to sup port source-specific policies, hop by hop routing woul d
+ACM SIGCOMM
+
+-71 -
+
+Figure 1 : Example of policies that can not be supporte d
+with hop by hop routing without replicating routing tables . In this example, C can use B or E to get to A .
+However, D wants to use B, and F wants to use E .
+In hop by hop routing C must make a single decisio n
+if we assume a single routing table . Consequently, C' s
+decision will deny either D or F a route . Examples o f
+policies that could lead to this situation are : (1) B provides enhanced type of service support but charges on a
+usage sensitive basis while E does not charge but make s
+no service guarantees, (2) D is a university, F is a private corporation, and B is a subsidized gigabit networ k
+for university use only .
+
+have to replicate routing tables for each possible source –
+a clearly infeasible solution . Figure 1 illustrates the nee d
+for source-specific policies and the inadequacy of hop b y
+hop routing in this regard . In addition, source routin g
+has the advantage of relaxing the consistency requirements for routing databases across the global internet .
+When a packet is outgoing from one AD to another ,
+and assuming an AD-level source route has been computed, a policy route is setup from the source AD to th e
+destination AD (see Section 4 .2) . Successive packet s
+between those two ADs, that meet the policy and typ e
+of service requirements specified in the setup packet ,
+need not carry the full source route . Instead the successive packets are forwarded based upon a globall y
+unique path ID and corresponding state informatio n
+maintained in the AD boundary routers . In effect, the
+architecture allows routes to be installed on demand i n
+
+Computer Communication Review
+
+	
+
+policy gateways through the setup function . For furthe r
+discussion see [11, 18] .
+
+3 Terminology and Definitions
+The following definitions and terminology are used through out the remainder of the paper . Most of them are described in more detail in the subsequent sections .
+• Administrative Domain (AD) : a collection o f
+links, routers, and end-systems governed by a single administrative authority .[9] .
+• Stub ADs : contain the communicating end-systems
+that are the endpoints of communication ; stu b
+ADs do not provide transit services and need no t
+advertise policies .
+• Transit ADs : provide transit services and mus t
+advertise their policies .
+• Hybrid ADs offer transit services (typically to
+fewer neighbor ADs), as well as end-system access .
+• Policy gateway (PG) : router at the border of
+an AD that implements the IDPR . protocol .
+• Virtual gateway (VG) : a set of (at least two)
+physical policy gateways that form a connectio n
+between two neighboring ADs . Every VG has two
+" sides " , one in each of the ADs that it connects ;
+in its simplest form a VG consists of two PGs, on e
+in each of the connecting ADs . The abstraction i s
+introduced to reduce the amount of detailed (i .e . ,
+PG specific) status information that is distribute d
+and maintained in the event that there are more
+than two PGs in a VG .
+• Route Server (RS) : entity within each AD that
+collects topology and policy information from othe r
+ADs and computes Policy Routes (see below) base d
+on this information .
+• Policy Term (PT) : conditions specified by an
+AD for use of its transit resources . Policies ma y
+be in terms of endpoint ADs that are permitted t o
+use the resource, type of service made available ,
+or previous and next hop AD via which resource s
+may be accessed, etc . For further discussion o f
+policy types see [6] . Policy terms are carried i n
+routing updates (see Update Protocol below) .
+• Policy route (PR) : the AD-level source rout e
+from source to destination AD . In particular, a
+PR is a sequence of VGs with the associated PT s
+that permit use of the respective AD resource .
+ACM SIGCOMM
+
+-72 -
+
+• Connectivity database : the database of policy and topology information used by the Rout e
+Server as input to the route computation . Th e
+database includes configured topology and polic y
+information, as well as most-recently reported status (i .e ., up or down) of particular VGs .
+e Route database : the database generated by rout e
+computation and kept by the route server . Polic y
+gateways query the route server for routes fro m
+this database when outgoing packets arrive fo r
+which no PR exists .
+• Forwarding information base : the database o f
+active PRs maintained by PGs in order to forwar d
+packets along active PRs .
+• Setup and data protocols : the protocols use d
+to set up PRs and forward data packets along established PRs .
+• Update protocol : distributes configured and status information about topology and policy . A lin k
+state protocol in which every AD advertises information about its neighbor connections to all AD s
+in the internet . 2
+• Virtual gateway protocol : carries informatio n
+among the PGs in an AD to determine the statu s
+of VGs that should be advertised in the updat e
+protocol .
+• Configuration Server : entity within each A D
+that distributes local (to the AD) configuratio n
+information to PGs and RSs . For example, th e
+configuration server distributes the local PTs t o
+the local PGs to be used in validation of setu p
+requests .
+The following section describes these elements i n
+more detail .
+
+4 Protocol s
+Three protocols form the core of the IDPR architecture :
+(1) virtual gateway protocol, (2) route setup and packet
+forwarding, and (3) update distribution of AD topolog y
+and policy information . A fourth function, route synthesis, is critical to the architecture but is not a protoco l
+per se ; each AD can implement its own version of rout e
+synthesis so long as it interfaces to the other protocol s
+(e .g ., update provides the inputs to route synthesis an d
+route synthesis provides policy routes to setup) . In addition to these four functions there are protocols fo r
+communication between the PG and RS, and the P G
+2 For most of this paper we assume a flat space of ADs acros s
+which all update information is flooded (i .e ., no hierarchy) .
+Computer Communication Review
+
+	
+
+gateways within an AD use information collected fro m
+VGP to make local forwarding decisions, across a V G
+or across an AD . This detailed forwarding information
+is only distributed within the AD or VG and not to
+the whole internet . In addition, to the VGP derive d
+information, each PG uses a simple up/down protocol t o
+monitor reachability of directly connected PGs within
+a VG . PGs use their AD's internal IGP (or the P G
+up/down protocol if the internal IGP is not adequate )
+to monitor the reachability of other VGs (but only VG s
+in which the AD is a participant) . VGP packets ar e
+encapsulated in the internet protocol used among PGs .
+In summary, the information obtained from IGP an d
+VGP is used by each PG to carry out setup and updat e
+procedures, as described in the rest of this section .
+
+4 .2
+Figure 2 : Simplified block diagram of the IDPR elements and their interaction .
+and configuration server . The interaction of these elements is illustrated in Figure 2 .
+The virtual gateway, setup, and update protocol s
+generate control packets that travel between PGs, generally in a hop-by-hop reliable fashion .' The control information is encapsulated in the internet protocol use d
+among PGs . Data packets travel with a smaller heade r
+indicating the path ID of the policy route being used .
+The operation of the individual protocols is summarize d
+below .
+
+4 .1
+
+Virtual Gateway Protoco l
+
+VGP is the protocol that allows groups of PGs to appea r
+to the update and route synthesis processes as singl e
+entities . At a minimum a VG is comprised of two PGs ,
+one in each of two directly-connected ADs . There ma y
+be more than one PG on either side of the VG, where a
+side refers to each AD .
+VGP information has both global and local significance . The update protocol (described in Section 4 .3)
+includes
+VG reachability information garnered from VGP i n
+dynamic routing updates ; in this sense, VGP carries
+globally-relevant information . At the same time, polic y
+3 The one exception to hop by hop handling of control packets arises when a route server requests an explicit update fro m
+someone other than its direct neighbor . In this case the updat e
+response is sent back from the responding RS to the requester an d
+is not processed by neighbor PGs .
+ACM SIGCOMM
+
+-73 -
+
+Packet Forwarding and Route Setu p
+
+The route setup protocol establishes a logical connection along the sequence of PGs that instantiate a policy
+route . Consequently, when an outbound packet arrive s
+at a PG (i .e ., the packet is exiting the AD to which th e
+PG belongs), the source PG looks to see if the packe t
+is part of a source-destination association that has al ready been bound to a policy route . In order for the
+association to match, it must have compatible type of
+service, user class identifiers, and other global conditions, in addition to the same source and destinatio n
+addresses . If the association is bound, then it has already been assigned a unique path ID by the source PG .
+In this case, the packet is encapsulated in an IDPR dat a
+packet header, and the packet is forwarded to the nex t
+PG on the already established policy route . The heade r
+includes the path ID, which is comprised of the sourc e
+AD, PG, and a unique number assigned by the sourc e
+PG . If the packet is not part of a currently mapped asso-
+
+ciation, the source PG compares the policy conditions o f
+the packet with active policy routes . If it matches, then
+the association is added to the table and the packet i s
+encapsulated as described above . In other words, many
+transport sessions may share a policy route, and consequently will use the same path ID . Finally, if no active
+policy route applies, the PG invokes the route setu p
+function (see Section 5 .3) .
+Route setup generates a setup request control packe t
+which travels, hop-by-hop, along a sequence of PGs tha t
+correspond to the policy route . Packets are encapsulated in internet packets with the source address set t o
+that of the sending PG and the destination address t o
+that of the next PG . The policy route is included withi n
+the control packet so that each PG can make the nex t
+forwarding decision .
+When a PG receives a setup request, it checks th e
+
+Computer Communication Review
+
+	
+
+listed policy conditions and packet integrity .' If al l
+checks pass, the necessary state information is installe d
+(e .g ., path ID, next hop) and the setup packet is sen t
+to the next PG in the policy route . The setup packe t
+includes a policy route that lists VGs . VGP, describe d
+above, keeps each PG in a VG informed of which PG s
+are reachable within its VG, and which PGs represen t
+the AD ' s other VGs . When a PG receives an outgoin g
+packet (where outgoing means that it is exiting the A D
+to which the PG belongs), the PG must decide whic h
+PG on the other side of the VG to forward it to . Whe n
+a PG receives an incoming packet, it must decide whic h
+PG in the next VG to send it to . In the first case th e
+next PG is in a directly connected AD ; in the secon d
+case the next PG is in the same AD as the sender . Information from the IGP is used to determine reachabilit y
+of PGs within the same AD . Therefore, a policy rout e
+resembles a loose source route in two ways . First, th e
+non-policy gateways traversed between next hop VG s
+are not bound before actual data packet transfer . In addition, even PGs are not bound until route setup tim e
+and can therefore adapt to PG up/down status, if VG s
+have redundant PGs .
+The setup protocol serves to install routes on demand in the necessary PGs . Therefore it is well suite d
+to an environment in which there are a large numbe r
+of possible policies and associated policy routes . Such
+an environment makes hop-by-hop route table replication impractical and requires more global coordination .
+Unlike some connection-oriented protocols, these path s
+are shared among multiple transport sessions, and even
+among different host pairs, to avoid the latency of setu p
+for transport sessions that exhibit some locality . More over, expedited data can be included in setup packets to
+accommodate datagram traffic that is traveling to uncommon destinations and that is not frequent enoug h
+to warrant maintaining state .
+4 .3
+
+Update
+
+The update protocol is a reliable link state update protocol similar to those described in [14, 16, 15] As wit h
+setup packets, routing updates are sent from PG to P G
+in a hop by hop reliable manner . 5 Update packets ar e
+encapsulated in the internet protocol used between PG s
+(e .g ., within ADs) .
+The update packets include sequence numbers that
+allow duplicate detection . If the topology includes cycles a PG may receive an update more than once, Th e
+duplicate update is detected and dropped so that du4 The particular signature scheme used for integrity protectio n
+is indicated in the setup packet . For more information on the
+security mechanisms provided see [18, 81 .
+S However, in this case, retransmission of unreceived updat e
+packets may be over-ridden by availability of a new update packe t
+that obsoletes the retransmitted information .
+ACM SIGCOMM
+
+-74 -
+
+plicates are not flooded further . Routing updates ar e
+not modified en route . Each update includes a signature (computed and appended in the originating A D
+and checked by the recipient update process within eac h
+AD) to provide integrity and authenticity .
+Routing updates are generated by a representativ e
+PG in each transit AD (i .e ., the lowest-numbered, liv e
+and reachable PG in the AD) . 6 The ultimate recipients
+of this information are the route servers in stub and hybrid ADs (i .e ., any AD that must generate policy route s
+for traffic generated by end systems within the AD) .
+There are two types of update messages . Configuration messages indicate the configured topology and policy information independent of the particular up/dow n
+status of each VG . Dynamic routing updates indicate
+which VGs are currently up, reachable, and therefor e
+available for forwarding data packets . Configured routing updates are sent on a periodic basis, whereas dynamic updates are triggered by changes in VG status .
+Even dynamic updates are expected to be low frequenc y
+events (e .g ., relative to intra-domain IGP routing) . Fo r
+example, when an intra-domain link goes down, we expect the AD's IGP to find an alternative path betwee n
+any two PGs, thereby making the change transparen t
+to IDPR, If a PR was computed with correct configured information, but without the benefit of up to dat e
+dynamic information, the setup (or data packet forwarding) process will fail with an appropriate error messag e
+alerting the originator of the setup ; but no looping wil l
+occur because of the use of loop-free source routes .
+Update packets express policy and topology information . One can think of the information in an updat e
+message as a listing of the policy conditions that ar e
+supported between each pair of the AD ' s VGs . How ever, assuming that many policies will be applied uniformly to a large subset of VGs in an AD, this would b e
+inefficient . Therefore, each entry in an update is rep resented as a set of policy conditions that apply to th e
+set of VGs listed . The VGs listed indicate connectivit y
+to directly-connected neighbors ; so all VGs listed in an
+update refer to VGs that connect to the AD generating the update . (This is analogous to a traditional lin k
+state update that advertizes information about a node' s
+neighbors . )
+The information needed to generate an update packe t
+is collected from VGP, IGP, and the configuration server .
+VGP and IGP information allows the representative P G
+to determine which VGs are up and reachable . The con6 1n the absence of intra-AD partitions, there is one representative PG per AD . If a partition occurs then two PGs on eithe r
+side will assume the PG representative role and receiving updat e
+processes will effectively treat them as separate ADs until th e
+partition is healed . Update request and response messages ar e
+used to reconstitute a connectivity database after a partition . In
+the future, additional mechanisms for healing partitions may b e
+included .
+Computer Communication Review
+
+	
+
+figuration server provides the PG with configured policy
+and topology information . The PG modifies the configured update to indicate which VGs are unreachable o r
+down .
+
+4 .4
+
+for a route with very specific characteristics . Moreover ,
+using on-demand computation alone is wasteful in term s
+of potentially unexploited parallelism . Both on-deman d
+and precomputed routes are cached to take advantage of
+the locality exhibited by most communication environments . However, optimal strategies for managing thes e
+caches, in particular invalidation, deserve more carefu l
+analysis .
+
+Route Synthesis
+
+Route synthesis is not a protocol per se . It is the function that takes input from the update protocol in th e
+form of global connectivity/policy database and computes AD level source routes . Route synthesis ma y
+be invoked on demand, i .e ., when the first outboun d
+packet in a transport session (for which there are no us able active PRs) arrives at the source PG . Alternatively ,
+route synthesis may be invoked in advance to precompute some subset of routes that the AD expects to us e
+(and thereby avoid the latency of on-demand computation) . Whatever form of route computation is used ,
+the input is the connectivity data base built with information obtained from Update . Given our assumption s
+about policy uniformity, we store the information as a
+collection of nodes that each represents either a polic y
+condition or a VG . The output of route synthesis are
+policy routes and associated conditions of usage . Th e
+policy route is a sequence of VGs and the policies tha t
+allowed the VG to be used in the path . General conditions of use such as type of service, time of day, etc . ar e
+appended to the route information itself . This information is stored and provided to setup upon request .
+When a route is computed on demand, the computation involves searching for a single route with specifi c
+characteristics . Therefore, much of the search tree can
+be pruned during computation . With precomputation ,
+many paths are computed simultaneously and the siz e
+of the explored search tree is much larger . The actua l
+size depends on the bounds placed on precomputatio n
+by the AD .
+It is not computationally feasible to precompute al l
+
+possible routes to all possible destinations in a large Internet with variable policies . Other routing protocol s
+limit the expressible or discoverable routes a priori b y
+restricting each routing node to advertise only a single route (or single route per type of service) to eac h
+destination . IDPR is more expressive, and allows eac h
+stub AD to control which subset of routes it will discover/compute . Each stub AD is free to design or tailor route synthesis to its needs . In general we expec t
+route synthesis to precompute some routes . Nevertheless, on-demand computation must always be supporte d
+to accommodate requirements not satisfied by precomputation (e .g ., uncommon destinations, unusual TO S
+requirements, or unusual policy conditions) . However ,
+the problem with on demand computation for all route s
+is that the computation may be time consuming relativ e
+to acceptable setup latency limits, even when searchin g
+ACM SIGCOMM
+
+-75 -
+
+Because of the challenging nature of the route computation problem, further issues associated with rout e
+synthesis are the subject of ongoing research, as mentioned in Section 5 .
+
+5 Design and Implementation Is sues
+One area in which significant research is needed is i n
+scaling of the IDPR architecture to very large network s
+(e .g ., 50,000 ADs with 10% transits) . The key scalin g
+issues pertain to connectivity database size, update distribution, route synthesis, and policy gateway state .
+
+5 .1
+
+Connectivity databas e
+
+The connectivity database maintains global information
+and therefore raises concerns regarding scale . The siz e
+of the database depends upon AD connectivity, as wel l
+as policies . In particular, the route server that maintains the database faces memory requirements that are a
+function of the number of transit ADs, the average number of neighbors for a transit AD, the number of policie s
+expressed, and the uniformity with which the policie s
+are applied . For example, if we assumed that each o f
+the 5,000 transit ADs includes an average of 10 polic y
+term entries in an update, and an average of 50 VGs pe r
+transit AD, then approximately 2 .5 Megabytes of storage is needed for the complete connectivity database .
+For further discussion, see [7] .
+A possible method for reducing connectivity databas e
+size is to introduce additional level(s) of abstraction or
+hierarchy, i .e ., group ADs into super ADs and only floo d
+update information among entities at the same level .
+However, in IDPR it is only meaningful to group AD s
+when policies are somewhat similar .
+When ADs are grouped, the policies advertised t o
+other AD groups must represent policies acceptable t o
+constituent ADs . Alternatively, the AD group must advertise multiple VGs to each neighbor group in order t o
+indicate the different policies supported . If intra-grou p
+policies differ significantly, then the AD group will have
+to advertise a large collection of policies for a large num ber of VGs and the amount of information distribute d
+will not be reduced . Moreover, from the perspectiv e
+Computer Communication Review
+
+	
+
+of logical connectivity (i .e ., taking into account policy
+as well as topology), the more dissimilar the policie s
+among constituent ADs, the more likely it is that th e
+AD group will appear partitioned to external groups–a n
+undesireable situation . Moreover, if other transit AD s
+(or groups) have policies that distinguish among members of an AD group, then those ADs will still writ e
+policies at the lower granularity and policy routes must
+be synthesized and set up with the finer granularity (i .e . ,
+not for the AD group as a whole) .
+
+5 .2
+
+Update distributio n
+
+Global flooding of update information also presents scal ing problems . To analyze update overhead we need t o
+make additional assumptions about the number of PG s
+in an AD and the number of inter-AD links supporte d
+by each of the PGs . For the purpose of this approximation we will assume 10 PGs per transit AD, wher e
+each PG is connected to 5 inter-AD links and each A D
+generates approximately one update per day . Although
+under these assumptions only 5,000 routing updates ar e
+generated per day, a PG may receive duplicates becaus e
+of the flooding technique used . Each PG will receive a t
+most one copy of each update from each of the PG s
+to which it is connected in neighboring ADs (5 in thi s
+example) . In the worst case each PG also receives on e
+copy of the udpate from each of the other PGs in it s
+own AD (9 in this example) . Therefore, in this pessimistic example, each PG would see at most 14 duplicates of each new update–averaging to 50 per minute o r
+less than 1 per second . This represents an aggregate o f
+approximately 3 Kbytes per second of data over intra AD resources . However, because internetwork structure
+more closely resembles a tree than a mesh, the general
+case should be much better . In other words, one P G
+in one VG typically will receive an update before an y
+others in a given AD . Consequently, an AD would no t
+experience updates from all VGs simultaneously and du-
+
+On demand computation can use a simple breadth
+first search to locate a policy route that meets the conditions specified by setup . SPF algorithms such as [5] may
+be used instead if some aspect(s) of policy are encode d
+in metrics before computation .
+The same approach can be used for precomputation ,
+however, multiple paths are explored and few paths are
+pruned . We are exploring the use of several techniques
+to address this problem . One approach is to precomput e
+K best paths based on topology (e .g ., hop count) alone ,
+and consequently check the policies of each route ' s constituent ADs to eliminate those that are not legal . Thi s
+approach will fail if K is too small to discover usable o r
+desirable routes . Alternatively, if K is set too large, i t
+will not be computationally practical .
+Other heuristics may be incorporated into route synthesis . For example the search tree may be pruned by
+rejecting ADs that express excessively restrictive or unusual policies (e .g ., a TOS that is rarely used, or a user class specific policy that will be applicable only rarely) .
+Alternatively, an AD may precompute all or many path s
+with a small number of hops and extend them on demand when appropriate paths to desired destination s
+can not be found .
+This is an area of ongoing research . Currently th e
+internet is probably small enough to support with o n
+demand computation alone .
+
+5 .4 PG stat e
+As part of the setup protocol there is state informatio n
+
+established and maintained in each PG along a polic y
+
+plicates would be eliminated, '
+A possible method for reducing update distributio n
+overhead is to limit the hop count on flooded packets .
+However, this assumes a topological locality of traffi c
+that is not necessarily characteristic of much internet
+traffic . Consequently, we are considering use of mechanisms for distribution of routing updates within logica l
+communities .
+
+5 .3 Route computatio n
+As described earlier, complete precomputation of polic y
+routes would be computationally infeasible in a larg e
+7 We note that even the worst case analysis results in a tolerabl e
+number considering that the burden is spread across the AD as a
+whole, not carried over a single intra-AD link .
+ACM SIGCOMM
+
+internet with multiple policies and types of service pe r
+AD . However, we wish to exploit the parallelism avail able when computing multiple routes simultaneously ,
+and to reduce setup latency, by doing some precomputatio n
+
+-76 -
+
+route . The state information is the forwarding information base used to forward data packet ; . consequently i t
+can not be treated as "soft state" as defined by Clark .[3] .
+The amount of state information maintained by a
+PG depends upon where it sits in the internet and ho w
+much traffic it sees . The memory requirements to store
+and maintain this state are significant for the PGs i n
+very large transit ADs . Moreover, the more fine graine d
+the policies expressed by transits and stub ADs, the
+larger the number of policy routes that individual stub s
+will set up, and the greater the amount of state required .
+Caching strategies should be effective given some locality of communication . We are currently collecting dat a
+to determine the extent of locality experienced in existing internet backbones, and are analyzing the utility o f
+various caching schemes .
+
+Computer Communication Review
+
+	
+
+5 .5
+
+Reference s
+
+Other Design and Implementatio n
+Issue s
+
+[1] ANSI, Intermediate System to Intermediate System Inter-domain Routeing Information Exchange Protocol, Document Number
+
+In addition to issues of scaling, the IDPR architectur e
+raises several issues and challenges to current datagram
+internet design and practice : (1) route setup introduce s
+state requirements in border gateways, (2) VG abstraction is used to represent groups of PGs, (3) The gateway
+and route synthesis processes are logically (and ofte n
+physically) separated, and (4) encapsulation is used t o
+tunnel through ADs .
+
+X3S3 .3/90-132, June 1990 .
+[2] L . Breslau and D . Estrin,
+
+Design of InterAdministrative Domain Routing Protocols, AC M
+
+SIGCOMM, September 1990 . Philadelphia, PA .
+[3] D . Clark, Design Philosophy of the DARPA Inter net Protocols, Proceedings of ACM Sigcomm ,
+pp . 106-114, August 1988, Palo Alto, CA .
+[4] D . Clark, Policy Routing in Internet Protocols ,
+RFC 1102, SRI Network Information Center, May 1989 .
+[5] E . W . Dijkstra, A Note on Two Problems i n
+Connection with Graphs, Numerische Mathematik, 1959, pp 269-271 .
+[6] D . Estrin, Policy Requirements for Inter Administrative Domain Routing, To appear in Computer Networks and ISDN Systems, 1991 . A
+previous version was distributed as RFC 1125 ,
+SRI Network Information Center, Novembe r
+1989 .
+[7] D . Estrin, K . Obraczka, Connectivity Databas e
+Overhead for Inter-Domain Policy Routing, University of Southern California, Technica l
+Report TR 90-17, August 1990 . To appear i n
+Proceedings of IEEE Infocom 1991 .
+
+6 Conclusions and statu s
+
+In summary, the IDPR architecture is based on source
+routing, setup and link state advertisements with explicit policy terms . This approach supports flexible expression of policy with limited computational burde n
+on transit ADs and a means of avoiding routing loop s
+
+without strong consistency requirements ,
+The IDPR protocols are currently being implemente d
+and we began testing of the partial prototype in Octobe r
+of 1990 . Participants are BBN, USC, and SAIC .
+We will be conducting experiments in the laborator y
+throughout the fall and hope to experiment with multiple sites in early December (e .g ., via DARTnet) . I n
+parallel we are investigating the various scaling issue s
+discussed through analysis and simulation .
+Future versions of the protocol will separate the R S
+and PG functions, explore hierarchical configuration fo r
+the connectivity database in RSs, and address the nee d
+for a community update mechanism, techniques for rout e
+synthesis, and interoperability with other (lower over head and lower functionality) inter-AD protocols, suc h
+as BGP.[13, 1 ]
+ACM SIGCOMM
+
+-77 -
+
+[8] D . Estrin and G . Tsudik, Secure Control of Inter network Transit Traffic, To Appear in Compute r
+Networks and ISDN Systems, 1991 .
+[9] S . Hares, D . Katz, Administrative Domains an d
+Routing Domains, a Model for Routing in the Internet, RFC 1136, SRI Network Informatio n
+
+Center, December 1989 .
+[10] ISO, OSI Routeing Framework, ISO/TF 9575 ,
+1989 .
+[11] M . Lepp and M . Steenstrup . An Architecture fo r
+Inter-Domain Policy Routing BBN Technica l
+Report No . 7345, July 1990 .
+[12] M . Little, Goals and Functional Requirements fo r
+Inter-Autonomous System Routing, RFC 1126 ,
+SRI Network Information Center, Octobe r
+1989 .
+[13] K . Lougheed and Y . Rekhter, Border Gatewa y
+Protocol, RFC 1163, SRI Network Information Center, June 1990 .
+
+Computer Communication Review
+
+	
+
+[14] J .M . McQuillan , I . Richer, and E . Rosen ,
+The New Routing Algorithm for the ARPANET ,
+IEEE Transactions on Communications ,
+Volume COM-28 :711-719, 1980 .
+[15] J . Moy, The Open Shortest Path First (05PF)
+Specification, RFC 1131, SRI Network Information Center, October 1989 .
+(16] R . Perlman, Fault-Tolerant Broadcast of Routin g
+Information, Computer Networks, Volume 7 ,
+December 1983, pp 395-405 . .
+[17] E . Rosen, Exterior Gateway Protocol (EGP) ,
+RFC 827, SRI Network Information Center, October 1982 .
+[18] M . Steenstrup, Inter-Domain Policy Routing Protocol Specification and Usage : Version .1, BB N
+Technical Report No . 7346, July 1990 .
+
+ACM SIGCOMM
+
+-78-
+
+Computer Communication Review
+
+

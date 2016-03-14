@@ -1,0 +1,599 @@
+Chapter 20: Fibonacci Heaps
+
+Fibonacci heaps are linked lists of
+
+heap-ordered trees (childrens keys are at
+
+least that of their parent) with the following
+
+characteristics:
+
+1. The trees are not necessarily binomial
+
+2. Siblings are bidirectionally linked
+
+3. There is a pointer min[H] to the root with
+
+the minimum key
+
+4. The root degrees are not unique.
+
+5. A special attribute n[H] maintains the
+
+total number of nodes
+
+6. Each node has an additional boolean label
+
+mark , indicating whether has lost a child
+
+since the last time it was made a child
+
+of another node
+
+1
+
+2
+
+8
+
+10
+min[H]
+
+3
+
+19
+
+4
+
+15
+
+5
+
+7
+
+9
+
+13 32
+
+20
+
+22
+
+30
+
+16
+
+17 21
+
+2
+
+We assume that roots are always unmarked.
+
+Then what is the running time
+
+for (cid:12)nding the minimum key
+in an n-node Fibonacci heap?
+
+3
+
+Amortized Cost Analysis a l(cid:19)a the
+
+Potential Method
+
+Let t(H) be the number of trees and m(H)
+the number of marked nodes in H. We
+assume that the computation begins with H
+being empty.
+
+De(cid:12)ne the potential (cid:8)(H) to be
+
+(cid:12)(t(H) + 2m(H))
+
+for some (cid:12)xed positive constant (cid:12). This (cid:12) is
+the scale-up factor. The term t(H) is for
+achieving an amortized cost of O(lg n) for the
+minimum extraction operation and the term
+2m(H) is for achieving an amortized cost of
+O(1) for the key decreasing operation.
+
+4
+
+Then the potential is always nonnegative. We
+stipulate that an X number of operations are
+executed on an initially empty Fibonacci heap.
+Then the potential at the beginning is 0.
+
+How large can the potential
+
+be at the end?
+
+5
+
+How large can the potential
+
+be at the end?
+
+At most 3(cid:12)X because there
+can be at most X marked
+nodes and X trees at the end.
+
+This means that the
+
+contribution of the potential
+to the amortized cost is O(1).
+
+6
+
+Insertion of a Key
+
+Suppose we wish to insert a key k into a
+Fibonacci heap H.
+
+To do this we create a single-node tree T ,
+whose unique node is unmarked and has k as
+the key. Then we insert T immediately to the
+right of min[H]. If k happens to be smaller
+than the current minimum key, set min[H] to
+T . We also increment n[H] by one.
+
+7
+
+What is the actual cost of this
+
+operation?
+
+How much is the potential
+
+increased?
+
+The actual cost is O(1) and
+the potential is increased by (cid:12).
+
+So the amortized cost is O(1).
+
+8
+
+min[H]
+
+min[H]
+
+9
+
+Uniting Two Heaps
+
+Suppose that we have two heaps, H and H0,
+and want to unite them.
+
+To do this we insert the bidirectionally linked
+root list of H0 after min[H]. If min[H0] has a
+smaller key than min[H], then set min[H] to
+min[H0]. We also increase n[H] by n[H0].
+
+What is the actual cost of this
+
+operation?
+
+How much is the potential
+
+increased?
+
+10
+
+The actual cost is O(1)
+because the root lists are
+bidirectional. The potential
+will be the sum of the
+potentials of the two heaps.
+
+11
+
+min[H]
+
+min[H]
+
+min[H]
+
+12
+
+Deleting min[H]
+
+Let x = min[H]. Then remove x from the link
+of the roots and insert the child list of x to it.
+This requires O(1) steps.
+
+What more do we need to do?
+
+13
+
+The min is changed, so we
+need to recalculate this.
+
+To do that we must examine
+all the keys at the root level.
+
+We will take this opportunity
+
+to \clean up." This is we
+
+will combine some trees
+
+together to make the
+
+bottom-level list shorter.
+
+14
+
+H
+
+removed
+
+H
+
+15
+
+Clean up
+
+We will unite trees so that in the remaining
+trees no two trees have the same root degree.
+
+We think of a tree having root degree k as
+the integer 2k(cid:0)1 and think of clean-up as
+binary addition by linking two trees with
+the same root degree, where a marked root
+that is made a child of another node is
+unmarked.
+
+Use a binary counter A[0::D], where for each
+i, 0 (cid:20) i (cid:20) D, A[i] is the pointer to a tree
+having root degree i. Starting with the empty
+counter (i.e. all nil), we add the trees one by
+one.
+
+16
+
+i
+
+10
+
+D(n)
+
+NIL
+
+0
+
+1
+
+2
+
+3
+
+NIL
+
+NIL
+linked
+
+A Tree From H
+
+11
+
+0
+
+1
+
+2
+
+3
+
+i
+
+i+1
+
+D(n)
+
+NIL
+
+NIL
+linked
+
+NIL
+
+?
+
+NIL
+
+17
+
+Bounding the Size of the Counter
+
+Lemma A There is a constant (cid:11) such that
+the maximum root degree in an n-node
+Fibonacci heap is at most (cid:11) lg n.
+
+So we let D = b(cid:11) lg nc.
+
+18
+
+What is the actual cost of cleaning up?
+
+We view \A[i] 6= nil" as the bit being 1
+\A[i] = nil" as the bit being 0.
+
+Incorporation of one tree \sets" a bit at
+one position and resets some bits. So, the
+total number of bits that are set is t(H).
+
+Note that a bit cannot be reset unless it is
+already set. Since the counter is initially
+zero, the total number of bits that are reset
+is (cid:20) t(H). Thus, the actual cost is (cid:20) ct(H)
+for some constant c.
+
+19
+
+The Amortized Cost
+
+Let H0 be the heap after \clean up." The
+amortized cost is
+ct(H) + (cid:12)(t(H0) + 2m(H0) (cid:0) t(H) (cid:0) 2m(H)).
+We have t(H0) (cid:20) D and m(H0) (cid:20) m(H). So,
+the amortized cost of \clean-up" is at most
+
+ct(H) + (cid:12)(t(H0)(cid:0) t(H)) = (c(cid:0) (cid:12))t(H) + (cid:12)t(H0):
+Choose (cid:12) so that (cid:12) (cid:21) c. Then the amortized
+cost is O(D) = O(lg n).
+
+20
+
+Decreasing a Key
+
+Suppose that a key at node x is decreased.
+We resolve the heap-property violation by
+repeatedly exchanging the keys as we did for
+binary heaps. Then the cost can be as large
+as the depth of the tree. Unfortunately, this
+operation does not change the potential and
+we dont have a good bound on the depth of
+the tree.
+
+21
+
+An Alternative for Resolution
+
+Let y be the parent of x. After decreasing
+key[x], if key[x] < key[y], we mark x and then
+repeat the following until x is unmarked:
+
+(cid:15) Insert x to the root list.
+(cid:15) Unmark x if x is marked.
+(cid:15) Adjust min[H] if key[min[H]] > key[x].
+(cid:15) Eliminate x from the list of children.
+- Decrease degree[y] by 1.
+(cid:15) If y is marked, then set x to y, set y to
+p[x]. Otherwise, if y is not a root, then
+mark y.
+
+22
+
+min[H]
+
+5
+
+7
+
+9
+
+13 32
+
+15
+
+20
+
+22
+
+30
+
+decreased
+
+3
+
+17 21
+
+3
+
+min[H]
+
+5
+
+7
+
+9
+
+13 32
+
+15
+
+2
+17 21
+
+22
+
+decreased
+
+30
+
+2
+
+3
+
+5
+
+min[H]
+
+21
+
+7
+
+9
+
+13 32
+
+15
+
+22
+8 decreased
+
+30
+
+2
+
+3
+
+15
+
+7
+
+8
+
+min[H]
+
+21
+
+5
+
+32
+
+9
+
+22
+
+13
+
+30
+
+23
+
+Amortized Cost Analysis
+
+Suppose that s nodes are cut in a sequence.
+Then this operation
+
+(cid:15) requires (cid:13)s steps for some constant (cid:13),
+(cid:15) increases t(H) by s, and
+(cid:15) decreases m(H) by at least s (cid:0) 1.
+The amortized cost is at most
+
+(cid:12)(s (cid:0) 2(s (cid:0) 1)) + (cid:13)s = ((cid:13) (cid:0) (cid:12))s + 2(cid:12):
+Choose (cid:12) so that (cid:12) (cid:21) (cid:13). Then the cost
+becomes O(1).
+
+24
+
+Deleting a Node
+
+Decrease the key to (cid:0)1 and then remove the
+minimum key. The amortized cost is O(1).
+
+25
+
+decreased
+
+15
+
+20
+
+17 21
+
+min[H]
+
+7
+
+9
+
+22
+
+13
+
+30
+
+5
+
+32
+
+5
+
+deleted
+
+7
+
+9
+
+13 32
+
+min[H]
+
+15
+
+20
+
+22
+
+30
+
+17 21
+
+26
+
+Bounding the Maximum Degree
+
+For a node x, let k = degree[x]. Let
+y1; y2 : : : yk be the children of x. Then
+degree[y1] (cid:21) 0 and degree[yi] (cid:21) i (cid:0) 2 for
+i = 2 : : : k.
+
+Proof: Node yi had same degree as x when
+linked to x, and has lost at most one child.
+
+Fibonacci numbers: Fk = Fk(cid:0)1 + Fk(cid:0)2
+
+Fk+2 = 1 +
+
+k
+X
+i=0
+
+Fi
+
+Fk+2 (cid:21) (cid:30)k; (cid:30) = (1 + p5)=2
+
+27
+
+Bounding the Maximum Degree
+
+For any node x with k = degree[x]:
+
+size(x) (cid:21) Fk+2 (cid:21) (cid:30)k
+
+Proof: let sk be minimum size for degree k.
+
+size(x) (cid:21) sk
+
+= 2 +
+
+= 2 +
+
+k
+X
+i=2
+
+k
+X
+i=2
+
+sdegree[yi]
+
+si(cid:0)2
+
+By induction over k, sk (cid:21) Fk+2.
+
+28
+

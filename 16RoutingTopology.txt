@@ -1,0 +1,1135 @@
+LECTURE 15: DATACENTER 
+LECTURE 15: DATACENTER 
+NETWORK: TOPOLOGY AND ROUTING
+NETWORK: TOPOLOGY AND ROUTING
+
+Xiaowei Yang
+
+1
+
+OVERVIEW
+OVERVIEW
+
+ Portland: how to use the topology feature of the 
+
+datacenter network to scale routing and forwarding
+
+ ElasticTree: topology control to save energy
+
+ Briefly
+
+2
+
+BACKGROUND
+BACKGROUND
+
+ Link layer (layer 2) routing and forwarding
+ Network layer (layer 3) routing and forwarding
+
+ The FatTree topology
+
+3
+
+LINK LAYER ADDRESSING
+LINK LAYER ADDRESSING
+
+ To send to a host with an IP address p, a sender 
+broadcasts an ARP request within its IP subnet
+ The destination with the IP address p will reply
+ The sender caches the result
+
+4
+
+LINK LAYER FORWARDING
+LINK LAYER FORWARDING
+
+Src=x, Dest=y
+
+Src=x, Dest=y
+
+Src=x, Dest=y
+Src=y, Dest=x
+Src=x, Dest=y
+
+Port 1
+
+Port 2
+
+Port 3
+
+x is at Port 3 
+y is at Port 4 
+
+Port 4
+
+Port 5
+
+Port 6
+
+Src=x, Dest=y
+Src=y, Dest=x
+Src=x, Dest=y
+
+Src=x, Dest=y
+
+Src=x, Dest=y
+
+ Done via learning bridges
+ Bridges run a spanning tree protocol to set up a tree topology
+ First packet from a sender to a destination is broadcasted to all 
+ Bridges on the path learn the senders MAC address and 
+ Return packets from a destination to a sender are unicast along 
+
+destinations in the IP subnet along the spanning tree
+incoming port
+the learned path
+
+5
+
+NETWORK LAYER ROUTING AND 
+NETWORK LAYER ROUTING AND 
+ADDRESSING 
+ADDRESSING 
+ Each subnet is assigned an IP prefix
+
+ Routers run a routing protocol such as OSPF or RIP to 
+
+establish the mapping between an IP prefix and a 
+next hop router
+
+6
+
+QUESTION 
+QUESTION 
+
+ Which one is better for a datacenter network that may  
+
+have hundreds of thousands of hosts?
+
+7
+
+DATACENTER TOPOLOGIES
+DATACENTER TOPOLOGIES
+ Hierarchical
+ Racks, Rows
+
+8
+
+FAT TREE WITH 4--PORT SWITCHES
+PORT SWITCHES
+FAT TREE WITH 4
+
+k-port homogeneous switches,  k/2-ary 3-tree, 5/4k2 switches, k3/4 hosts
+
+10
+
+11
+
+PortLand
+PortLand
+A Scalable Fault--Tolerant Layer 2 Data Center Network Fabric
+Tolerant Layer 2 Data Center Network Fabric
+A Scalable Fault
+
+Radhika Niranjan Mysore, Andreas Pamboris, Nathan Farrington, Nelson 
+Huang, Pardis Miri, Sivasankar Radhakrishnan, Vikram Subramanya and 
+Amin Vahdat
+
+12
+
+PortLand In A Nutshell
+
+ PortLand is a single logical layer 2 data center network 
+
+fabric that scales to millions of endpoints
+
+ PortLand internally separates host identity from host 
+
+location
+ Uses IP address as host identifier
+ Introduces Pseudo MAC (PMAC) addresses 
+
+internally to encode endpoint location
+
+ PortLand runs on commodity switch hardware with 
+
+unmodified hosts
+
+13
+
+Data Centers Are Growing In Scale
+
+Mega Data Centers
+
+Large Scale 
+Applications
+
+Virtualization in Data 
+
+Center
+
+ Microsoft DC at Chicago
+ 500,000+ servers
+
+ Facebook, Search 
+ All to all communication
+ Most Data centers run 
+more than one application
+
+ 10 VMs per server (cid:206)
+5 million routable 
+addresses!
+
+14
+
+Goals For Data Center Network Fabrics
+
+ Easy configuration and management  Plug and play
+
+ Fault tolerance, routing,  and addressing  Scalability
+
+ Commodity switch hardware  Small switch state
+
+ Virtualization support  Seamless VM migration
+
+15
+
+Layer 2 versus Layer 3 Data Center Fabrics
+
+Technique
+
+Plug and play Scalability
+
++
+
+-
+
+-
+
++
+
+Layer 2:
+
+Flat MAC
+Addresses
+
+Layer 3: 
+
+IP 
+Addresses
+
+Small Switch 
+
+Seamless 
+
+State
+
+-
+
+Migration
+
+VM 
+
++
+
++
+
+-
+
+16
+
+Layer 2 versus Layer 3 Data Center Fabrics
+
+Technique
+
+Plug and play Scalability
+
+Layer 2:
+
+Flat MAC
+Addresses
+
+Layer 3: 
+
++
+
+-
+
+-
+
+Flooding
+
++
+
+IP 
+Addresses
+
+LSR 
+
+Broadcast 
+
+Location-based addresses mandate manual configuration
+
+based
+
+17
+
+Small Switch 
+
+Seamless 
+
+State
+
+-
+
+Host MAC 
+Address
+9a:57:10:ab:6e
+
+62:25:11:bd:2d
+
+ff:30:2a:c9:f3
+....
+
+Out 
+Port
+1
+
+3
+
+0
+...
+
++
+
+Host IP 
+Address
+10.2.x.x
+10.4.x.x
+
+Out
+Port
+0
+1
+
+Migration
+
+VM 
+
++
+
+No change 
+
+to IP 
+endpoint
+
+-
+
+IP endpoint 
+can change
+
+Cost Consideration:
+Flat Addresses vs. Location Based Addresses
+ Commodity switches today have ~640 KB of low latency, 
+
+power hungry, expensive on chip memory
+ Stores 32  64 K flow entries
+
+ Assume 10 million virtual endpoints in 500,000 servers in data 
+
+center
+
+ Flat addresses (cid:206) 10 million address mappings (cid:206) ~100 MB 
+on chip memory (cid:206) ~150 times the memory size that can be 
+put on chip today
+
+ Location based addresses (cid:206) 100  1000 address 
+
+mappings(cid:206) ~10 KB of memory (cid:206) easily accommodated in 
+switches today
+
+18
+
+PortLand: Plug and Play + Small Switch State
+
++
+
+Pair-wise 
+
+communication
+
+ 10 million virtual endpoints in 
+500,000 servers in data center
+
+100  1000 address mappings(cid:206)
+1. PortLand switches learn location in topology using pair-wise 
+~10 KB of memory (cid:206) easily 
+accommodated in switches today
+
+2. They assign topologically meaningful addresses to hosts using 
+
+their location
+
+19
+
+PMAC Address
+
+Auto Configuration
+Out
+Port
+0
+1
+2
+3
+
+0:2:x:x:x:x
+0:4:x:x:x:x
+0:6:x:x:x:x
+0:8:x:x:x:x
+
+communication
+
+PortLand: Main Assumption
+Hierarchical structure of data center networks:
+They are multi-level, multi-rooted trees
+
+Cisco Recommended Configuration
+
+Fat Tree
+
+20
+
+PortLand: Scalability Challenges
+
+Challenge
+
+State Of Art
+
+Address Resolution
+
+Routing
+
+Forwarding
+
+Broadcast based
+
+Broadcast based
+
+X
+X
+X
+
+Large switch state
+
+21
+
+Data Center Network
+
+Switches
+
+Servers
+
+Core
+
+Aggregation
+
+Edge
+
+22
+
+Imposing Hierarchy On A Multi-Rooted Tree
+
+POD 0 
+
+POD 1 
+
+POD 2 
+
+POD 3 
+
+Pod Number
+
+23
+
+Imposing Hierarchy On A Multi-Rooted Tree
+
+0 1 0 1 0
+
+1
+
+0 1
+
+Position Number
+
+24
+
+Imposing Hierarchy On A Multi-Rooted Tree
+
+0 1 0 1 0 1 0 1
+
+PMAC: pod.position.port.vmid
+
+25
+
+Imposing Hierarchy On A Multi-Rooted Tree
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+PMAC: pod.position.port.vmid
+
+26
+
+Imposing Hierarchy On A Multi-Rooted Tree
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+PMAC: pod.position.port.vmid
+
+27
+
+Imposing Hierarchy On A Multi-Rooted Tree
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+0
+
+1
+
+00:00:00:02:00:01
+00:00:00:03:00:01
+00:00:01:02:00:01
+00:00:01:03:00:01
+
+00:01:00:02:00:01
+00:01:00:03:00:01
+00:01:01:02:00:01
+00:01:01:03:00:01
+
+00:02:00:02:00:01
+00:02:00:03:00:01
+00:02:01:02:00:01
+00:02:01:03:00:01
+
+00:03:00:02:00:01
+00:03:00:03:00:01
+00:03:01:02:00:01
+00:03:01:03:00:01
+
+28
+
+PROXY--BASED ARP
+BASED ARP
+PROXY
+
+ When an edge switch sees a new AMAC, it assigns a 
+
+PMAC to the host 
+
+ It then communicates the PMAC to IP mapping to the 
+
+fabric manager. 
+
+ The fabric manager servers as a proxy-ARP agent, 
+
+and answers  ARP queries
+
+PortLand: Location Discovery Protocol
+ Location Discovery Messages (LDMs) exchanged 
+
+between neighboring switches
+
+ Switches self-discover location on boot up
+
+Location characteristic
+
+Technique
+
+1) Tree level / Role
+
+Based on neighbor identity
+
+2)  Pod number
+
+3) Position number
+
+Aggregation and edge switches agree on 
+pod number
+
+Aggregation switches help edge switches 
+choose unique position number
+
+30
+
+PortLand: Location Discovery Protocol
+
+Switch Identifier
+A0:B1:FD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+??
+
+??
+
+PortLand: Location Discovery Protocol
+
+Switch Identifier
+A0:B1:FD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+??
+
+??
+
+PortLand: Location Discovery Protocol
+
+Switch Identifier
+A0:B1:FD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+??
+
+??0
+
+PortLand: Location Discovery Protocol
+
+Switch Identifier
+B0:A1:FD:57:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+??
+
+??
+
+PortLand: Location Discovery Protocol
+
+Switch Identifier
+B0:A1:FD:57:32:01
+
+Pod Number
+
+Position
+
+??
+
+??
+
+Tree Level
+??
+
+1
+
+PortLand: Location Discovery Protocol
+
+Switch Identifier
+B0:A1:FD:57:32:01
+
+Pod Number
+
+Position
+
+??
+
+??
+
+Tree Level
+??
+
+1
+
+PortLand: Location Discovery Protocol
+
+Propose 
+
+1
+
+Switch Identifier
+A0:B1:FD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+??
+
+0
+
+PortLand: Location Discovery Protocol
+
+Propose 
+
+0
+
+Switch Identifier
+D0:B1:AD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+??
+
+0
+
+PortLand: Location Discovery Protocol
+
+Yes
+
+Switch Identifier
+A0:B1:FD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+1
+??
+
+0
+
+PortLand: Location Discovery Protocol
+
+Fabric 
+Manager
+
+Switch Identifier
+D0:B1:AD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+0
+
+0
+
+PortLand: Location Discovery Protocol
+
+Fabric 
+Manager
+
+0
+
+Switch Identifier
+D0:B1:AD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+??
+
+0
+
+0
+
+PortLand: Location Discovery Protocol
+
+Fabric 
+Manager
+
+Pod 0
+
+Switch Identifier
+D0:B1:AD:56:32:01
+
+Pod Number
+
+Position
+
+Tree Level
+
+00
+??
+
+0
+
+0
+
+PortLand: Name Resolution
+
+Intercept all ARP packets
+
+43
+
+PortLand: Name Resolution
+
+Intercept all ARP packets
+
+Assign new end hosts 
+Assign new end hosts 
+
+with PMACs
+with PMACs
+
+44
+
+PortLand: Name Resolution
+
+Intercept all ARP packets
+
+Assign new end hosts 
+
+with PMACs
+
+Rewrite MAC for packets 
+
+entering and exiting 
+
+network
+
+45
+
+PortLand: Name Resolution
+
+Fabric 
+Manager
+
+PortLand: Fabric Manager
+
+Fabric 
+Manager
+
+ARP mappings
+
+Network map
+
+Soft state
+Soft state
+
+Administrator 
+Administrator 
+configuration
+configuration
+
+PortLand: Name Resolution
+
+Fabric 
+Manager
+
+10.5.1.2 MAC ??
+
+PortLand: Name Resolution
+
+Fabric 
+Manager
+
+10.5.1.2 00:00:01:02:00:01
+
+PortLand: Name Resolution
+
+ARP replies contain only 
+
+PMAC
+
+Address HWtype
+10.5.1.2
+
+ether
+
+HWAddress
+00:00:01:02:00:01
+
+Flags Mask
+C
+
+Iface
+eth1
+
+50
+
+PROVABLY LOOP--FREE FORWARDING
+FREE FORWARDING
+PROVABLY LOOP
+
+ Switches populate their forwarding tables after 
+
+establishing local positions
+
+ Core switches forward according to pod numbers
+
+ Aggregation switches forward packets destined to the 
+
+same pod to edge switches, to other pods to core 
+switches
+
+ Edge switches forward packets to the corresponding 
+
+hosts
+
+FAULT TOLERANT ROUTING
+FAULT TOLERANT ROUTING
+
+ LDP exchanges serve as keepalive
+
+ A switch reports a dead link to the fabric manager (FM)
+
+ The FM updates its faulty link matrix, and informs 
+
+affected switches the failure
+
+ Affected switches reconfigure their forwarding tables to 
+
+bypass the failed link
+
+ (cid:198) No broadcasting of the failure
+
+Portland Prototype
+
+ 20 OpenFlow NetFPGA switches
+
+ TCAM + SRAM for flow entries
+
+ Software MAC rewriting
+
+ 3 tiered fat-tree
+
+ 16 end hosts
+
+53
+
+PortLand: Evaluation
+
+Measurements
+Network convergence 
+time
+
+TCP convergence time
+Multicast convergence 
+time
+TCP convergence with 
+VM migration
+Control traffic to fabric 
+manager
+CPU requirements of 
+fabric manager
+
+Configuration
+Keepalive frequency = 
+10 ms
+Fault detection time = 50 
+ms
+RTOmin = 200ms
+
+Results
+65 ms 
+
+~200 ms
+110ms
+
+RTOmin = 200ms
+
+~200 ms  600 ms
+
+27,000+ hosts, 
+100 ARPs / sec per host
+27,000+ hosts,
+100 ARPs / sec per host
+
+400 Mbps (cid:198) non trivial
+
+70 CPU cores (cid:198) non 
+trivial
+
+54
+
+Summarizing PortLand
+ PortLand is a single logical layer 2 data center network 
+
+fabric that scales to millions of endpoints
+
+ Modify network fabric to
+
+ Work with arbitrary operating systems and virtual 
+
+ Maintain the boundary between network and end-host 
+
+machine monitors
+
+administration
+
+ Scale Layer 2 via network modifications
+
+ Unmodified switch hardware and end hosts
+
+55
+
+DISCUSSION
+DISCUSSION
+
+ Unmodified hosts: why is it desirable?
+
+ Does location-based addressing necessarily mandate 
+
+manual configuration?
+ Their own solution implies a  big NO
+
+56
+
+57
+
+NETWORK CONSUMES MUCH POWER
+NETWORK CONSUMES MUCH POWER
+
+GOAL: ENERGY PROPORTION 
+GOAL: ENERGY PROPORTION 
+NETWORKING
+NETWORKING
+
+APPROACH: TURN OFF UNNEEDED LINKS 
+APPROACH: TURN OFF UNNEEDED LINKS 
+AND SWITCHES CAREFULLY AND AT 
+AND SWITCHES CAREFULLY AND AT 
+SCALE
+SCALE
+
+ELASTIC TREE ARCHITECTURE
+ELASTIC TREE ARCHITECTURE
+
+THREE OPTIMIZERS
+THREE OPTIMIZERS
+
+FORMAL MODEL: MCF
+FORMAL MODEL: MCF
+
+Does not scale
+
+GREEDY BIN PACKING 
+GREEDY BIN PACKING 
+
+ For each flow, evaluates all possible flows, and 
+chooses the left-most one with sufficient capacity
+
+TOPOLOGY--AWARE HEURISTICS
+AWARE HEURISTICS
+TOPOLOGY
+
+ Active switches == total bandwidth demand / capacity 
+
+per switch
+
+ Determine which switches are active, and pack flows 
+
+to the active switches
+
+ Add more switches for fault tolerance and connectivity
+
+SCALABILITY
+SCALABILITY
+
+POTENTIAL POWER SAVINGS
+POTENTIAL POWER SAVINGS
+
+ Near traffic: within the same edge switches
+ Far: remote traffic
+
+REALISTIC DATA CENTER TRAFFIC
+REALISTIC DATA CENTER TRAFFIC
+
+ Savings range from 25-62%
+ A single E-commerce application
+
+SUMMARY
+SUMMARY
+
+ An interesting idea: energy-proportional networking
+
+ Realized it on realistic datacenter topologies
+
+ Three energy optimizers
+ Heuristics work well
+
+DISCUSSION
+DISCUSSION
+
+ Evaluation does not use traffic from multiple 
+
+applications
+
+ Not sure what the savings are on EC2, AppEngine, or 
+
+Azure 
+

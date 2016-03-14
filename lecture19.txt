@@ -1,0 +1,978 @@
+CSCI-UA.0201-003 
+
+Computer Systems Organization 
+Lecture 19: Dynamic Memory Allocation: 
+
+Basics 
+
+Mohamed Zahran (aka Z) 
+
+mzahran@cs.nyu.edu 
+
+http://www.mzahran.com 
+
+Slides adapted  
+(and slightly modified) 
+from: 
+ Clark Barrett 
+ Jinyang Li  
+ Randy Bryant 
+ Dave OHallaron 
+ 
+
+Why dynamic allocator? 
+
+ Weve discussed two types of data allocation so 
+
+far: 
+ Global variables 
+ Stack-allocated local variables 
+
+ 
+
+ Not sufficient! 
+
+ How to allocate data whose size is only known 
+
+during runtime? 
+
+ E.g. when reading variable-sized input from network, file 
+
+etc. 
+
+ How to control lifetime of allocated data? 
+
+ E.g. a linked list that grows and shrinks as items are 
+
+inserted/deleted 
+
+ 
+
+Example usage: a simple linked list 
+
+typedef struct item_t { 
+  int val; 
+  item_t *next; 
+}item_t; 
+ 
+item_t *head = NULL; 
+ 
+void insert(int v) { 
+  item_t *x; 
+  x = (item_t *)malloc(sizeof(item_t));  
+  if (x == NULL) { exit(1);} 
+  x->val = v; 
+  x->next = head; 
+  head = x; 
+} 
+ 
+void delete(int v) { 
+  item_t *x = head, *y = NULL; 
+  while (x != NULL && x->val != v) { 
+    y = x; 
+    x = x->next; 
+  } 
+  if (x != NULL) { 
+    if (y != NULL) { 
+      y->next = x->next; 
+    } 
+    else { 
+      head = x->next; 
+    } 
+    free(x); 
+  } 
+} 
+ 
+
+void printlist() { 
+  item_t *x; 
+  x = head; 
+  printf(list contents: ); 
+  while (x!=NULL) { 
+    printf(%d , x->val); 
+    x = x->next; 
+  } 
+}    
+ 
+int main() 
+{ 
+  while (1) {  
+    if (fscanf(stdin, %c %d\n, &c, &v)!=2) { 
+      break; 
+    } 
+    if (c == i) { 
+      insert(v); 
+    }else if (c == d) { 
+      delete(v); 
+    } 
+  } 
+  printlist(); 
+} 
+
+linux% ./a.out 
+i 5 
+i 10 
+i 20 
+d 20 
+q 
+list contents: 10 5 
+
+Example usage: a simple linked list 
+
+Returns a pointer to a memory 
+block of size bytes, 
+(typically) aligned to 8-byte 
+boundary. 
+Returns NULL on failure 
+ 
+
+typedef struct item_t { 
+  int val; 
+  item_t *next; 
+}item_t; 
+ 
+item_t *head = NULL; 
+ 
+void insert(int v) { 
+  item_t *x; 
+  x = (item_t *)malloc(sizeof(item_t));  
+  if (x == NULL) { exit(1);} 
+  x->val = v; 
+  x->next = head; 
+  head = x; 
+} 
+ 
+void delete(int v) { 
+  item_t *x = head, *y = NULL; 
+  while (x != NULL && x->val != v) { 
+    y = x; 
+    x = x->next; 
+  } 
+  if (x != NULL) { 
+    if (y != NULL) { 
+      y->next = x->next; 
+    } 
+    else { 
+      head = x->next; 
+    } 
+    free(x); 
+  } 
+} 
+ 
+
+void printlist() { 
+  item_t *x; 
+  x = head; 
+  printf(list contents: ); 
+  while (x!=NULL) { 
+    printf(%d , x->val); 
+    x = x->next; 
+  } 
+}    
+ 
+int main() 
+{ 
+  while (1) {  
+    if (fscanf(stdin, %c %d\n, &c, &v)!=2) { 
+      break; 
+    } 
+    if (c == i) { 
+      insert(v); 
+    }else if (c == d) { 
+      delete(v); 
+    } 
+  } 
+  printlist(); 
+} 
+
+linux% ./a.out 
+i 5 
+i 10 
+i 20 
+d 20 
+q 
+list contents: 10 5 
+
+Returns memory block pointed by 
+x to allocator, x must come from 
+previous calls to malloc 
+
+The Heap 
+
+User stack 
+
+Memory mapped region  
+for shared libraries 
+
+heap grows 
+upward 
+
+Top of the heap  
+(brk ptr) 
+
+heap 
+
+Uninitialized data (.bss) 
+
+Initialized data (.data) 
+
+Program text (.text) 
+
+0 
+
+Dynamic Memory Allocation  
+
+Application 
+
+malloc 
+
+free 
+
+realloc 
+
+Dynamic Memory Allocator 
+
+mmap 
+
+sbrk 
+
+OS 
+
+Allocate or free data of 
+
+arbitary sizes 
+
+Request for or give back 
+
+large chunk of page-
+aligned address space 
+
+Dynamic memory allocator is part of user-level library.  
+Why not implement its functionality in the kernel? 
+
+Dynamic Memory Allocation  
+
+Holds local 
+variables 
+
+Grown/shrunk by malloc 
+library, holds dynamically-
+
+allocated data 
+
+Holds global 
+Holds global 
+
+variables 
+variables 
+
+User stack 
+
+Heap (via malloc) 
+
+Uninitialized data (.bss) 
+
+Initialized data (.data) 
+
+Program text (.text) 
+
+0 
+
+Types of Dynamic Memory Allocator 
+
+This class 
+
+ Explicit allocator (used by C/C++): 
+
+application allocates and frees space 
+
+ malloc and free in C 
+ new and delete in C++ 
+
+ 
+
+ Implicit allocator (used by Java,...): 
+
+application allocates, but does not 
+free space 
+
+ Garbage collection in Java, Python etc. 
+
+ 
+
+Challenges facing a memory allocator 
+
+ Achieve good memory utilization 
+
+ Apps issue arbitrary sequence of malloc/free 
+
+requests of arbitrary sizes 
+
+ Utilization =  sum of mallocd data / size of heap 
+
+ 
+
+ Achieve good performance 
+
+ malloc/free calls should return quickly 
+ Throughput = # ops/sec 
+
+ 
+
+ Constraints: 
+
+ Can not touch/modify mallocd memory 
+ Cant move the allocated blocks once they are 
+
+mallocd 
+ i.e., compaction is not allowed 
+
+Fragmentation 
+
+ Poor memory utilization caused by 
+
+fragmentation 
+ internal fragmentation 
+ external fragmentation 
+
+Internal Fragmentation 
+
+ Malloc allocates data from ``blocks of certain sizes. 
+ Internal fragmentation occurs if payload is smaller than 
+
+block size 
+ 
+ 
+ 
+ 
+ 
+
+Block of 128-byte 
+
+100 byte Payload 
+
+Internal  
+fragmentation 
+
+ 
+ May be caused by  
+
+ Limited choices of block sizes 
+ Padding for alignment purposes 
+ Other space overheads.. 
+
+External Fragmentation 
+
+ Occurs when there is enough 
+
+p1 
+
+p2 
+
+100 byte Payload 
+
+100 byte Payload 
+
+100 byte Payload 
+
+aggregate heap memory, but no single 
+free block is large enough 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+p1= malloc (100); 
+p2 = malloc(100); 
+p3 = malloc(100); 
+
+free(p1); 
+free(p3); 
+malloc(200)? 
+
+p3 
+
+Malloc design choices 
+
+ How do we know how much memory to free given just a 
+
+pointer? 
+ 
+
+ How do we keep track of the free blocks? 
+
+ 
+
+ What do we do with the extra space when allocating a 
+
+structure that is smaller than the free block it is placed 
+in? 
+ 
+
+ How do we pick a block to use for allocation -- many might 
+
+fit? 
+ 
+
+ How do we reinsert freed block? 
+
+ 
+
+Knowing How Much to Free 
+
+ Standard method 
+
+ Keep the length of a block in the header 
+
+field preceding the block. 
+
+ Requires header overhead for every 
+
+allocated block 
+
+p0 = malloc(4) 
+
+free(p0) 
+
+p0 
+
+5 
+
+block size 
+
+data 
+
+Keeping Track of Free Blocks 
+ Method 1: Implicit list using lengthlinks all blocks 
+
+ 
+ 
+ 
+
+5 
+
+4 
+
+6 
+
+2 
+
+ Method 2: Explicit list among the free blocks using 
+
+pointers 
+ 
+ 
+
+5 
+
+ 
+
+ 
+ Method 3: Segregated free list 
+
+4 
+
+6 
+
+2 
+
+ Different free lists for different size classes 
+
+ Method 4: Blocks sorted by size 
+
+ Can use a balanced tree with pointers within each free 
+
+block, and the length used as a key 
+
+Method 1: Implicit List 
+
+ Malloc grows a contiguous region of heap by calling sbrk() 
+ Heap is divided into variable-sized blocks 
+ For each block, we need both size and allocation status 
+
+Format of 
+allocated and 
+free blocks 
+
+4-byte 
+
+Size 
+
+a 
+
+Payload 
+
+Optional 
+padding 
+
+a = 1: Allocated block   
+a = 0: Free block 
+ 
+Size: block size 
+ 
+Payload: application data 
+(allocated blocks only) 
+ 
+
+Detailed Implicit Free List Example 
+
+Unused 
+
+8/0 
+
+16/1 
+
+32/0 
+
+16/1 
+
+0/1 
+
+Start  
+
+of  
+heap 
+
+8-byte 
+aligned 
+
+Allocated blocks: shaded 
+Free blocks: unshaded 
+Headers: labeled with size in bytes/allocated bit 
+
+Implicit List: Finding a Free Block 
+
+ First fit: 
+
+ Search from beginning, choose first free block that fits: 
+ Time taken? 
+
+ Next fit: 
+
+ Like first fit, except search starts where previous search finished 
+ Faster than first fit? 
+
+ Best fit: 
+
+ Search the list, choose the best free block: fits, with fewest bytes 
+
+left over 
+
+ Keeps fragments smallusually helps fragmentation 
+ Will typically run slower than first fit 
+
+Implicit List: Allocating in Free Block 
+
+ Allocating in a free block: splitting 
+
+ Since allocated space might be smaller than 
+free space, we might want to split the block 
+
+4 
+
+4 
+
+4 
+
+4 
+
+6 
+
+p 
+
+4 
+
+2 
+
+2 
+
+2 
+
+Implicit List: Freeing a Block 
+ Simplest implementation: 
+
+free(p) 
+
+ Need only clear the allocated flag 
+ But can lead to false fragmentation  
+ 
+ 
+ 
+ 
+malloc(5)  Oops! 
+ 
+ 
+ 
+
+2 
+
+4 
+
+p 
+
+2 
+
+2 
+
+4 
+
+4 
+
+2 
+
+4 
+
+4 
+
+4 
+
+Implicit List: Coalescing 
+
+ Join (coalesce) with next/previous blocks, if they 
+
+are free 
+ Coalescing with next block 
+
+free(p) 
+
+4 
+
+4 
+
+4 
+
+4 
+
+4 
+
+4 
+
+4 
+
+p 
+
+4 
+
+6 
+
+2 
+
+2 
+
+2 
+
+2 
+
+Check if next block is 
+
+free 
+
+2 
+
+How to coalesce with a previous block? 
+
+Implicit List: Bidirectional Coalescing  
+
+ Boundary tags [Knuth73] 
+
+ Replicate size/allocated header at bottom (end) of free blocks 
+ Allows us to traverse the list backwards, but requires extra space 
+
+4 
+
+4  4 
+
+4 
+
+6 
+
+6  4 
+
+4 
+
+Header 
+
+Size 
+
+a 
+
+Format of 
+allocated and 
+free blocks 
+
+Payload and 
+
+padding 
+
+Boundary tag 
+
+(footer) 
+
+Size 
+
+a 
+
+a = 1: Allocated block   
+a = 0: Free block 
+ 
+Size: Total block size 
+ 
+Payload: Application data 
+(allocated blocks only) 
+ 
+
+Constant Time Coalescing 
+
+Case 1 
+
+Case 2 
+
+Case 3 
+
+Case 4 
+
+Block being 
+freed 
+
+Allocated 
+
+Allocated 
+
+Free 
+
+Allocated 
+
+Free 
+
+Allocated 
+
+Free 
+
+Free 
+
+Constant Time Coalescing (Case 1) 
+
+m1 
+
+m1 
+
+n 
+
+n 
+
+m2 
+
+m2 
+
+1 
+
+1 
+
+1 
+
+1 
+
+1 
+
+1 
+
+m1 
+
+m1 
+
+n 
+
+n 
+
+m2 
+
+m2 
+
+1 
+
+1 
+
+0 
+
+0 
+
+1 
+
+1 
+
+Constant Time Coalescing (Case 2) 
+
+m1 
+
+m1 
+
+n 
+
+n 
+
+m2 
+
+m2 
+
+1 
+
+1 
+
+1 
+
+1 
+
+0 
+
+0 
+
+m1 
+
+m1 
+
+n+m2 
+
+1 
+
+1 
+
+0 
+
+n+m2 
+
+0 
+
+Constant Time Coalescing (Case 3) 
+
+m1 
+
+m1 
+
+n 
+
+n 
+
+m2 
+
+m2 
+
+0 
+
+0 
+
+1 
+
+1 
+
+1 
+
+1 
+
+n+m1 
+
+0 
+
+n+m1 
+
+m2 
+
+m2 
+
+0 
+
+1 
+
+1 
+
+Constant Time Coalescing (Case 4) 
+
+m1 
+
+m1 
+
+n 
+
+n 
+
+m2 
+
+m2 
+
+0 
+
+0 
+
+1 
+
+1 
+
+0 
+
+0 
+
+n+m1+m2 
+
+0 
+
+n+m1+m2 
+
+0 
+
+Implicit Lists: Summary 
+
+ Implementation: very simple 
+ Allocate cost:  
+
+ linear time worst case 
+
+ Free cost:  
+
+ constant time worst case, even with 
+
+coalescing 
+
+ Memory usage:  
+
+ will depend on first-fit, next-fit or best-fit 
+ 
+
+ Not used in practice for malloc/free 
+
+because of linear-time allocation 
+ used in many special purpose applications 
+
+Summary of Key Allocator Policies 
+ Placement policy: 
+
+ First-fit, next-fit, best-fit, etc. 
+ Trades off lower throughput for less 
+
+fragmentation 
+ Splitting policy: 
+
+ 
+
+tolerate? 
+
+ Coalescing policy: 
+
+ When do we go ahead and split free blocks? 
+ How much internal fragmentation are we willing to 
+
+ Immediate coalescing: coalesce each time free is 
+
+called  
+
+ Deferred coalescing: try to improve performance 
+
+of free by deferring coalescing until needed. 
+Examples: 
+
+ Coalesce as you scan the free list for malloc 
+ Coalesce when the amount of external fragmentation 
+
+reaches some threshold 
+

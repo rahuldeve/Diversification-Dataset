@@ -1,0 +1,676 @@
+Memory Allocation 
+
+Copyright : University of Illinois CS 241 Staff 
+
+1 
+
+Variable Size Partitions 
+
+  Idea 
+
+  Allocate memory in small units 
+  Give each job as many units as it needs 
+
+A 
+
+B 
+
+C 
+
+D 
+
+E 
+
+
+ 
+
+
+ 
+
+  Key Challenges 
+
+  Keep track of free / allocated memory regions 
+  Allocation policy to assign free regions to jobs 
+
+Copyright : University of Illinois CS 241 Staff 
+
+2 
+
+Malloc: Dynamic Allocation 
+
+  Idea 
+
+  Allocate memory in small units 
+  Give each request as many units as it needs 
+
+A 
+
+B 
+
+C 
+
+D 
+
+E 
+
+
+ 
+
+
+ 
+
+  Key Challenges 
+
+  Keep track of free / allocated memory regions 
+  Allocation policy to assign free regions to objects 
+
+Copyright : University of Illinois CS 241 Staff 
+
+3 
+
+Malloc and Friends 
+
+  void* malloc(size_t size) 
+  void  free(void* ptr) 
+  void* realloc(void* ptr, size_t size) 
+  Allocate new object if old is smaller 
+  If so, copy memory and free old memory 
+  Return new memory 
+
+  void* calloc(size_t count, size_t size) 
+
+  malloc count*size and zero the bytes 
+
+Copyright : University of Illinois CS 241 Staff 
+
+4 
+
+Dynamic allocation: Metrics 
+
+  Memory Usage: Max, avg. heap size 
+
+  Minimize fragmentation 
+
+  Allocation speed: Avg cost per malloc 
+
+  Choose large enough free region 
+
+  Deallocation speed: Avg cost per free 
+
+  Find object size 
+  Return to free list 
+
+Copyright : University of Illinois CS 241 Staff 
+
+5 
+
+Pieces of the Puzzle 
+
+1.  Free list 
+
+  Tracking, finding free regions 
+
+2.  Allocation Policy: 
+
+  Choosing free region for allocation 
+
+3.  Deallocation Policy:  
+
+  Speed up searches; minimize fragmentation 
+
+Copyright : University of Illinois CS 241 Staff 
+
+6 
+
+1. Tracking Free Regions 
+
+  Goals 
+
+  Keep track of free / allocated memory regions 
+  Find free regions of sufficient size 
+
+  Mechanisms for tracking memory regions 
+
+  Bitmaps 
+
+  Each bit corresponds to a single unit of memory 
+
+  Linked lists 
+
+  Each list entry corresponds to contiguous region 
+
+Copyright : University of Illinois CS 241 Staff 
+
+7 
+
+Bit Maps and Linked Lists 
+
+8 
+
+B 
+
+16 
+C 
+
+A 
+
+24 
+
+D 
+
+E 
+
+
+ 
+
+
+ 
+
+  Part of memory with 5 processes, 3 holes 
+
+  Tick marks show allocation units 
+  Green regions are free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+8 
+
+Bit Maps and Linked Lists 
+
+8 
+
+B 
+
+16 
+C 
+
+A 
+
+24 
+
+D 
+
+E 
+
+
+ 
+
+
+ 
+
+1 1 1 1 1 0 0 0 
+1 1 1 1 1 1 1 1 
+1 1 0 0 1 1 1 1 
+1 1 1 1 1 0 0 0 
+
+ 
+
+  Part of memory with 5 objects, 3 holes 
+
+  Tick marks show allocation units 
+  Green regions are free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+9 
+
+Bit Maps and Linked Lists 
+
+8 
+
+B 
+
+16 
+C 
+
+A 
+
+24 
+
+D 
+
+E 
+
+
+ 
+
+
+ 
+
+1 1 1 1 1 0 0 0 
+1 1 1 1 1 1 1 1 
+1 1 0 0 1 1 1 1 
+1 1 1 1 1 0 0 0 
+
+ 
+
+P 0  5 
+
+H 5  3 
+
+P 8  6 
+
+P 14  4 
+
+H 18  2 
+
+P 20  6 
+
+P 26  3 
+
+H 29  3  X
+
+Hole  Starts 
+at 18 
+
+Object 
+
+Length 
+
+2 
+
+  Part of memory with 5 objects, 3 holes 
+
+  Tick marks show allocation units 
+  Green regions are free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+10 
+
+Storage Tracking Schemes 
+
+  Bitmap vs. link list 
+
+  Which one occupies more space? 
+
+  Which one is faster to reclaim freed space? 
+
+  Which one is faster to find a free hole? 
+
+Copyright : University of Illinois CS 241 Staff 
+
+11 
+
+Storage Tracking Schemes 
+
+  Bitmap vs. link list 
+
+  Which one occupies more space? 
+
+  Depends on the individual memory allocation scenario 
+ 
+
+In most cases, bitmap usually occupies more space 
+
+  Which one is faster to reclaim freed space? 
+
+  On average, bitmap is faster because it just needs to 
+
+set the corresponding bits 
+
+  Which one is faster to find a free hole? 
+
+  On average, a link list is faster because we can link all 
+
+free holes together 
+
+Copyright : University of Illinois CS 241 Staff 
+
+12 
+
+2. Storage Allocation Policies 
+
+  Goals: Given allocation size: 
+
+  Choose a large enough free region (hole) 
+  Assign part of that hole and save rest 
+
+  Common Policies: 
+
+1. 
+2. 
+3. 
+
+  
+  
+  
+
+Copyright : University of Illinois CS 241 Staff 
+
+13 
+
+Storage Allocation Policies 
+
+  First fit 
+
+  Use first hole whose size is large enough 
+  Rationale? 
+
+  Best fit 
+
+  Use first exact size or smallest hole that is larger 
+  Rationale? 
+
+  Worst fit 
+
+  Use the largest available hole 
+  Rationale? 
+
+Copyright : University of Illinois CS 241 Staff 
+
+14 
+
+Example 
+
+  Consider a swapping system in which 
+
+memory consists of the following hole sizes 
+in memory order:  
+  10K, 4K, 20K, 18K, 7K, 9K, 12K, and 15K.  
+  Which hole is taken for successive segment 
+
+requests of:   
+  12K   
+  10K   
+  9K  
+
+Copyright : University of Illinois CS 241 Staff 
+
+15 
+
+Storage Allocation Policies 
+
+  Best fit 
+
+  Produces the smallest leftover hole 
+  Creates small holes that cannot be used  
+
+  Worst Fit 
+
+  Produces the largest leftover hole 
+  Difficult to run large programs  
+
+  First Fit 
+
+  Creates average size holes  
+
+  First-fit and best-fit better than worst-fit in terms of 
+
+speed and/or storage utilization 
+
+Copyright : University of Illinois CS 241 Staff 
+
+17 
+
+Fragmentation 
+  Internal Fragmentation  
+
+  Allocated memory may be larger than 
+
+requested memory 
+
+  The extra memory is internal to a 
+partition/block, but not being used 
+
+  External Fragmentation 
+
+  Memory space exists to satisfy a request, 
+
+but it is not contiguous 
+
+  Reduce by compaction, buddy allocation 
+
+Copyright : University of Illinois CS 241 Staff 
+
+18 
+
+3. Deallocation Policies 
+  Goals: Given deallocation pointer: 
+
+  Find size of the target object 
+  Restore the memory to the free list 
+  Minimize fragmentation 
+  Common Mechanisms: 
+
+1.  Object metadata to find size  
+2.  Binary buddy system to reduce external 
+
+fragmentation 
+
+Copyright : University of Illinois CS 241 Staff 
+
+19 
+
+Object Metadata 
+
+  void free(void* ptr) 
+
+A 
+
+C 
+
+B 
+
+Free 
+
+  Find size of target object fast: How? 
+
+Copyright : University of Illinois CS 241 Staff 
+
+20 
+
+Metadata Before Object 
+
+  void free(void* ptr) 
+
+B 
+
+  Metadata at front of object: 
+  4 bytes for object size: 232-1 
+  4 bytes for pointer to linked list of objects 
+  C++, Java, ... : 4-8 bytes for class, GC 
+
+Copyright : University of Illinois CS 241 Staff 
+
+21 
+
+Binary Buddy Allocator 
+
+  Memory allocated using 
+
+power-of-2 allocator 
+  Satisfy requests in units of 
+
+size power of 2 
+
+  Request rounded up to 
+next highest power of 2 
+  When smaller allocation 
+needed than is available, 
+current chunk split into two 
+buddies of next-lower 
+power of 2 
+  Continue until 
+
+appropriate sized chunk 
+available 
+
+Copyright : University of Illinois CS 241 Staff 
+
+22 
+
+Binary Buddy System 
+
+  Approach 
+
+  Minimum allocation size = smallest frame 
+  Use a bitmap to monitor frame use 
+  Maintain freelist for each possible frame size  
+
+ 
+ 
+
+  power of 2 frame sizes from min to max 
+Initially one block = entire buffer 
+If two neighboring frames (buddies) are free, combine 
+them and add to next larger freelist 
+
+Copyright : University of Illinois CS 241 Staff 
+
+23 
+
+Buddy System Example 
+
+128 Free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+24 
+
+Buddy System Example 
+
+Process A requests 16 
+
+128 Free 
+
+64 Free 
+
+32 Free 
+
+32 Free 
+
+16 A 
+
+16 Free 
+
+32 Free 
+
+64 Free 
+
+64 Free 
+
+64 Free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+25 
+
+Buddy System Example 
+
+Process B requests 32 
+
+16 A 
+
+16 Free 
+
+32 Free 
+
+32 B 
+
+128 Free 
+
+64 Free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+26 
+
+Buddy System Example 
+
+Process C requests 8 
+
+16 A 
+
+16 Free 
+
+32 B 
+
+128 Free 
+
+64 Free 
+
+16 A 
+
+8 
+C 
+
+8 
+
+32 B 
+
+64 Free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+27 
+
+Buddy System Example 
+
+Process A exits 
+
+16 Free 
+
+8 
+C 
+
+8 
+
+32 B 
+
+64 Free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+28 
+
+Buddy System Example 
+
+Process C exits 
+
+16 Free 
+
+8 
+
+8 
+
+16 Free 
+
+16 Free 
+
+32 Free 
+
+32 B 
+
+32 B 
+
+32 B 
+
+64 Free 
+
+64 Free 
+
+64 Free 
+
+Copyright : University of Illinois CS 241 Staff 
+
+29 
+
+Buddy System: Tradeoffs 
+
+  Advantages 
+
+  Very fast search for Best Fit allocation policy 
+  Fast compaction  
+  Minimizes external fragmentation 
+
+  Disadvantage 
+
+ 
+
+Internal fragmentation when not 2^n request 
+
+Copyright : University of Illinois CS 241 Staff 
+
+30 
+

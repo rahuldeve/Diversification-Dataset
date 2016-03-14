@@ -1,0 +1,333 @@
+CSE 373 Lecture 13: Hashing
+
+Review of Hashing
+
+ Todays Topics:
+
+ Collision Resolution
+ Separate Chaining
+ Open Addressing
+
+G Linear/Quadratic Probing
+G Double Hashing
+
+ Rehashing
+ Extendible Hashing
+
+ Covered in Chapter 5 in the text
+
+ Idea: Store data record in array slot A[i] where i = Hash(key)
+
+ If keys are integers, we can use the hash function:
+
+ Hash(key) = key mod TableSize
+ TableSize is size of the array (preferably a prime number)
+
+ If keys are strings (in the form char *key), get integers by
+
+treating characters as digits in base 27 (using a = 1, b =
+2, c = 3, d = 4 etc.)
+ Hash(key) = StringInt(key) mod TableSize
+ StringInt(abc) = 1*272 + 2*271 + 3 = 786
+ StringInt(bca) = 2*272 + 3*271 + 1 = 1540
+ StringInt(cab) = 3*272 + 1*271 + 2 = 2216
+
+R. Rao, CSE 373 Lecture 13
+
+1
+
+R. Rao, CSE 373 Lecture 13
+
+Collisions and their Resolution
+
+Collision Resolution by Separate Chaining
+
+ A collision occurs when two different keys hash to the same
+
+value
+ E.g. For TableSize = 17, keys 18 and 35 hash to the same value
+ 18 mod 17 = 1 and 35 mod 17 = 1
+
+ Cannot store both data records in the same slot in array!
+
+ Two different methods for collision resolution:
+
+ Separate Chaining: Use data structure (such as a linked list)
+
+to store multiple items that hash to the same slot
+
+ Open addressing (or probing): search for other slots using a
+second function and store item in first empty slot that is found
+
+ Each hash table cell holds pointer to
+linked list of records with same hash
+value (i, j, k in figure)
+
+ Collision: Insert item into linked list
+ To Find an item: compute hash value,
+
+then do Find on linked list
+
+ Can use List ADT for
+
+Find/Insert/Delete in linked list
+
+ Can also use BSTs: O(log N) time
+
+instead of O(N). But lists are usually
+small  not worth the overhead of BSTs
+
+R. Rao, CSE 373 Lecture 13
+
+3
+
+R. Rao, CSE 373 Lecture 13
+
+2
+
+4
+
+Separate Chaining: In-Class Example
+
+Load Factor of a Hash Table
+
+ Insert 10 random keys between 0 and 100 into a hash table
+
+with TableSize = 10
+
+ Let N = number of items to be stored
+ Load factor  = N/TableSize
+ What is  for our example?
+ Suppose TableSize = 2 and number of items N = 10
+
+  = 5
+
+ Suppose TableSize = 10 and number of items N = 2
+
+  = 0.2
+
+ Average length of chained list = 
+ Average time for accessing an item = O(1) + O()
+
+ Want  to be close to 1 (i.e. TableSize  N)
+ But chaining continues to work for  > 1
+
+R. Rao, CSE 373 Lecture 13
+
+5
+
+R. Rao, CSE 373 Lecture 13
+
+Collision Resolution by Open Addressing
+
+Open Addressing I: Linear Probing
+
+ Linked lists can take up a lot of space...
+
+ Open addressing (or probing): When collision occurs, try
+
+alternative cells in the array until an empty cell is found
+
+ Given an item X, try cells h0(X), h1(X), h2(X), ..., hi(X)
+ hi(X) = (Hash(X) + F(i)) mod TableSize
+
+ Define F(0) = 0
+
+ F is the collision resolution function. Three possibilities:
+
+ Linear: F(i) = i
+ Quadratic: F(i) = i2
+ Double Hashing: F(i) = i(cid:149)Hash2(X)
+
+ Main Idea: When collision occurs, scan down the array one
+
+cell at a time looking for an empty cell
+ hi(X) = (Hash(X) + i) mod TableSize
+ Compute hash value and increment it until a free cell is found
+
+(i = 0, 1, 2, ...)
+
+ Example: Insert {18, 19, 20, 29, 30, 31} into empty hash
+
+table with TableSize = 10
+
+R. Rao, CSE 373 Lecture 13
+
+7
+
+R. Rao, CSE 373 Lecture 13
+
+6
+
+8
+
+Load Factor Analysis of Linear Probing
+
+Drawbacks of Linear Probing
+
+ Recall: Load factor  = N/TableSize
+ Fraction of empty cells = 1 - 
+ Number of such cells we expect to probe = 1/(1- )
+ Can show that expected number of probes for:
+
+ Successful searches = O(1+1/(1- ))
+ Insertions and unsuccessful searches = O(1+1/(1- )2)
+
+ Keep   0.5 to keep number of probes small
+
+(between 1 and 5). (E.g. What happens when  = 0.99)
+
+ Works until array is full, but as number of items N
+
+approaches TableSize (  1), access time approaches O(N)
+
+ Very prone to cluster formation (as in our example)
+
+ If a key hashes into a cluster, finding a free cell involves going
+
+through the entire cluster
+
+ Inserting this key at the end of cluster causes the cluster to
+grow ! future Inserts will be even more time consuming!
+
+ This type of clustering is called Primary Clustering
+
+ Can have cases where table is empty except for a few
+
+clusters
+ Does not satisfy good hash function criterion of distributing
+
+keys uniformly
+
+R. Rao, CSE 373 Lecture 13
+
+9
+
+R. Rao, CSE 373 Lecture 13
+
+10
+
+Open Addressing II: Quadratic Probing
+
+Open Addressing III: Double Hashing
+
+ Main Idea: Spread out the search for an empty slot 
+
+Increment by i2 instead of i
+
+ hi(X) = (Hash(X) + i2) mod TableSize
+
+ No primary clustering but secondary clustering possible
+
+(i = 0, 1, 2, ...)
+
+ Example 1: Insert {18, 19, 20, 29, 30, 31} into empty hash
+
+table with TableSize = 10
+
+ Example 2: Insert {1, 2, 5, 10, 17} with TableSize = 16
+
+ Note: 25 mod 16 = 9, 36 mod 16 = 4, 49 mod 16 = 1, etc.
+
+ Theorem: If TableSize is prime and  < 0.5, quadratic
+
+probing will always find an empty slot
+
+ Idea: Spread out the search for an empty slot by using a
+
+second hash function
+ No primary or secondary clustering
+
+ hi(X) = (Hash(X) + i(cid:149)Hash2(X)) mod TableSize
+
+for i = 0, 1, 2, ...
+
+ E.g. Hash2(X) = R  (X mod R)
+
+ R is a prime smaller than TableSize
+
+ Try this example: Insert {18, 19, 20, 29, 30, 31} into empty
+
+hash table with TableSize = 10 and R = 7
+
+ No clustering but slower than quadratic probing due to Hash2
+
+R. Rao, CSE 373 Lecture 13
+
+11
+
+R. Rao, CSE 373 Lecture 13
+
+12
+
+Rehashing
+
+Extendible Hashing
+
+ Need to use lazy deletion if we use probing (why?)
+
+ Need to mark array slots as deleted after Delete
+
+ If table gets too full (  1) or if many deletions have occurred, running
+
+time gets too long and Inserts may fail
+
+ Solution: Rehashing  Build a bigger hash table (of size 2*TableSize)
+
+when  exceeds a particular value
+ Cannot just copy data from old table ! bigger table has a new hash
+
+function
+
+ Go through old hash table, ignoring items marked deleted
+ Recompute hash value for each non-deleted key and put the item in
+
+new position in new table
+
+ Running time is O(N) but happens very infrequently
+
+ A method of hashing used when large amounts of data are
+
+stored on disks ! can find data in 2 disk accesses
+
+ Could use B-trees but deciding which of many children
+
+contains the data takes time
+
+ Extendible Hashing: Store data according to bit patterns
+ Root contains pointers to sorted data bit patterns stored in leaves
+ Leaves contain  M data bit patterns with dL identical leading bits
+ Root is known as the directory; M is the size of a disk block
+ Requires bits to be nearly random, so hash keys to long integers
+
+ E.g.: Leaves store bit patterns with 2 identical leading bits
+
+ See text (page 169)
+
+R. Rao, CSE 373 Lecture 13
+
+13
+
+R. Rao, CSE 373 Lecture 13
+
+14
+
+Wednesdays Class will be a Lab Session for help
+
+with the programming assignment (no lecture)
+Where: Communications Bldg. B-027 and B-022
+
+When: 11:30am-12:30pm
+
+Charles and Jiwon will be in the lab to answer questions
+
+To Do:
+
+Finish reading Chapter 5
+
+Programming Assignment #1 (due April 27)
+
+R. Rao, CSE 373 Lecture 13
+
+15
+

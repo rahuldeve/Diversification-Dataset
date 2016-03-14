@@ -1,0 +1,2873 @@
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+147
+
+A Cone-Based Distributed Topology-Control
+Algorithm for Wireless Multi-Hop Networks
+
+Li (Erran) Li, Member, IEEE, Joseph Y. Halpern, Senior Member, IEEE, Paramvir Bahl, Senior Member, IEEE,
+
+Yi-Min Wang, and Roger Wattenhofer
+
+, there is some node that
+
+AbstractThe topology of a wireless multi-hop network can be
+controlled by varying the transmission power at each node. In
+this paper, we give a detailed analysis of a cone-based distributed
+topology-control (CBTC) algorithm. This algorithm does not
+assume that nodes have GPS information available; rather it
+depends only on directional information. Roughly speaking, the
+transmits with the
+basic idea of the algorithm is that a node
+minimum power
+required to ensure that in every cone of
+can reach with
+around
+degree
+power
+. We show that taking = 5
+6 is a necessary and
+sufficient condition to guarantee that network connectivity is
+preserved. More precisely, if there is a path from to when every
+node communicates at maximum power then, if
+6, there
+is still a path in the smallest symmetric graph
+containing all
+edges (
+using power
+6, connectivity is not
+necessarily preserved. We also propose a set of optimizations that
+further reduce power consumption and prove that they retain
+network connectivity. Dynamic reconfiguration in the presence
+of failures and mobility is also discussed. Simulation results are
+presented to demonstrate the effectiveness of the algorithm and
+the optimizations.
+
+. On the other hand, if
+
+can communicate with
+
+) such that
+
+5
+
+5
+
+Index TermsConnectivity,
+
+localized distributed algorithm,
+
+power management, topology control.
+
+I. INTRODUCTION
+
+M ULTI-HOP wireless networks, such as radio networks
+
+[11], ad hoc networks [16], and sensor networks [4],
+[18], are networks where communication between two nodes
+may go through multiple consecutive wireless links. Unlike
+wired networks, which typically have a fixed network topology
+
+Manuscript received August 30, 2002; revised September 8, 2003; approved
+by IEEE/ACM TRANSACTIONS ON NETWORKING Editor K. Calvert. The work of
+J. Y. Halpern and L. Li was supported in part by the National Science Founda-
+tion under Grants IRI-96-25901, IIS-0090145, and NCR97-25251, and the Of-
+fice of Naval Research under Grants N00014-00-1-03-41, N00014-01-10-511,
+and N00014-01-1-0795. The work of R. Wattenhofer was supported in part by
+the National Competence Center in Research on Mobile Information and Com-
+munication Systems (NCCR-MICS), which is supported by the Swiss National
+Science Foundation under Grant 5005-67322. This is a revised and extended ver-
+sion of a paper which appeared in Proceedings of ACM Principles of Distributed
+Computing (PODC), 2001, and includes results from Distributed topology con-
+trol for power efficient operation in multihop wireless ad hoc networks, by
+R. Wattenhofer, L. Li, P. Bahl, and Y.-M. Wang, which appeared in the Pro-
+ceedings of IEEE INFOCOM, 2001.
+
+L. Li is with Bell Laboratories, Lucent Technologies, Holmdel, NJ 07733-
+
+3030 USA (e-mail: erranlli@bell-labs.com).
+
+J. Y. Halpern is with the Department of Computer Science, Cornell University,
+
+Ithaca, NY 14853-7501 USA (e-mail: halpern@cs.cornell.edu).
+
+P. Bahl and Y.-M. Wang are with Microsoft Research, Redmond, WA 98052
+
+USA (e-mail: bahl@microsoft.com; ymwang@microsoft.com).
+
+R. Wattenhofer is with ETH Zurich, 8092 Zurich, Switzerland (e-mail: wat-
+
+tenhofer@inf.ethz.ch).
+
+Digital Object Identifier 10.1109/TNET.2004.842229
+
+(except in case of failures), each node in a wireless network
+can potentially change the network topology by adjusting
+its transmission power to control its set of neighbors. The
+primary goal of topology control is to design power-efficient
+algorithms that maintain network connectivity and optimize
+performance metrics such as network lifetime and throughput.
+As pointed out by Chandrakasan et al. [2], network protocols
+that minimize energy consumption are key to the successful
+usage of wireless sensor networks. To simplify deployment
+and reconfiguration in the presence of failures and mobility,
+distributed topology-control algorithms that utilize only local
+information and allow asynchronous operations are particularly
+attractive.
+
+, at any given point in time. Each node
+
+We are given a set
+the plane. Each node
+
+The topology-control problem can be formalized as follows.
+of possibly mobile nodes located in
+is specified by its coordinates,
+has a
+gives the minimum power needed
+away
+
+power function where
+to establish a communication link to a node
+at distance
+from . Assume that the maximum transmission power
+is the same for every node, and the maximum distance for any
+.
+two nodes to communicate directly is
+If every node transmits with power
+, then we have an
+induced graph
+(where
+and ).
+Although this model is not always appropriate, Rodouplu and
+Meng [23] argue that it does capture various radio propagation
+environments.
+
+is the Euclidean distance between
+
+where
+
+, i.e.,
+
+It is undesirable to have nodes transmit with maximum power
+for two reasons. First, since the power required to transmit be-
+tween nodes increases as the th power of the distance between
+them, for some
+[22], it may require less power for a node
+to relay messages through a series of intermediate nodes to
+than to transmit directly to . Second, the greater the power
+with which a node transmits, the greater the likelihood of the
+transmission interfering with other transmissions.
+
+of
+
+such that (1)
+
+but has fewer edges, (2) if
+
+, they are still connected in
+
+rected1 subgraph
+nodes in
+
+Our goal in performing topology control is to find an undi-
+consists of all the
+and are connected in
+can transmit
+to all its neighbors in
+using less power than is required to
+. Since minimizing power con-
+transmit to all its neighbors in
+sumption is so important, it is desirable to find a graph
+satis-
+fying these three properties that minimizes the amount of power
+that a node needs to use to communicate with all its neighbors.
+
+, and (3) a node
+
+1Directed links complicate the design of routing and MAC protocols [19].
+
+1063-6692/$20.00  2005 IEEE
+
+148
+
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+Furthermore, for a topology control algorithm to be useful in
+in the network to
+practice, it must be possible for each node
+in a dis-
+construct its neighbor set
+tributed fashion. Finally, if
+due to node fail-
+ures or mobility, it must be possible to reconstruct a connected
+
+changes to
+
+without global coordination.
+In this paper we consider a cone-based topology-control
+(CBTC) algorithm, and show that it satisfies all these desiderata.
+Most previous papers on topology control have utilized position
+information, which usually requires the availability of GPS at
+each node. There are a number of disadvantages with using
+GPS. In particular, the acquisition of GPS location information
+incurs a high delay, and GPS does not work in indoor environ-
+ments or cities. By way of contrast, the cone-based algorithm
+requires only the availability of directional information. That
+is, it must be possible to estimate the direction from which
+another node is transmitting. Techniques for estimating direc-
+tion without requiring position information are available, and
+discussed in the IEEE antenna and propagation community
+as the Angle-of-Arrival problem. The standard way of doing
+this is by using more than one directional antenna (see [12]).
+Specifically, the direction of incoming signals is determined
+from the difference in their arrival times at different elements
+of the antenna.2
+
+The cone-based algorithm takes as a parameter an angle
+
+.
+such that
+
+ensures that in every cone of degree
+
+then tries to find the minimum power
+
+A node
+transmitting with
+around , there is some node that
+taking
+nectivity. That is, we show that if
+from to in
+node locations) and that if
+
+can reach. We show that
+is necessary and sufficient to preserve con-
+, then there is a path
+(for all possible
+, then there exists a graph
+is not. Moreover, we propose
+several optimizations and show that they preserve connectivity.
+Finally, we discuss how the algorithm can be extended to deal
+with dynamic reconfiguration and asynchronous operations.
+
+iff there is such a path in
+
+that is connected while
+
+There were a number of papers on topology control prior
+to our work; as we said earlier, all assume that position in-
+formation is available. Hu [9] describes an algorithm that
+does topology control using heuristics based on a Delauney
+triangulation of the graph. There seems to be no guarantee
+that the heuristics preserve connectivity. Ramanathan and Ros-
+ales-Hain [21] describe a centralized spanning tree algorithm
+for achieving connected and biconnected static networks, while
+minimizing the maximum transmission power. (They also
+describe distributed algorithms that are based on heuristics
+and are not guaranteed to preserve connectivity.) Rodoplu
+and Meng [23] propose a distributed position-based topology
+control algorithm that preserves connectivity; their algorithm
+is improved by Li and Halpern [13]. Other researchers working
+in the field of packet radio networks, wireless ad hoc networks,
+and sensor networks have also considered the issue of power
+efficiency and network lifetime, but have taken different ap-
+proaches. For example, Hou and Li [8] analyze the effect of
+adjusting transmission power to reduce interference and hence
+
+2Of course, if GPS information is available, a node can simply piggyback its
+location to its message and the required directional information can be calcu-
+lated from that.
+
+achieve higher throughput as compared to schemes that use
+fixed transmission power [24]. Heinzelman et al. [7] describe
+an adaptive clustering-based routing protocol that maximizes
+network lifetime by randomly rotating the role of per-cluster
+local base stations (cluster-head) among nodes with higher
+energy reserves. Chen et al. [3] and Xu et al. [30] propose
+methods to conserve energy and increase network lifetime by
+turning off redundant nodes. Wu et al. [29] and Monks et al.
+[15] describe their power controlled MAC protocols to reduce
+energy consumptions and increase throughput. They do this
+through power control of unicast packets, but make no attempt
+at reducing the power consumption of broadcast packets.
+
+After the initial publication of our results on CBTC [14], [27],
+there appeared a number of papers proposing different localized
+topology-control algorithms [10], [26], [28]. CBTC was the first
+algorithm that simultaneously achieved a variety of useful prop-
+erties, such as symmetry, sparseness, and good routes; some of
+the recent topology also aim to simultaneously achieve a number
+of properties, most notably [26] and [10]. CBTC was also the
+first topology-control algorithm that did not require GPS in-
+formation, but used only angle-of-arrival information. The only
+improvement toward this end that we are aware of is the XTC
+topology-control algorithm [28]. The XTC algorithm is some-
+what similar in spirit to the SMECN algorithm [13], in that it
+if, according to some path-loss model,
+removes an edge
+there is a two-hop path from to which nevertheless requires
+less energy than the direct path.
+
+The rest of the paper is organized as follows. Section II
+presents the basic cone-based algorithm and shows that
+is necessary and sufficient for connectivity. Sec-
+tion III describes several optimizations to the basic algorithm
+and proves their correctness. Section IV extends the basic
+algorithm so that it can handle the reconfiguration necessary to
+deal with failures and mobility. Section V describes network
+simulation results that show the effectiveness of the basic
+approach and the optimizations. Section VI summarizes this
+paper.
+
+II. THE BASIC CONE-BASED TOPOLOGY CONTROL ALGORITHM
+
+We consider three communication primitives: broadcast,
+
+send, and receive, defined as follows:
+
+
+
+
+
+sage
+
+with power
+
+is invoked by node
+
+to send mes-
+; it results in all nodes in the set
+
+receiving
+
+.
+
+is invoked by node
+. This primitive is used to send unicast
+
+to sent message
+
+to with power
+messages, i.e., point-to-point messages.
+
+
+
+is used by
+
+to receive message
+
+receives a message
+of message
+
+from .
+from , it knows
+We assume that when
+the reception power
+. This is, in general, less
+than the power with which
+sent the message, because of
+radio signal attenuation in space. Moreover, we assume that,
+given the transmission power and the reception power
+can
+. This assumption is reasonable in practice.
+estimate
+For ease of presentation, we first assume a synchronous
+model; that is, we assume that communication proceeds in
+rounds, governed by a global clock, with each round taking
+
+,
+
+LI et al.: A CONE-BASED DISTRIBUTED TOPOLOGY-CONTROL ALGORITHM FOR WIRELESS MULTI-HOP NETWORKS
+
+149
+
+one time unit. (We deal with asynchrony in Section IV.) In
+can examine the messages sent to it,
+each round each node
+com-
+compute, and send messages using the
+munication primitives. The communication channel is reliable.
+We later relax this assumption, and show that the algorithm is
+correct even in an asynchronous setting.
+
+and
+
+. Node
+
+centered at
+
+. Each node
+
+The basic Cone-Based Topology-Control (CBTC) algorithm
+is easy to explain. The algorithm takes as a parameter an angle
+tries to find at least one neighbor in every cone of
+starts running the algorithm by
+degree
+broadcasting a Hello message using low transmission power,
+and collecting Ack replies. It gradually increases the transmis-
+sion power to discover more neighbors. It keeps a list of the
+nodes that it has discovered and the direction in which they are
+located. (As we said in Section I, we assume that each node
+can estimate directional information.) It then checks whether
+contains a node. This check is easily per-
+each cone of degree
+formed: the nodes are sorted according to their angles relative to
+received
+some reference node (say, the first node from which
+be-
+a reply). It is immediate that there is a gap of more than
+tween the angles of two consecutive nodes iff there is a cone of
+centered at which contains no nodes. If there is such
+degree
+a gap, then broadcasts with greater power. This continues until
+broadcasts with maximum power.
+either finds no -gap or
+Fig. 1 gives the basic CBTC algorithm. In the algorithm, a
+Hello message is originally broadcasted using some minimal
+. In addition, the power used to broadcast the message
+power
+is included in the message. The power is then increased at each
+. As in [13] (where a sim-
+step using some function
+ilar function is used, in the context of a different algorithm),
+in this paper, we do not investigate how to choose the initial
+, nor do we investigate how to increase the power at
+power
+such that
+each step. We simply assume some function
+. If transmis-
+, one can set
+for fast convergence. If the initial choice
+is less than the total power actually needed, then it is easy
+of
+s estimate of the transmission
+to see that this guarantees that
+power needed to reach a node will be within a factor of 2 of
+the minimum transmission power actually needed to reach . If
+transmission power can only be set to several discrete values,
+can be set to each value in increasing order. We
+
+sion power can be set continuously in
+
+for sufficiently large
+
+adopt the latter approach in our simulation.
+
+Upon receiving a Hello message from , node
+
+responds
+
+to its set
+
+with an Ack message. Upon receiving the Ack from , node
+adds
+(measured as an angle relative to some fixed angle) to its set
+tests if there is a gap
+
+of neighbors and adds s direction
+
+of directions. The test
+
+greater than
+if
+
+.)
+
+in the angles in
+
+. (We take
+
+We use the following notation throughout the paper.
+
+
+is the final set of discovered neighbors computed
+
+
+
+
+
+by node
+
+at the end of running CBTC
+is the corresponding final power.
+
+.
+
+.
+
+work and
+
+, where
+is the symmetric closure of
+
+consists of all nodes in the net-
+; that is,
+
+iff either
+
+or
+
+.
+
+Fig. 1. Basic cone-based algorithm running at each node u.
+
+Fig. 2.
+
+cone(u ; ; v ).
+
+
+
+
+
+
+
+
+
+by the line
+
+is the cone of degree which is bisected
+, as in Fig. 2.
+
+is the set of nodes inside
+
+.
+
+is the circle centered at with radius .
+
+is the distance
+
+of the neighbor
+
+farthest
+
+from in
+
+; that is,
+
+.
+
+is the distance
+
+of the neighbor
+
+farthest
+
+from in
+Note that the
+
+example shows, it is possible that
+
+Example II.1: Suppose that
+
+.
+relation is not symmetric. As the following
+.
+. (See
+
+but
+
+Fig. 3.) Further suppose that
+,
+
+and place
+
+,
+
+1)
+2)
+
+3)
+4)
+
+);
+
+(so that
+
+.
+
+. Choose with
+
+so that:
+
+;
+
+(so that
+
+);
+
+and , the positions
+
+Note that, given
+of
+
+,
+
+and the positions of
+are determined. Since
+
+, and
+, it follows that
+
+;
+. (Here and elsewhere we
+similarly
+use the fact that, in a triangle, larger sides are opposite larger
+,
+angles.) Assume
+,
+since there is no -gap with this neighbor set.
+since
+, but
+
+has to reach maximum power. Thus,
+
+.
+
+.
+
+. Although
+
+Example II.1 shows the need for taking the symmetric clo-
+, there would
+sure in computing
+if we considered just the edges deter-
+be no path from
+, without taking the symmetric closure. (The fact
+mined by
+in this example is necessary. As we shall see in
+that
+Section III-B, taking the symmetric closure is not necessary if
+
+to
+
+150
+
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+Fig. 3. N may not be symmetric.
+
+.) As we have already observed, each node
+
+the power required to reach all nodes
+it is just the max of
+each of the nodes
+(As we said earlier, if
+cludes the power used to transmit it,
+required for
+
+knows
+:
+to reach
+from which it received a Hello message.
+receives a Hello from , since it in-
+can determine the power
+
+and the power required by
+
+to reach .)
+
+such that
+
+We now prove the two main results of this paper:
+
+1) if
+2) if
+of
+
+.
+
+, then
+, then
+
+preserves the connectivity of
+;
+may not preserve the connectivity
+
+The following lemma will be used in the proof of (1).
+
+Lemma II.1: If
+
+that
+that
+
+(that is,
+), then either
+
+, and
+
+and
+
+are nodes in
+is an edge in the graph
+
+or there exist
+
+such
+, so
+,
+or
+
+such that (a)
+
+, and (c) either
+
+or
+
+, (b) either
+.
+
+Proof: If
+
+be the case that
+
+and
+
+terminate CBTC
+
+with no
+
+, we are done. Otherwise, it must
+. Thus, both
+-gap. It follows that
+.
+is minimal.
+is in the
+,
+
+such that
+
+and
+
+. If
+
+Choose
+(See Fig. 4.) Suppose without loss of generality that
+halfplane above
+since
+
+is actually located in
+
+, it follows that
+would be at least as long
+. For otherwise, the side
+, so that
+would have
+as any other side in the triangle
+to be at least as large as any other angle in the triangle. But
+since
+and
+without loss of generality that
+that
+
+, the lemma holds in this case. So we can assume
+(and, thus,
+be the first node in
+
+, this is impossible. Thus, taking
+
+). Let
+
+that a ray that starts at
+
+would hit as it sweeps past
+
+going counterclockwise. By construction,
+below
+
+and
+
+.
+
+is in the half-plane
+
+we can assume that
+,
+exist two points
+above
+and
+If
+
+Similar considerations show that, without loss of generality,
+, and that there
+is in the halfplane
+is in the halfplane below , (c) at least one of
+. See Fig. 4.
+and
+. Similarly,
+
+, then the lemma holds with
+
+, so we can assume that
+
+, (b)
+is inside
+
+such that (a)
+
+, and (d)
+
+Fig. 4.
+
+Illustration for the proof of Lemma II.1.
+
+and
+
+. We
+we can assume without loss of generality that
+cannot both be greater than
+now prove that
+or equal to . This will complete the proof since, for example, if
+in the lemma.
+and
+and
+
+Suppose, by way of contradiction, that
+
+be the intersection point of
+
+, then we can take
+
+. Let
+
+and
+
+that is closest to . Recall that at least one of
+
+and
+
+must be outside (or on)e both circles
+
+. As we show in Appendix A, since node
+,
+(see the closeup on the far right side of
+
+and
+
+, and
+
+, it
+
+. Thus,
+
+is inside
+
+we have
+Fig. 4).
+Since
+
+follows that
+
+and so
+
+Since
+
+, we have that
+
+By definition of
+
+,
+
+, so
+
+. Thus, it must be the case that
+
+, so
+
+.
+
+(1)
+
+Arguments identical to those used to derive (1) (replacing the
+and , respectively) can be used to show
+
+and
+
+by
+
+role of
+that
+
+From (1) and (2), we have
+
+(2)
+
+LI et al.: A CONE-BASED DISTRIBUTED TOPOLOGY-CONTROL ALGORITHM FOR WIRELESS MULTI-HOP NETWORKS
+
+151
+
+Since
+
+Since
+
+, we have that
+
+. Thus,
+
+, it easily follows that
+
+. As we showed earlier,
+
+. Therefore,
+
+. This is a contradiction.
+
+, then
+and are connected in
+
+preserves the connec-
+iff they are connected
+
+Theorem II.2: If
+
+;
+
+tivity of
+.
+in
+Proof: Since
+are connected in
+
+and
+
+is a subgraph of
+
+, it is clear that if
+
+, they must be connected in
+
+.
+
+We now prove the converse. Order the edges in
+
+by length.
+We proceed by induction on the rank of the edge in the ordering
+in
+to show that if
+, then
+. For note
+,
+. For the
+
+, then there is a path from to
+
+and is a shorter edge than
+
+is the shortest edge in
+
+. For the base case, if
+
+it is immediate from Lemma II.1 that
+that, by construction, if
+then
+inductive step, suppose that
+and, by way of contradiction, that
+II.1, there exist
+(b) either
+
+is the th shortest edge in
+
+such that (a)
+
+and
+
+or
+
+,
+
+is not in
+
+, and (c) either
+
+. By Lemma
+,
+or
+.
+, by the inductive hypothesis, it follows
+is symmetric,
+. It
+, then
+
+are connected in
+
+. Since
+
+in
+
+Since
+that there is an path from to
+it is immediate that there is also a path from to
+immediately follows that if
+there is a path from to
+in
+
+and
+.
+
+in
+
+. As we observed, it follows that
+
+The proof of Theorem II.2 gives some extra information,
+
+which we cull out as a separate corollary:
+
+Corollary II.3: If
+
+, and
+
+and
+
+Fig. 5. A disconnected graph if  = 5=6 + .
+
+and
+
+so that
+
+is, since
+
+, whatever
+
+sweeps around counterclockwise from
+
+. It is easy to see that
+.
+is
+For definiteness, choose
+chosen similarly. The key step in the construction is the choice
+be a point
+of
+on the line through
+such that
+find such a node
+struction, it follows that
+is clearly possible to choose
+
+, it is possible to
+by con-
+. It
+sufficiently small so that
+
+slightly to the left of
+
+. Note that
+
+parallel to
+
+. Since
+
+. Since
+
+. Node
+
+. Let
+
+and
+
+. The choice of
+
+is similar.
+
+It is now easy to check that when
+
+runs CBTC
+
+, it will
+; similarly
+
+. Thus, this construction has all the required properties.
+
+III. OPTIMIZATIONS
+
+In this section, we describe three optimizations to the basic
+algorithm. We prove that these optimizations allow some of the
+edges to be removed while still preserving connectivity.
+
+A. The Shrink-Back Operation
+
+In the basic CBTC
+
+is said to be a boundary
+algorithm,
+still has an -gap. Note
+node if, at the end of the algorithm,
+that this means that, at the end of the algorithm, a boundary
+node broadcasts with maximum power. An optimization would
+be to add a shrinking phase at the end of the growing phase
+to allow each boundary node to broadcast with less power, if
+it can do so without reducing its cone coverage. To make this
+,
+precise, given a set
+define
+
+of directions (angles) and an angle
+
+. We modify CBTC
+
+so that, at each iteration,
+is tagged with the power used the first time it
+
+a node in
+was discovered. Suppose that the power levels used by node
+during the algorithm were
+is the maximum power
+
+is a boundary node,
+. A boundary node successively
+, and so on, as
+removes nodes tagged with power
+long as their removal does not change the coverage. That is, let
+
+, then
+
+. If
+
+such that
+path
+
+, then either
+
+such that
+
+,
+
+, for
+
+Next we prove that degree
+
+if
+connectivity.
+
+, then CBTC
+
+are nodes in
+or there exists a
+, and
+
+terminate with
+for
+
+,
+
+.
+
+is a tight upper bound;
+does not necessarily preserve
+
+Theorem II.4: If
+
+, then CBTC
+
+does not neces-
+
+sarily preserve connectivity.
+
+,
+
+,
+
+,
+
+Proof: Suppose
+
+,
+-cluster, and
+
+for some
+such that CBTC
+
+struct a graph
+serve the connectivity of this graph.
+
+. We con-
+does not pre-
+,
+the
+the -cluster. The construction has
+, 1, 2, 3, we have
+.
+That is, the only edge between the -cluster and the -cluster in
+) edge disappears,
+
+the property that
+,
+
+. (See Fig. 5.) We call
+
+has eight nodes:
+
+). However, in
+
+and for ,
+
+, the (
+
+, and
+
+is (
+
+if
+
+,
+
+,
+
+,
+
+,
+
+,
+
+,
+
+,
+
+,
+
+,
+
+,
+
+so that the -cluster and the -cluster are disconnected.
+
+In Fig. 5,
+
+of radius
+chosen so that
+
+and
+
+and
+
+. Similarly,
+
+centered at
+
+, respectively. Node
+
+are the intersection points of the circles
+is
+is chosen so that
+are on opposite sides of the
+. Because of the right angle, it is clear that, whatever
+is, we must have
+; simi-
+so
+as a ray
+
+whatever
+and
+
+is. Next, choose
+
+comes after
+
+and
+
+and
+
+line
+
+larly,
+that
+
+152
+
+,
+levels
+
+, be the set of directions found with all power
+
+or less, then the minimum such that
+
+is found. Let
+
+consist of all the nodes in
+
+tagged with power
+, and let
+
+or less. Let
+
+be the symmetric closure of
+
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+Lemma III.3 shows that if
+
+consisting of edges in
+for our purposes; we need a path consisting of edges in
+next lemma shows that this is also possible.
+
+, then there is a path
+from to . This is not good enough
+. The
+
+. Finally,
+
+Lemma III.4: If
+
+, and
+
+and
+
+that
+
+, then there exists a path
+
+are nodes in
+
+such
+such that
+
+, then
+
+preserves the connec-
+
+,
+
+,
+
+, for
+
+.
+
+let
+
+.
+Theorem III.1: If
+
+tivity of
+
+.
+
+and
+
+and
+
+, if
+and
+
+in
+either both
+tance
+enough power to reach distance
+ther case, nodes
+
+Proof: It is easy to check that the proof of Theorem II.2
+depended only on the cone coverage of each node, so it goes
+through without change. In more detail, given any two nodes
+, then
+did not use power sufficient to reach dis-
+in the basic CBTC algorithm or one or both of them used
+but then shrank back. In ei-
+and
+,
+respectively, since any shrink-back operation can only remove
+those neighbors that provide redundant cone coverage. Thus,
+the proof of Lemma II.1 goes through with no change. The re-
+mainder of the argument follows exactly the same lines as that
+of the proof of Theorem II.2.
+
+and must still have neighbors in
+
+fully covering the cones
+
+and
+
+Note that this argument actually shows that we can remove
+any nodes from
+that do not contribute to the cone coverage.
+However, our interest here lies in minimizing the power needed
+.
+for broadcast, not in minimizing the number of nodes in
+There may be some applications where it helps to reduce the
+degree of a node; in this case, removing further nodes may be a
+useful optimization.
+
+B. Asymmetric Edge Removal
+
+As shown by Example II.1, in order to preserve connectivity,
+, even
+. This is not an
+, not only do we not
+, we can remove an
+. Let
+
+it is necessary to add an edge
+if
+accident. As we now show, if
+if
+have to add an edge
+but
+edge
+
+. In Example II.1,
+
+to
+
+if
+
+if
+
+symmetric set containing
+contained in
+
+. Let
+Theorem III.2: If
+
+tivity of
+
+.
+
+. Thus, while
+
+is the smallest
+is the largest symmetric set
+
+,
+
+.
+
+, then
+
+preserves the connec-
+
+Proof: We start by proving the following lemma, which
+
+strengthens Corollary II.3.
+
+Lemma III.3: If
+
+, and
+
+that
+
+, then either
+,
+
+such that
+
+, for
+
+and are nodes in
+
+such
+or there exists a path
+, and
+
+,
+
+.
+
+Proof: Order the edges in
+
+by length. We proceed by
+strong induction on the rank of an edge in the ordering. Given
+,
+an edge
+we are done. If not, as argued in the proof of Lemma II.1, there
+, the
+must be a node
+argument in the proof of Lemma II.1 also shows that
+
+in the ordering, if
+
+of rank
+
+. Since
+
+. Thus,
+
+and has lower rank in the ordering
+of edges. Applying the induction hypothesis, the lemma holds
+for
+
+. This completes the proof.
+
+of rank
+
+in the ordering, if
+
+Proof: Order the edges in
+
+by length. We proceed by
+strong induction on the rank of an edge in the ordering. Given an
+, we
+edge
+. Since
+,
+are done. If not, we must have
+by Lemma III.3, there is a path from to
+consisting of edges
+. If any of
+in
+, we can apply the
+these edges is asymmetric, i.e., in
+inductive hypothesis to replace the edge by a path consisting
+, such a path from
+only of edges in
+implies a path from to . This completes the inductive
+
+all of which have length smaller than
+
+. By the symmetry of
+
+to
+step.
+
+The proof of Theorem III.2 is now immediate from Lemmas
+
+III.3 and III.4.
+
+needs to be enhanced slightly. After finishing CBTC
+
+To implement asymmetric edge removal, the basic CBTC
+, a node
+to which it sent an Ack
+
+must send a message to each node
+
+from
+
+, telling to remove
+
+with asymmetric edge removal.
+
+message that is not in
+when constructing
+. It is easy to see that the shrink-back op-
+timization discussed in Section III-A can be applied together
+with the removal of these asymmetric edges.
+There is a tradeoff between using CBTC
+
+and using
+)
+CBTC
+will be no greater than
+if the Increase function is the
+same, links are reliable, and Acks responding to one Hello
+message are received before the next one is sent. However, the
+needs to transmit may be
+power
+such
+greater than
+,
+that
+and
+then asymmetric edge removal allows
+may allow to use power less than
+. Our experimental
+results confirm this. (See Section V.)
+
+with which
+, since may need to reach nodes
+but
+
+. In contrast, if
+to still use
+
+C. Pairwise Edge Removal
+
+The final optimization aims at further reducing the transmis-
+sion power of each node. In addition to the directional informa-
+tion, this optimization requires two other pieces of information.
+is assigned a unique integer ID denoted ID ,
+First, each node
+and that ID is included in all of
+s messages. Second, although
+a node does not need to know its exact distance from its neigh-
+bors, given any pair of neighbors
+and , node needs to know
+which of them is closer. This can be achieved as follows. Re-
+call that a node grows its radius in discrete steps. It includes its
+transmission power level in each of the Hello messages. Each
+discovered neighbor node also includes its transmission power
+level in the Ack. When
+and
+is closer based on the trans-
+
+receives messages from nodes
+
+, it can deduce which of
+
+and
+
+mission and reception powers of the messages.
+
+Even after the shrink-back operation and possibly asym-
+metric edge removal, there are many edges that can be removed
+while still preserving connectivity. For example,
+if three
+edges form a triangle, we can clearly remove any one of
+
+LI et al.: A CONE-BASED DISTRIBUTED TOPOLOGY-CONTROL ALGORITHM FOR WIRELESS MULTI-HOP NETWORKS
+
+153
+
+them while still maintaining connectivity. In this section, we
+improve on this result by showing that if there is an edge
+, then we can remove the
+from
+longer edge even if there is no edge from
+, as long as
+. Note that a condition
+
+and from
+
+to
+
+to
+
+to
+
+sufficient to guarantee that
+is that
+the largest angle).
+
+(since the longest edge will be opposite
+
+To make this precise, we use the notion of an edge ID. Each
+,
+
+is assigned an edge ID
+
+,
+
+ID ID , and
+
+edge
+where
+
+ID ID . Edge IDs are compared lexicographically,
+and
+
+, (b)
+
+so that
+
+, or (c)
+
+,
+
+iff either (a)
+, and
+.
+
+Definition III.5: If and
+
+are neighbors of
+
+,
+
+,
+
+and
+
+, then
+
+is a redundant edge.
+
+As the name suggests, redundant edges are redundant, in that
+it is possible to remove them while still preserving connectivity.
+The following theorem proves this.
+
+Theorem III.6: For
+
+, all redundant edges can be
+
+removed while still preserving connectivity.
+
+Proof: Let
+
+. We show that if
+
+consist of all the nonredundant edges in
+, then there is a path
+. Clearly, this suffices
+
+from to consisting only of edges in
+to prove the theorem.
+
+Let
+
+be a listing of the redundant edges (i.e,
+those in
+) in increasing lexicographic order of edge
+ID. We prove, by induction on , that for every redundant edge
+consisting of edges in
+. By definition,
+
+. For the base case, consider
+
+there is a path from to
+
+. Since
+
+such that
+
+, it follows that
+
+there must exist an edge
+and
+with the smallest edge ID,
+Since
+If
+shortest redundant edge) and
+path of nonredundant edges. On the other hand, if
+and
+to
+
+is the redundant edge
+cannot be a redundant edge.
+.
+is the
+is the desired
+
+by Corollary II.3, there exists a path from
+of edges in
+edges can be redundant edge, this gives us the desired path.
+
+,
+consisting
+. Since none of these
+
+all shorter than
+
+then, since
+
+(since
+
+, then
+
+,
+
+For the inductive step, suppose that for every
+
+, we have found a path
+
+which contains no redundant edges. Now consider
+Again, by definition, there exists another edge
+
+and
+
+and
+
+between
+
+,
+,
+.
+with
+is
+.
+and
+and
+and replacing
+, we obtain a path
+that contains no redundant edges. This
+
+(from Corollary II.3) between
+
+on the path with
+
+, we must have
+
+s, where
+
+with
+
+. If
+
+a redundant edge, it must be one of
+Moreover, if the path
+
+contains a redundant edge
+. By connecting
+
+so
+every redundant edge
+
+between
+
+and
+completes the proof.
+
+Although Theorem III.6 shows that all redundant edges can
+be removed, this does not mean that all of them should nec-
+essarily be removed. For example, if we remove some edges,
+the paths between nodes become longer, in general. Since some
+overhead is added for each link a message traverses, having
+fewer edges can affect network throughput. In addition, if routes
+
+are known and many messages are being sent using point-to-
+point communication between different senders and receivers,
+having fewer edges is more likely to cause congestion. Since
+we would like to reduce the transmission power of each node,
+we remove only redundant edges with length greater than the
+longest nonredundant edges. We call this optimization the pair-
+wise edge removal optimization.
+
+IV. DEALING WITH RECONFIGURATION, ASYNCHRONY,
+
+AND FAILURES
+
+In a multi-hop wireless network, nodes can be mobile. Even
+if nodes do not move, nodes may die if they run out of energy.
+In addition, new nodes may be added to the network. We need a
+mechanism to detect such changes in the network. This is done
+by the Neighbor Discovery Protocol (NDP). A NDP is usually a
+simple beaconing protocol for each node to tell its neighbor that
+it is still alive. The beacon includes the sending nodes ID and
+the transmission power of the beacon. A neighbor is considered
+failed if a pre-defined number of beacons are not received for a
+is considered a new neighbor
+certain time interval
+of
+if a beacon is received from and no beacon was received
+from during the previous
+
+. A node
+
+interval.
+
+The question is what power a node should use for beaconing.
+Certainly a node
+should broadcast with sufficient power to
+reach all of its neighbors in
+). As
+we will show, if
+the
+power needed for
+, then this is
+sufficient for reconfiguration to work with the basic cone-based
+algorithm (possibly combined with asymmetric edge removal if
+
+, if
+uses a beacon with power
+to reach all its neighbors in
+
+(or
+
+, in which case we can use power
+
+).
+
+We define three basic events:
+ A
+
+from node
+
+ A
+
+event happens when node
+for the first time.
+event happens when node misses some
+
+detects a beacon
+
+predetermined number of beacons from node .
+
+ An
+
+angle with respect to
+due to movement by either
+
+or
+
+.)
+
+event happens when
+
+s
+has changed. (Note this could be
+
+detects that
+
+Our reconfiguration algorithm is very simple. It is convenient
+to assume that each node is tagged with the power used when
+it was first discovered, as in the shrink-back operation. (This is
+not necessary, but it minimizes the number of times that CBTC
+needs to be rerun.)
+
+
+
+
+
+
+
+event happens, and if there is an
+
+-gap
+
+If a
+after dropping
+(as in Fig. 1), starting with power
+
+from
+
+, node
+
+reruns CBTC
+
+(i.e., taking
+
+).
+
+computes
+
+event happens,
+
+If a
+and the
+power needed to reach . As in the shrink-back operation,
+then removes nodes, starting with the farthest neighbor
+nodes and working back, as long as their removal does not
+change the coverage.
+If an
+event happens, node modifies the
+set
+-gap is then
+detected, then CBTC
+is rerun, again starting with
+power
+. Otherwise, nodes are removed, as in
+the shrink-back operation, to see if less power can be
+used.
+
+of directions appropriately. If an
+
+154
+
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+In general, there may be more than one change event that is
+detected at a given time by a node . (For example, if moves,
+then there will be in general several
+events detected by .) If more than one change event is detected
+by , we perform the changes suggested above as if the events
+are observed in some order, as long as there is no need to rerun
+CBTC. If CBTC needs to be rerun, it deals with all changes
+simultaneously.
+
+and
+
+,
+
+Intuitively, this reconfiguration algorithm preserves connec-
+tivity. We need to be a little careful in making this precise, since
+if the topology changes frequently enough, the reconfiguration
+algorithm may not ever catch up with the changes, so there may
+be no point at which the connectivity of the network is actually
+preserved. Thus, what we want to show is that if the topology
+ever stabilizes, so that there are no further changes, then the re-
+configuration algorithm eventually results in a graph that pre-
+serves the connectivity of the final network, as long as there are
+periodic beacons. It should be clear that the reconfiguration al-
+gorithm guarantees that each cone of degree
+is covered (except for boundary nodes), just as the basic algo-
+rithm does. Thus, the proof that the reconfiguration algorithm
+preserves connectivity follows immediately from the proof of
+Theorem II.2.
+
+around a node
+
+While this reconfiguration algorithm works in combination
+and in combination with
+with the basic algorithm CBTC
+the asymmetric edge removal optimization, we must be careful
+in combining it with the other optimizations discussed in Sec-
+tion III. In particular, we must be very careful about what power
+a node should use for its beacon. For example, if the shrink-
+back operation is performed, using the power to reach all the
+neighbors in
+does not suffice. For suppose that the net-
+work is temporarily partitioned into two subnetworks
+and
+and
+, the dis-
+is a boundary node in
+, and that, as a result of the
+shrink-back operation, both
+.
+Further suppose that later nodes
+and move closer together
+so that
+. If
+to
+communicate with
+, then they will never be aware of each
+others presence, since their beacons will not reach each other,
+so they will not detect that the network has become reconnected.
+Thus, network connectivity is not preserved.
+
+is not sufficient power for
+
+; for every pair of nodes
+
+is a boundary node in
+
+. Suppose that
+
+and
+
+use power
+
+tance
+
+and
+
+broadcast with the power computed by the basic CBTC
+gorithm, namely
+edge removal optimization, it is necessary for
+broadcast with
+of
+
+This problem can be solved by having the boundary nodes
+al-
+in this case. Similarly, with the pairwise
+s beacon to
+, i.e., the power needed to reach all
+, not just the power needed to reach all of
+. It is easy to see that this choice of beacon
+
+s neighbors in
+
+s neighbors in
+
+power guarantees that the reconfiguration algorithm works.
+
+It is worth noting that a reconfiguration protocol works per-
+fectly well in an asynchronous setting. In particular, the syn-
+chronous model with reliable channels that has been assumed
+up to now can be relaxed to allow asynchrony and both com-
+munication and node failures. Now nodes are assumed to com-
+municate asynchronously, messages may get lost or duplicated,
+
+and nodes may fail (although we consider only crash failures:
+either a node crashes and stops sending messages, or it follows
+its algorithm correctly). We assume that messages have unique
+identifiers and that mechanisms to discard duplicate messages
+events, as do lost mes-
+are present. Node failures result in
+sages. If node
+gets a message after many messages having
+event corresponding to the earlier
+been lost, there will be a
+
+event.
+
+V. EXPERIMENTAL RESULTS
+
+How effective is our algorithm and its optimizations as com-
+pared to other approaches? Before we answer this question, let
+us briefly review existing approaches. To our knowledge, among
+the topology-control algorithms in the literature [8], [9], [21],
+[23], [24], only Rodoplu and Mengs algorithm [23] attempts
+to optimize for energy efficiency while maintaining network
+connectivity. Following [13], we refer to Rodoplu and Mengs
+algorithm as the MECN algorithm (for minimum-energy com-
+munication network). The algorithms in [8], [9], and [24]
+try to maximize network throughput; they do not guarantee
+network connectivity. Ramanathan and Rosales-Hain [21] have
+considered minimizing the maximum transmission power of
+all nodes by using centralized MST algorithms. However,
+their distributed heuristic algorithms do not guarantee network
+connectivity. Since we are only interested in algorithms that
+preserve connectivity and are energy efficient, it seems that the
+only relevant algorithm in the literature is the MECN algorithm.
+However, since the SMECN algorithm outperforms MECN
+[13], we will compare our algorithm with SMECN only.
+
+We refer to the basic algorithm as CBTC, and to our
+complete algorithm with all applicable optimizations as
+OPT-CBTC.3 Furthermore, we also make the comparison with
+the no-topology-control case, where each node always uses the
+maximum transmission power to send a packet (we refer to this
+approach as MaxPower). In the case of no-topology-control,
+the reason we choose maximum power is that it guarantees
+that there will be no network partitions due to insufficient
+transmission power.
+
+A. Simulation Environment
+
+The topology-control algorithmsCBTC, SMECN, and
+MaxPowerare implemented in the ns-2 network simulator
+[20], using the wireless extension developed at Carnegie Mellon
+[6]. We generated 20 random networks, each with 200 nodes.
+Each node has a maximum transmission range of 500 meters
+and initial energy of 0.5 Joule. The nodes are placed uniformly
+at random in a rectangular region of 1500 by 1500 meters.
+Although there have been some papers on realistic topology
+generation [1], [31], most of them have focused on the Internet
+setting. Since large multihop wireless networks such as sensor
+networks are often deployed in a somewhat random fashion (for
+example, an airplane may drop sensors over some geographical
+region), we believe that assuming nodes are placed uniformly
+at random is not an unreasonable assumption.
+
+3For brevity, we will omit the parameter  in our presentation when it is clear
+
+from the context.
+
+LI et al.: A CONE-BASED DISTRIBUTED TOPOLOGY-CONTROL ALGORITHM FOR WIRELESS MULTI-HOP NETWORKS
+
+155
+
+AVERAGE DEGREE AND RADIUS OF THE CONE-BASED TOPOLOGY-CONTROL ALGORITHM WITH
+
+DIFFERENT  AND OPTIMIZATIONS (op -SHRINK-BACK, op -ASYMMETRIC EDGE REMOVAL)
+
+TABLE I
+
+We assume the two-ray propagation model for terrestrial
+
+communication [22]. A transmission from node
+takes power
+
+at node
+is the path-loss exponent of outdoor radio
+
+for some constant
+
+to node
+
+, where
+
+
+
+
+
+94 dBW;
+
+108 dBW;
+
+is the distance between
+
+propagation models, and
+and . The model has been shown to be close to reality in
+many environment settings [22]. Finally, we take the following
+parameter settings, which are chosen to simulate the 914 MHz
+Lucent WaveLAN DSSS radio interface:
+the carrier frequency is 914 MHz;
+the transmission raw bandwidth 2 MHz;
+antennas are omnidirectional with 0 dB gain, and the an-
+tenna is placed 1.5 meters above a node;
+the receive threshold is
+the carrier sense threshold is
+the capture threshold is 10 dB.
+
+
+
+
+In order to simulate the effect of power control in the
+neighbor-discovery process, we made changes to the physical
+layer of the ns-2 simulation code to support eight discrete power
+levels. This seems to be more in keeping with current practice.
+For example, currently the Aironet PC4800 supports five trans-
+mission-power levels. Eight power levels seems sufficient to
+provide a realistic simulation of the kind of scenarios that arise
+in practice. In our simulation, power level 8 gives the maximum
+function in
+transmission range of 250 meters. The
+Fig. 1 moves from one power level to the next higher level. For
+the Hello packet in the CBTC algorithm, the transmission
+power level is controlled by the algorithm itself. Specifically,
+broadcasts using the final
+as we discussed in Section IV, node
+function in Fig. 1).
+power
+For point-to-point transmissions from a node
+, the minimum
+s neighbors is used. We do
+power level needed to reach all of
+not use different power levels for different neighbors because
+there is a delay associated with changing power levels in
+practice (in the order of 10 ms [5] for certain wireless radio
+hardware), which some applications may not be able to tolerate.
+To simulate interference and collision, we choose the
+WaveLAN-I [25] CSMA/CA MAC protocol. Since topology
+control by itself does not provide routing, we used the AODV
+[17] routing protocol in our simulation.
+
+(as determined by the
+
+To simulate the network application traffic, we use the fol-
+lowing application scenario: we choose 60 connections, i.e., 60
+sourcedestination pairs. All the source and destination nodes
+are distinct. For each of these 60 connections in sequence, the
+
+source (if it is still alive) sends constant bit rate (CBR) traffic
+to its destination. The sending rate is 2 packets/s and the packet
+size is 512 bytes. This traffic pattern seems to generate sufficient
+load in the network for our evaluation. We do not expect that the
+results would be qualitatively different if fewer or more con-
+nections were used. We use the same 60 connections in all our
+experiments. Since we conduct the experiments in 20 random
+networks, there is no need to randomize over the connections as
+well.
+
+B. Network Topology Characteristics
+
+Before comparing CBTC with SMECN and MaxPower
+through detailed network simulation, we first examine the
+topology graphs that result from using each of these approaches
+in the 20 random networks described previously.
+
+and CBTC
+
+Fig. 6 illustrates how CBTC and the various optimizations
+improve network topology using the results from one of the
+random networks. Fig. 6(a) shows a topology graph produced
+by MaxPower. Fig. 6(b) and (c) shows the corresponding graphs
+, respectively. We
+produced by CBTC
+can see that both CBTC
+allow nodes
+in the dense areas to automatically reduce their transmission ra-
+dius. Fig. 6(d) and (e) illustrates the graphs after the shrink-back
+operation is performed. Fig. 6(f) shows the graph for
+as a result of the shrink-back operation and the asymmetric
+edge removal. Fig. 6(g) and (h) shows the topology graphs after
+all applicable optimizations. We can see that the optimizations
+are very effective in further reducing the transmission radius of
+nodes.
+
+and CBTC
+
+cone-based algorithm parameterized by
+
+Table I compares the network graphs resulted from the
+and
+, in terms of average node degree and average
+radius. It also shows the corresponding results for SMECN
+and MaxPower. The results are averaged over the 20 random
+networks mentioned earlier. As expected, using a larger value
+results in a smaller node degree and radius. However,
+of
+as we discussed in Section III-B, there is a tradeoff between
+. Using the basic algo-
+using CBTC
+.
+rithm, we have
+, the
+After applying asymmetric edge removal with
+resulting radius is 176.6. Hence, asymmetric edge removal
+can result in significant savings. After applying all applicable
+end up with
+optimizations, both
+very similar results in terms of both average node degree and
+
+and CBTC
+
+and
+
+156
+
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+The sixth row (MaxPower) gives the performance numbers
+for the case where each node uses the maximum transmission
+. We can see that using topology control cuts
+power of
+down the average degree by a factor of more than 3 (3.8 versus
+15.0) and the average radius by a factor of more than 2 (113.1 or
+110.7 versus 250). This clearly demonstrates the effectiveness
+of our topology-control algorithms.
+
+The last row shows the results for SMECN. Recall that
+SMECN requires GPS position information, while the CBTC
+algorithms rely on only directional information. So our objec-
+tive in the comparison is to study how well CBTC performs
+with the lack of distance information. The average radius
+numbers in Table I show that the performance of OPT-CBTC
+is in fact very close to (and slightly better than) that of SMECN
+(113.1 versus 115.8). Note that SMECN does achieve a smaller
+average node degree (2.7 versus 3.7). However, with SMECN,
+each node typically has more nodes within its radius that are
+to be considered
+not its neighbors. This is because for a node
+in SMECN, direct transmission has to take
+a neighbor of
+less energy than any two-hop path. Two-hop paths are less
+desirable than single-hop paths, they occupy the media for
+twice as long as one-hop transmissions. On the other hand,
+although OPT-CBTC reduces the power demand of nodes as
+much as SMECN does, SMECN has the additional property of
+preserving minimum-energy paths. If a different power level
+can be used for each neighbor, and the amount of unicast traffic
+is significantly greater than the amount of neighbor broadcast
+traffic, using SMECN can be beneficial.
+
+C. Network Performance Analysis
+
+and
+
+We next use detailed network simulations to evaluate the
+algorithms in terms of energy consumption, number of de-
+livered packets, and latency. Since the two CBTC settings
+produced similar network graphs
+in the
+(as shown in Table I), we consider only
+remaining experiments.4 We simulate CBTC, MaxPower, and
+SMECN using the same traffic pattern and random networks for
+performance measurements. As the power available to a node
+is decreased after each packet reception or transmission, nodes
+in the simulation die over time. After a node dies, the network
+must be reconfigured. In our simulation, the NDP beacons
+trigger the reconfiguration protocol. The beacons are sent once
+per second for SMECN and CBTC, and each of them is jittered
+randomly before it is actually sent to avoid synchronization
+effects. For CBTC and OPT-CBTC, the beacons use power
+. For SMECN, the beacons use the appropriate
+power level as computed by SMECNs neighbor discovery
+process. Note that no beacon is required in the MaxPower
+approach. For simplicity, we do not simulate node mobility,
+although some of the effects of mobilitythat is, the triggering
+of the reconfiguration protocolcan already be observed when
+nodes run out of energy. In the rest of this section, we compare
+the performance of CBTC, OPT-CBTC, SMECN, and Max-
+Power. All results are averaged over the 20 random networks
+described in Section V-A.
+
+4Since we use only a few discrete power levels, there is no significant benefit
+
+in using  = 5=6.
+
+Fig. 6. The network graphs after different optimizations. (a) No topology
+control; (b) CBTC(2=3); (c) CBTC(5=6); (d) CBTC(2=3)+ shrink-back;
+(e) CBTC(5=6) + shrink-back;
+(f) CBTC(2=3)+shrink-back +
+asymmetric edge removal; (g) OPT-CBTC(5=6); (h) OPT-CBTC(2=3).
+
+. In general, CBTC
+
+average radius. However, there are secondary advantages to
+will terminate
+setting
+and so expend less power during its
+sooner than CBTC
+execution (since
+). Thus, if reconfiguration
+over
+happens frequently, the advantage of using
+in terms of reduction on power consumption can
+
+be significant.
+
+LI et al.: A CONE-BASED DISTRIBUTED TOPOLOGY-CONTROL ALGORITHM FOR WIRELESS MULTI-HOP NETWORKS
+
+157
+
+Fig. 7. Performance comparison through detailed network simulation. (a) Number of traffic sources that remain alive. (b) Average power levels.
+
+1) Energy Consumption: We investigate the energy con-
+sumption of the three approaches in terms of the number of
+traffic sources alive and the average transmission power levels
+over time. As can be seen from Fig. 7, OPT-CBTC has the
+best performance. CBTC performs worse than the SMECN
+algorithm, but uses only directional information. MaxPower
+has significantly worse performance than the other algorithms.
+Fig. 7(a) shows the number of traffic sources that remain alive
+over time. We can see that when almost all the traffic sources
+in MaxPower are dead at time 600, about 45% and 30% of the
+traffic sources are still alive in SMECN and CBTC, respec-
+tively, and more than 79% of the traffic sources are still alive
+in OPT-CBTC. The basic CBTC algorithm does not perform
+as well as OPT-CBTC, but it still performs much better than
+MaxPower.
+
+Next, we consider how the transmission power evolves over
+time as nodes die over time. Fig. 7(b) shows the average power
+level averaged over all nodes. The average power level at time
+still alive at time
+is computed by considering, for each node
+to reach all its
+, the minimum power currently needed for
+neighbors (recall that this is the power that
+uses in the simu-
+lation to send all messages except the NDP Hello beacons),
+and then averaging this number over all nodes still alive. For
+MaxPower, the average power is constant over time because the
+maximum power is always used. The curves show that, while
+the average power level of CBTC and SMECN increases rapidly
+over time as more nodes die, the power level of OPT-CBTC in-
+creases rather slowly and remains much lower.
+
+2) Total Number of Packets Delivered and Latency: We
+collected packet delivery and latency statistics at the end of
+our simulation. SMECN, CBTC and OPT-CBTC were able
+to deliver 1.66, 1.44, and 2.94 times the amount of packets
+delivered by MaxPower, respectively, throughout the simula-
+tion. The statistics for packet delivery and the number of traffic
+sources still alive together show that it is undesirable to transmit
+with large radius because it increases energy consumption and
+causes unnecessary interference, and consequently decreases
+throughput. The average packet latencies in decreasing order
+are 271, 170, 126, and 79 ms for MaxPower, OPT-CBTC,
+CBTC, and SMECN, respectively. MaxPower has the highest
+latency due to its low spatial reuse of the spectrum. That is, a
+successful transmission by MaxPower reserves a large physical
+
+area. Any node that hears the transmission within this area
+backs off and does not transmit itself. Therefore, the larger the
+area reserved, the fewer nodes can transmit at any particular
+time. OPT-CBTC has higher latency than CBTC and SMECN
+because it typically takes longer routes due to the use of lower
+transmission power.
+
+VI. CONCLUSION
+
+We have analyzed the distributed cone-based algorithm
+and proved that
+is a tight upper bound on the cone
+degree for the algorithm to preserve connectivity. We have
+also presented three optimizations to the basic algorithmthe
+shrink-back operation, asymmetric edge removal, and pairwise
+edge removaland proved that they improve performance
+while still preserving connectivity. Finally, we showed that
+there is a tradeoff between using CBTC
+and
+allows an additional opti-
+mization, which can have a significant impact on reducing the
+transmission radius. The algorithm extends easily to deal with
+reconfiguration and asynchrony. Most importantly, simulation
+results show that it is very effective in reducing power demands
+and increases the overall throughput.
+
+, since using
+
+with
+
+Since the focus of this paper has been on reducing energy
+consumption, we conclude with some discussion of this goal.
+Reducing energy consumption has been viewed as perhaps the
+most important design metric for topology control. There are
+two standard approaches to doing this: 1) reducing the trans-
+mission power of each node as much as possible; and 2) re-
+ducing the total energy consumption through the preservation
+of minimum-energy paths in the underlying network. These two
+approaches may conflict: reducing the transmission power re-
+quired by each node may not result in minimum-energy paths
+or vice versa. Furthermore, there are other metrics to consider,
+such as network throughput and network lifetime. Reducing en-
+ergy consumption tends to increase network lifetime. (This is
+particularly true if the main reason that nodes die is loss of bat-
+tery power.) However, there is no guarantee that it will. For
+example, using minimum-energy paths for all communication
+may result in hot spots and congestion, which in turn may drain
+battery power and lead to network partition. Using approach
+1) in this case may do better. If topology control is not done
+
+158
+
+IEEE/ACM TRANSACTIONS ON NETWORKING, VOL. 13, NO. 1, FEBRUARY 2005
+
+carefully, network throughput can be hurt. As we have already
+pointed out, eliminating edges may result in more congestion
+and, hence, worse throughput, even if it saves power in the short
+run. The right tradeoffs to make are very much application de-
+pendent. Therefore, an algorithm that adapts to the specific ap-
+plication setting is much needed. Reconfiguration in response to
+node mobility and failure consumes precious energy resources.
+Fast convergence of topology control is critical to keep the net-
+work functioning well. It would be interesting to investigate how
+much mobility CBTC can handle. We hope to explore these is-
+sues in more detail in future work.
+
+APPENDIX
+
+PROOF FOR THEOREM II.2
+
+.
+on the
+
+Fact A.1: The distance
+
+in a
+sector of a circle is no greater than the circle radius .
+and
+
+are not the center of the circle, then
+
+between any two points
+
+If both
+
+Lemma A.2: In Fig. 8,
+arc from clockwise to
+
+intersects
+.
+
+at point
+,
+
+, then
+
+Proof: For any two points
+
+on the arc from clock-
+wise to , if
+. This
+follows from a simple geometry argument. Consider triangles
+and the tri-
+implies
+(by assumption) and
+on the arc
+
+(by Fact A.1), there must be a point
+
+angles have one side
+
+in common,
+
+. Since
+
+. Since
+
+and
+
+from clockwise to such that
+
+.
+
+Lemma A.3: Let line
+is the same as
+, then
+
+intersect
+
+, in the case of
+
+at point
+
+(if
+) in Fig. 8. To cover
+
+of Lemma II.1,
+
+must have at lease one neighbor in sector
+and outside
+one such that
+
+of
+. Among these neighbors, let
+is the smallest.
+
+be the
+cannot lie within the
+
+.
+
+Proof: For the case of
+
+of
+
+only need to show that
+region inside sector
+We prove by contradiction. Suppose
+previous lemma,
+are in the sector
+assumption is that
+. Therefore,
+
+of
+
+. Thus,
+
+cannot lie within the
+
+of Lemma II.1, we
+region (the
+and outside of
+).
+lies in that region. By the
+
+lies in the arc from to . So both and
+
+. By Fact 1,
+
+(
+
+is the intersection of
+
+Since
+and
+
+)
+
+Since
+
+is inside
+
+Draw a line
+
+parallel to
+
+. We have
+
+and (5),
+
+. By (3),
+
+, we have
+
+. Since
+
+our assumption of
+.
+
+s position. Thus,
+
+. By (4)
+
+. This contradicts
+must be outside
+
+Fig. 8.
+
+Illustration for the proof of Lemma A.2 and Lemma A.3.
+
+REFERENCES
+
+[1] K. Calvert, M. Doar, and E. W. Zegura, Modeling internet topology,
+
+IEEE Commun. Mag., vol. 35, no. 6, pp. 160163, Jun. 1997.
+
+[2] A. Chandrakasan, R. Amirtharajah, S. H. Cho, J. Goodman, G. Kon-
+duri, J. Kulik, W. Rabiner, and A. Wang, Design considerations for
+distributed microsensor systems, in Proc. IEEE Custom Integrated Cir-
+cuits Conf. (CICC), May 1999, pp. 279286.
+
+[3] B. Chen, K. Jamieson, H. Balakrishnan, and R. Morris, Span: an en-
+ergy-efficient coordination algorithm for topology maintenance in ad
+hoc wireless networks, in Proc. 7th Annu. ACM/IEEE Int. Conf. Mo-
+bile Computing and Networking (MobiCom), 2001, pp. 8596.
+
+[4] L. P. Clare, G. J. Pottie, and J. R. Agre, Self-organizing distributed
+sensor networks, in Proc. SPIE Conf. Unattended Ground Sensor Tech-
+nologies and Applications, Apr. 1999, pp. 229237.
+
+[5] J. Gomez, A. T. Campbell, M. Naghshineh, and C. Bisdikian, Con-
+serving transmission power in wireless ad hoc networks, in Proc. Int.
+Conf. Network Protocols (ICNP), Nov. 2001, pp. 2434.
+
+[6] CMU Monarch Group. (1999, Oct.) Wireless and Mobility Extensions to
+ns-2. [Online]. Available: http://www.monarch.cs.cmu.edu/cmu-ns.html
+[7] W. R. Heinzelman, A. Chandrakasan, and H. Balakrishnan, Energy-
+efficient communication protocol for wireless micro-sensor networks,
+in Proc. IEEE Hawaii Int. Conf. System Sciences, Jan. 2000, pp. 47.
+
+[8] T.-C. Hou and V. O. K. Li, Transmission range control in multihop radio
+networks, IEEE Trans. Commun., vol. 34, no. 1, pp. 3844, Jan. 1986.
+[9] L. Hu, Topology control for multihop packet radio networks, IEEE
+
+Trans. Commun., vol. 41, no. 10, pp. 14741481, Oct. 1993.
+
+[10] L. Jia, R. Rajaraman, and C. Scheideler, On local algorithms for
+topology control and routing in ad hoc networks, in Proc. SPAA, 2003,
+pp. 220229.
+
+[11] R. E. Kahn, The organization of computer resources into a packet radio
+network, IEEE Trans. Commun., vol. COM-25, no. 1, pp. 169178, Jan.
+1977.
+
+[12] K. Krizman, T. E. Biedka, and T. S. Rappaport, Wireless position loca-
+tion: fundamentals, implementation strategies, and source of error, in
+Proc. IEEE 47th Vehicular Technology Conf., 1997, pp. 919923.
+
+[13] L. Li and J. Y. Halpern, Minimum energy mobile wireless networks
+revisited, in Proc. IEEE Int. Conf. Communications (ICC), Jun. 2001,
+pp. 278283.
+
+[14] L. Li, J. Y. Halpern, P. Bahl, Y. M. Wang, and R. Wattenhofer, Anal-
+ysis of distributed topology control algorithms for wireless multi-hop
+networks, in Proc. ACM Symp. Principles of Distributed Computing
+(PODC), Aug. 2001, pp. 264273.
+
+[15] J. Monks, V. Bharghavan, and W. Hwu, A power controlled multiple ac-
+cess protocol for wireless packet networks, in Proc. IEEE INFOCOM,
+Apr. 2001, pp. 219228.
+
+[16] C. E. Perkins, Ad Hoc Networking. Reading, MA: Addison-Wesley,
+
+2001.
+
+[17] C. E. Perkins and E. M. Royer, Ad-hoc on-demand distance vector
+routing, in Proc. 2nd IEEE Workshop on Mobile Computing Systems
+and Applications, Feb. 1999, pp. 90100.
+
+[18] G. J. Pottie and W. J. Kaiser, Wireless integrated network sensors,
+
+Commun. ACM, vol. 43, no. 5, pp. 5158, May 2000.
+
+. Our
+
+(3)
+
+(4)
+
+(5)
+
+LI et al.: A CONE-BASED DISTRIBUTED TOPOLOGY-CONTROL ALGORITHM FOR WIRELESS MULTI-HOP NETWORKS
+
+159
+
+[19] R. Prakash, Unidirectional links prove costly in wireless ad hoc net-
+works, in Proc. Int. Workshop on Discrete Algorithms and Methods for
+Mobile Computing and Communications (dialM), 1999, pp. 1522.
+
+[20] VINT Project. The UCB/LBNL/VINT Network Simulatorns (Version
+
+2). [Online]. Available: http://www.isi.edu/nsnam/ns
+
+[21] R. Ramanathan and R. Rosales-Hain, Topology control of multihop
+wireless networks using transmit power adjustment, in Proc. IEEE IN-
+FOCOM, Mar. 2000, pp. 404413.
+
+[22] T. S. Rappaport, Wireless Communications: Principles and Prac-
+
+tice. Englewood Cliffs, NJ: Prentice-Hall, 1996.
+
+[23] V. Rodoplu and T. H. Meng, Minimum energy mobile wireless net-
+works, IEEE J. Select. Areas Commun., vol. 17, no. 8, pp. 13331344,
+Aug. 1999.
+
+[24] H. Takagi and L. Kleinrock, Optimal transmission ranges for randomly
+distributed packet radio terminals, IEEE Trans. Commun., vol. 32, no.
+3, pp. 246257, Mar. 1984.
+
+[25] B. Tuch, Development of WaveLAN, an ISM band wireless LAN,
+
+AT&T Tech. J., vol. 72, no. 4, pp. 2733, 1993.
+
+[26] Y. Wang and X. Y. Li, Localized construction of bounded degree and
+planar spanner for wireless ad hoc networks, in Proc. ACM DIALM-
+POMC Joint Workshop on Foundations of Mobile Computing, 2003, pp.
+5968.
+
+[27] R. Wattenhofer, L. Li, P. Bahl, and Y. M. Wang, Distributed topology
+control for power efficient operation in multihop wireless ad hoc net-
+works, in Proc. IEEE INFOCOM, Apr. 2001, pp. 13881397.
+
+[28] R. Wattenhofer and A. Zollinger, XTC: a Practical Topology Control
+Algorithm for Ad-Hoc Networks, Computer Science Department, ETH
+Zurich, Tech. Rep. 407, 2003.
+
+[29] S. L. Wu, Y. C. Tseng, and J. P. Sheu, Intelligent medium access control
+for mobile ad hoc networks with busy tones and power control, IEEE
+J. Select. Areas Commun., vol. 18, no. 9, pp. 16471657, Sep. 2000.
+
+[30] Y. Xu, J. Heidemann, and D. Estrin, Geography-informed energy con-
+servation for ad hoc routing, in Proc. 7th Annu. ACM/IEEE Int. Conf.
+Mobile Computing and Networking (MobiCom), 2001, pp. 7084.
+
+[31] E. W. Zegura, K. Calvert, and S. Bhattacharjee, How to model an inter-
+
+network, in Proc. IEEE INFOCOM, vol. 2, 1996, pp. 594602.
+
+Paramvir Bahl (SM97) received the Ph.D. degree
+in computer systems engineering from the University
+of Massachusetts, Amherst.
+
+He is a Senior Researcher and the Manager
+of the Networking Group in Microsoft Research.
+His research interests span a variety of problems
+in wireless networking including low-power RF
+communications; ubiquitous wireless Internet access
+and services; location determination techniques and
+services; self-organizing, self-managing multi-hop
+community mesh networks; and real-time audio-vi-
+sual communications. He has authored over 65 scientific papers, 44 issued and
+pending patent applications, and book chapters in these areas.
+
+Dr. Bahl is the founder and Chairman of the ACM Special Interest Group
+in Mobility (SIGMOBILE); the founder and past Editor-in-Chief of the ACM
+Mobile Computing and Communications Review, and the founder and Steering
+Committee Chair of ACM/USENIX Mobile Systems Conference (MobiSys).
+He has served on the editorial board of the IEEE JOURNAL ON SELECTED AREAS
+IN COMMUNICATIONS, and is currently serving on the editorial boards of El-
+seviers Ad hoc Networking Journal, Kluwers Telecommunications Systems
+Journal, and ACMs Wireless Networking Journal. He has served as a guest
+editor for several IEEE and ACM journals and on networking panels and work-
+shops organized by the National Science Foundation (NSF), the National Re-
+search Council (NRC) and European Unions COST. He has served as the Gen-
+eral Chairman, Program Chair and Steering Committee member of several IEEE
+and ACM conferences and on the Technical Program Committee of over 40 in-
+ternational conferences and workshops. He is the recipient of Digitals Doctoral
+Engineering Award (1994) and the ACM SIGMOBILEs Distinguished Service
+Award (2001). He has been a Fellow of the ACM since 2003.
+
+Li (Erran) Li (M99) received the B.E. degree in au-
+tomatic control from Beijing Polytechnic University,
+China, in 1993, the M.E. degree in pattern recognition
+from the Institute of Automation, Chinese Academy
+of Sciences, Beijing, in 1996, and the Ph.D. degree
+in computer science from Cornell University, Ithaca,
+NY, in 2001, where Joseph Y. Halpern was his ad-
+visor.
+
+During his graduate study at Cornell University, he
+worked at Microsoft Research and Bell Labs Lucent
+as an intern, and at AT&T Research Center at ICSI
+Berkeley as a visiting student. He is presently a member of the Networking Re-
+search Center, Bell Labs, Holmdel, NJ. His research interests are in networking
+with a focus on wireless networking and mobile computing. He has been a
+member of ACM since 1999.
+
+Joseph Y. Halpern (SM00) received the B.Sc. de-
+gree in mathematics from the University of Toronto,
+Canada, in 1975 and the Ph.D. degree in mathematics
+from Harvard University in 1981.
+
+He spent two years as the head of the Mathematics
+Department at Bawku Secondary School in Ghana.
+He is currently a Professor of computer science at
+Cornell University, Ithaca, NY, where he has been
+since 1996. He has coauthored six patents, two books
+(Reasoning About Knowledge and Reasoning About
+Uncertainty), and over 100 journal publications and
+100 conference publications. He is a former editor-in-chief of the Journal of the
+ACM.
+
+Together with his former student, Y. Moses, he pioneered the approach of ap-
+plying reasoning about knowledge to analyzing distributed protocols and multi-
+agent systems; he won a Godel Prize for this work. He received the Publishers
+Prize for Best Paper at the International Joint Conference on Artificial Intelli-
+gence in 1985 (joint with R. Fagin) and in 1989. He has been a Fellow of the
+ACM since 2002.
+
+Yi-Min Wang received the B.S. degree from the
+Department of Electrical Engineering at National
+Taiwan University in 1986, and the Ph.D. degree
+from the Department of Electrical and Computer
+Engineering, University of Illinois at Urbana-Cham-
+paign, in 1993, where he received the Robert T.
+Chien Memorial Award from the Graduate College
+for excellence in research.
+
+From 1993 to 1997, he was with AT&T Bell Labs
+and worked primarily in the area of checkpointing
+and rollback recovery, both in theory and practice.
+Since he joined Microsoft Research in 1998, he has expanded his research ef-
+forts into distributed systems and home networking. He is currently a Senior
+Researcher in the Systems and Networking group, leading an R&D effort in
+systems management and diagnostics.
+
+Roger Wattenhofer received the Ph.D. degree in
+computer science from ETH Zurich, Switzerland, in
+1998.
+
+From 1999 to 2001, he was first with Brown
+University, Providence, RI, then with Microsoft Re-
+search, Redmond, WA. Currently, he is an Assistant
+Professor at ETH Zurich. His research interests in-
+clude a variety of algorithmic aspects in networking
+and distributed computing, in particular, peer-to-peer
+computing and ad hoc networks.
+
+Dr. Wattenhofer has been a member of the ACM
+
+since 1999.
+

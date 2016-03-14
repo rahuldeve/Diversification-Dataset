@@ -1,0 +1,1089 @@
+SIAM J. COMPUT.
+Vol. 10, No. 3, August 1981
+
+(C) 1981 Society for Industrial and Applied Mathematics
+0097-5397/81/1003-0002 $01.00/0
+
+OPTIMAL MULTI-WAY SEARCH TREES*
+
+L. GOTLIEBf
+
+Abstract. Given a set of N weighted keys, N + missing-key weights and a page capacity m, we describe
+an algorithm for constructing a multi-way lexicographic search tree with minimum cost. The program runs in
+time O(N3m) and requires O(N2m) storage locations. If the missing-key weights are zero, the time can be
+reduced to O(N2m). A further refinement enables the factor m in the above costs to be replaced by log m.
+
+Key words, algorithms, optimal weighted search trees, dynamic programming
+
+1. Introduction. In this paper, we consider the problem of constructing a search
+tree for use in secondary storage. Because the access cost of the external memory is high
+compared to internal processing speeds, keys are grouped for searching into storage
+units called pages. Given a set of N keys with weights {Pi}, N + 1 missing-key weights
+{q.}, and a page capacity m, we show how to construct a multi-way search tree which
+minimizes the expected number of pages accessed during a search. Section 2 sets up the
+problem and reviews Knuths dynamic programming technique for finding optimal
+binary search trees [1]. Section 3 extends this method to produce an algorithm for
+constructing optimal multi-way trees. The running time is O(N3m), and O(N2m)
+storage locations required. If the q weights are absent, a "monotonicity" property
+6) enables the running time to be reduced
+(expressed by Theorem 2, which is proved in
+to O(N2m); however a counterexample presented in
+5 shows that this property need
+not hold if any of the qs are positive.
+4 outlines a refinement whereby the factor m in
+the above time and storage costs can be replaced by log m.
+
+Variants of the problem considered here have been addressed by Itai [4] and by
+Wood et al. [6]. Itai shows how to construct optimal multi-way code trees, that is, trees
+in which the weights are confined to appear at the leaves only. Recently, Wood and his
+colleagues have shown how to construct optimal multi-way search trees with a height
+constraint, and also how to optimize multi-way trees when the cost of searching is
+defined as a combination of page accesses and the time required to search within a page.
+Their results have been derived independently of this work.
+
+2. The problem. We are given keys K1 < K2 <"" < K, a page capacity m => 1,
+
+and nonnegative weights {pl,"", pv, qo,""", qN}, where
+
+pi/W is the probability that Ki is the search argument,
+qj/W is the probability of a search between Kj and Ki/l, 1 <= < N, and
+W is the total weight, pl +"
+(qo/W is the probability that the search argument precedes K1, qlv/W that it
+follows KN).
+The problem is to construct an m + 1-way search tree (an example of which is
+
++ pN + qo +
+
++ qv.
+
+illustrated in Fig. 1), which minimizes the cost
+
+., Pi
+
+N
+
+i=1
+
+level (pi)+
+
+N
+
+1=0
+
+qi
+
+(level (qi)-1).
+
+3) for the 15 most common names in the
+Fig. 1 shows an optimal 4-way tree (m
+Canadian census. The number accompanying each name (the p-weight) is the number of
+
+* Received by the editors November 24, 1977, and in final revised form June 6, 1980.
+
+" Department of Computer Science, University of Toronto, Toronto, Canada M5S 1A7. Present
+
+address, Gellman, Hayward and Partners Ltd., Calgary, Canada T2G 0G3. This research was supported in
+part by the National Research Council of Canada.
+
+422
+
+OPTIMAL MULTI-WAY SEARCH TREES
+
+423
+
+2433
+
+3885 "1948691
+
+1 87601 12578-11i053151
+
+!e5388]
+
+145811[
+
+FIG. 1. Optimal 4-way search tree on 15 most common names in Canadian census.
+
+times it occurred in a list of over a million names, while the numbers in the leaves (the q
+weights) represent those list members falling alphabetically between pairs from the top
+15; thus there were 309,686 names (with repetitions) between "Campbell" and
+"Johnson", and 12, 127 preceeding "Anderson". Thus Level (pi) is actually the level of
+Ki, while level (qj) is the level of a node representing a missing-key range.
+
+Two points about Fig. 1 should be noted. First, each page which has pages (i.e.,
+nodes with names) as descendants must be filled, or the cost could be reduced by
+promoting names up to the unfilled pages. In other words, in an optimal tree, only leaf
+pages may be unfilled. Second, the search cost of a q-weight is not the level of the leaf
+labeled with that weight, but rather the level of the page which is the father of that
+weight; for example, the cos.t of the leaf weighted 309,686 is 309,686 times the level of
+the root, since the search for a name between "Campbell" and "Johnson" would stop at
+the root page. Thus one is subtracted from level (qj) in the expresssion for the cost of the
+tree. The level of the root is taken to be one, since we want the level of a page to reflect
+its access cost.
+
+For rn
+
+1 (binary branching), a dynamic programming approach, employing the
+principle that subtrees of an optimal tree must also be optimal, yields an O(N2)
+construction algorithm [1]. Let t(i,f) denote an optimal tree on weights (q, p+l,
+, p, qi) (henceforth abbreviated (i,/)), c(i, j) be the cost of this tree, and w(i, f)
+qi+l,
++ q. The idea is to compute c(0, N), starting with
+be its weight, pi/x, +"
+
++ pi + qi +"
+
+c(i,i)=O,
+
+O<-i<-N,
+
+424
+
+and using
+
+(1)
+
+L. GOTLIEB
+
+c(i,j)=w(i,j)+ min {c(i,h-1)+c(h,j)},
+
+i<hj
+
+O<=i<j<-N.
+
+Each time (1) is performed, the key corresponding to an h which gives a minimum
+
+is selected as r(i, j), the root of t(i, ]). The computational cost is proportional to
+
+N j-1
+
+2
+i=1 i=0
+
+(j-i),
+
+which is roughly N3/6, and N2 storage locations are needed for the c(i, j)s and r(i, j)s.
+The running time can be further reduced by using Knuths observation [1] that
+
+r(i, ]- 1) -< r(i, j) <= r(i + 1,/);
+
+that is, one need not move left in the key set, looking for a new root when a key is added
+following the rightmost key in the tree, and vice-versa. This makes it possible to restrict
+the range of h in (1), thereby reducing the running time to
+
+(2)
+
+N i-1
+
+i=1 i=0
+
+Y. (r(i + 1, j)-r(i, j- 1)+ 1)
+
+(To make this summation correct when ]
+0,
+O<-_iNN; in fact, (1) is not needed when f-i= 1, since by definition, c(i,i+l)=
+w(i, + 1), and r(i, + 1)= + 1.) After cancelling terms, the sum reduces to
+
+1, we adopt the convention that r(i, i)
+
+N(N+ 1)
+
+N
+
++ E (r(i, N)- r(O, N- i)) Nz,
+
+since r(i, N)<-N and r(0, N-i):> 0, so the time is O(N2).
+
+The algorithm for optimal m + 1-way trees, m > 1, is basically an extension of the
+
+above technique. Let
+
+i<r(i,], 1)<...<r(i,j,m) <-]
+
+be the (indices of the) keys on the root page of the optimal m + 1-way tree t(i, ]) with
+cost c(i, ]) and weight w(i, ]). We have
+c(i,i)=O,
+c(i; ])= w(i, j),
+
+1 <-j-i <= m,
+
+O<-i<-N,
+
+and for rn <j-i <-N, we must find an assignment for r(i, j, k) such that
+
+c(i,j)-w(i,j)+c(i,r(i,j, 1)-1)
+
++ Y c(r(i,j,k),r(i,],k+l)-l)+c(r(i,j,m),j)
+
+m--1
+
+k=l
+
+is a minimum.
+
+The problem is carrying out this minimization. For each r(i, ]), there are (2,i)
+d, there are N- d + 1 c(i, j)s and r(i, j)s to
+choices for the root page, and when j-
+ranges from
+determine, namely for (i, j)
+m + 1 to N, a brute force approach which considers each possible candidate for the root
+page of t(i, j) would take on the order of (N) steps. This cost is too large to be practical, so
+a way of reducing the number of potential root pages per subtree is needed.
+
+((0, d), (1, d + 1),. , (N- d, N)). Since j
+
+OPTIMAL MULTI-WAY SEARCH TREES
+
+425
+
+3. A dynamic programming solution. Let T(i,/, k), 1 <- k -<_ m, denote the set of
+
+optimal k-rooted trees on weights (i, f), that is, optimal trees in which
+
+i) there are exactly k keys on the root page,
+
+and
+
+ii) the k + 1 subtrees of the root page are (optimal) m + 1-way trees.
+The basis for our construction algorithm is an observation similar to that made by
+Itai for code trees [4]. We note that the cost of a search tree, expressed iteratively as Y iPi
+level (pi) + lqJ (level (q.)
+1), can also be expressed recursively, in aform which makes
+it clear how to carry out minimization. For example, the cost of the tree in Fig. 1 can be
+written
+
+Cost (2-rooted tree on ("Anderson",..., "Martin"))
++ Weight ("Miller") + Weight (Right Subtree of "Miller")
++ Cost (Right Subtree of "Miller").
+
+Now for the tree to be optimal, the right subtree of "Miller" must be optimal, as,
+must the 2-rooted tree to the left; otherwise the total cost could be reduced by finding
+better trees on the same key sets. Moreover, the choice of "Miller" as the rightmost key
+on the root page must produce a cost no greater than any other (optimal 2-rooted tree,
+rightmost root key, optimal 4-way subtree) combination. Therefore, given all optimal
+4-way and 2-rooted trees for proper subsequences of ("Anderson",.. , "Williams"),
+the problem of finding the optimal 4-way tree on the whole sequence is reduced to that
+of choosing the rightmost key of the root page (i.e., that which gives the smallest cost
+when substituted into the above formula).
+
+More generally, let c(i,L k) be the cost of t(i, f, k)T(i,], k). Then for ]-i>-m,
+
+c(i,],m)= min {c(i,h-l,m-1)+ph+W(h,f)+c(h,f,m)}.
+
+i+rnhj
+
+in other words, t(i, ], m) is the smallest cost concatenation of an optimal m 1-
+rooted tree on the left, together with a single root and its (right) m + 1-way subtree.
+(The weight of the right subtree, w(h, ]), must be added in because the tree starts at level
+two, and therefore its stand-alone cost, c(h, j, m), does not reflect its access cost as a
+subtree.) Similarly, t(i,j, m-l) can be determined from optimal m-2-rooted and
+m-rooted subtrees, and in general, for 2 -<_ k -<_ m, f- ->_ k,
+
+(3)
+
+c(i,,hk)= min {c(i,h-l,k-1)+ph+W(h,f)+c(h, Lm)}.
+
+i+khj
+
+(Note that + k is the lower bound, since the set of candidates for the rightmost root of a
+k-rooted tree starts at the kth key from the left.)
+
+The computation of c(i, ], 1) is slightly different since no concatenation of trees is
+involved; rather a single root is chosen to minimize the cost of left and right subtrees.
+We have, for < j,
+(4)
+
+c(i,j, 1)=w(i,j)+ min {c(i,h-l,m)+c(h,j,m)}
+
+i<hj
+
+which is similar to (1), except that the subtrees are m + 1-way, rather than binary.
+
+(The equivalence of the recursive formulation of cost, given by (3) and (4), with the
+iterative expression iPi" level (pi)"" etc.) is easy to show. For trees with maximum
+height one, (4) is trivially correct, and (3) is established by induction on k. Then,
+assuming the equivalence for trees with maximum height less than h, (4) is proved for
+trees with maximum height h, and (3) follows, again by induction on k.)
+
+426
+
+L. GOTLIEB
+
+Assuming then, that c(i, ], k) has been computed for 1 <_- k <- m and/"- < d, we can
+compute c(i, ], k) for 1-<k-<m and ]-i =d, starting with (4) to get c(i, j, 1), and
+2, 3,. ., m. (In the final step when
+followed by successive applications of (3) with k
+c(0, N, m) is to be determined, it is only necessary to use (3) once, since at this point
+optimal trees with fewer than m keys on the root page are not needed; however the
+savings are negligible.) The timing analysis is essentially the same as for the binary
+algorithm: the cost of (4) is proportional to
+
+while for 2 -< k <- m, (3) takes
+
+Y E (J-i)=N3/6,
+
+i=1 i=0
+
+v i-k
+E Y. (J- i- k + 1)
+
+j=k i=0
+
+(N-k + 1) 3
+
+6
+
+steps.
+
+The total cost is therefore approximately
+
+E (N-k + 1)3
+
+6
+
+k=l
+
+which is O(N3m).
+
+For 2 -< k -< m, let r(i, j, k) be the largest value of h that gives a minimum in (3), and
+define r(i, j, 1) similarly for (4); r(i, j, k) is simply the largest possible key on a root page
+of T(i, j, k). In
+
+5 and 6, we show two facts about r(i, j, k):
+
+property holds (Theorem 2,
+
+6):
+
+2) If the missing-key weights (qs) are all zero, then the following monotonicity
+
+1) During construction of an optimal k-rooted tree, the rightmost key in the root
+can move left when a key is added at the right (alphabetically high) end of the key set. In
+particular, r(i, j, k) may be less than r(i, ]- 1, k) ( 5).
+
+outside [r(i,- 1, k), r(i + 1,, k)] and therefore, when qs are present, the speed up in
+
+running time from N3 to N2 cannot be applied. When the qs are absent, (2) restricts the
+search for the minimum in (3) and (4), making the total cost proportional to
+
+Point (1) means that, in contrast with the situation for binary trees, r(i, f, k) can lie
+
+Y E Y (r(i+l,j,k)-r(i,j-l,k)+l).
+
+r(i, ]- 1, k) <- r(i, j, k) <- r(i + 1, j, k).
+
+k=l ]=k i=o
+
+1 if ]
+
+< k.) For each k, the inner double sum is
+(Again, it is convenient to let r(i, ], k)
+equivalent to (2) above (in fact, slightly smaller when k > 1), which is bounded by N2;
+hence the running time is O(N2m).
+
+The storage requirement is O(N2m) locations, since r(i, ], k) and c(i, ], k) are N by
+N by m arrays. To see how the desired tree, t(0, N, m), is reconstructed from the
+information in r, note that the keys on the root page of t(0, N, m) are given by the
+following sequence:
+
+r r(0, N, m)
+r r(O, rk-1-1, m k + 1),
+
+for 2 <-_ k <- m.
+
+OPTIMAL MULTI-WAY SEARCH TREES
+
+427
+
+In other words, the rightmost key rl is r(0, N, m), the key second from the right is the
+rightmost root key for the weights (0, rl
+1 and so on. The root pages of the subtrees of
+the root page, and hence ultimately the whole tree, are similarly determined.
+
+An algorithm which uses (3) and (4) to compute optimal rn + 1-way search trees on
+
+weights (qo, pt,""", pr, qr) is presented in [5].
+
+4.. refinement. The time and space costs of the above algorithm can be reduced
+using a technique employed by Itai for the construction of optimal multi-way code trees
+7]. He observed that an optimal m-way code tree is the concatenation of an optimal
+[4,
+collection of s m-way trees, together with an optimal collection of m-s trees. Here we
+cannot concatenate trees in the same way code trees are combined (there would be one
+subtree too many), lut we can join them with a middle root; for example the tree of Fig.
+1 can be regarded as the join of two optimal 1-rooted trees (with roots "Campbell",
+"Miller"), together with the key "Johnson". Thus, for u + v
+
+1, k > 2,
+
+k
+
+(5)
+
+c(i,/, k)
+
+min
+
+{c(i, h
+
+1, u) + Ph + c(h, L v)}.
+
+i+u<h<--j-v
+
+This makes it possible to determine c(i, j, m) without computing all the intermediate
+
+costs, c(i, j, 1), c(i, j, 2),. , c(i,, m 1). For example, suppose c(i, j, k) are available
+
+for k =(1, 3, 7, 11, 12) and j-i <d; then for ]-i =d, c(i,], k) can be derived for the
+same set of ks by the following steps:
+
+(1) use (4) to get c(i, j, 1),
+(2) use (5) with u
+(3) use (5) with u
+(4) use (5) with u
+(5) use (3) with k
+More generally, let So, s l, ., st be any sequence which satisfies
+
+12 to get c(i,, 12).
+
+3 to get c(i,, 11)
+
+1 to get c(i, j, 3),
+3 to get c(i, j, 7),
+
+v
+v
+7, v
+
+(6)
+and
+(7)
+
+So
+
+0, sl
+
+m,
+
+Sh
+
+1 4- S 4-
+
+O<_i<__j<_h<_l.
+
+For 1 -<_ h <- l, let left (h) and right (h) be, respectively, the
+and/" for which (7) holds,
+that is, Sh "-Sleft(h)4-Sright(h) 4- 1. Finally, suppose c(i,],Sh) has been computed for
+< d. Then the following rule is used to decide which of (3), (4)
+h e (1, 2,
+or (5) to apply when computing c(i, j, Sh) for ]--
+
+, l} and ]
+
+d and h
+
+1 to
+
+if left (h)= 0 then use (4)
+else if right (h)= 0 then use (3) with k
+
+s(h)
+
+else use (5) with u
+
+left (h) and v =right (h).
+
+Sequences for which (6) and (7) hold are closely related to addition chains. An
+n, such
+rn + 1, note that the
+
+addition chain of length
+<= j < h <- I. Given an addition chain for n
+that ah
+sequence (a0- 1, a- 1,..., at- 1) satisfies (6) and (7), since
+
+for n > 1 is a sequence of integers 1
+
+ai + aj, 0 <-
+
+, at
+
+ao, a 1,
+
+ao- 1
+
+0,
+
+at- 1
+
+m,
+
+and
+
+ah
+
+1
+
+(ai + aj)
+
+1
+
+14- (ai
+
+1) +(ai
+
+1),
+
+l<_h<_l.
+
+428
+
+L. GOTLEB
+
+Let l(n) be the length of the shortest possible addition chain for n > 1. Given such a
+chain, it is possible to construct an optimal m + 1-way tree in time O(N3l(m + 1)). As it
+turns out, neither a minimal chain nor l(n) are easy to compute efficiently for n in
+general [2,
+4.6.3]; however the binary addition chain for n is easily derived from the
+binary
+terms
+((1, 2,.. , 2 tlogn]) plus a term for each "one" bit except the high order one). Thus the
+sequence of ks for which c(i,], k) must be computed need be no longer than
+2 [log m + 1], which makes possible an O(N3 log m) construction algorithm (or
+O(N2 log n), when the qs are absent).
+
+at most 2[logn]
+
+that number,
+
+and has
+
+representation
+
+of
+
+$. Failure ot monotonidty property in the general ease. In this section we show
+that, during construction of an optimal multi-way search tree, the rightmost key in the
+root can move left when a key is added at the right. Consider a set of 8 keys,
+{A, B, ., H}, each weighted one, together with 9 missing-key weights q, all equal to
+one except for q(8) (between G and H), which is 4. For convenience, these weights are
+unnormalized; to get the actual probabilities, it is necessary to divide each weight by the
+
+total. Thus the probability of a search for A is.
+
+Fig. 2(b) shows a 3-way (m
+
+2) tree which is optimal for these weights. The
+rightmost key in the root is F; it is also r(0, 8, 2), the largest possible rightmost root,
+since no other 3-way tree costs as little for this data. Now the algorithm outlined in
+3
+requires an optimal tree on (A, G) before it can determine one on (A, H), and such a
+tree is illustrated in Fig. 2(a). This tree is also uniquely optimal for the weights given,
+which makes G, the rightmost key in the root, equal to r(0, 7, 2). Thus the rightmost
+root key shifts left from G, on keys (A, G), to F, on keys (A, H), and in particular,
+r(0, 8, 2) _<- r(0, 7, 2), which shows that r(i, j, k) may lie outside the interval Jr(i, j- 1, k),
+r(i + 1, j, k)]. (The number of keys in the root of the tree in Fig. 2 is not critical to the
+example, and thus the result is true for optimal k-rooted trees as defined at the
+beginning of
+
+3.)
+
+Cost
+
+33
+
+(a)
+
+Cost
+
+38
+
+(b)
+
+FIG. 2. Optimal trees on (A, G) and (A, H).
+
+The example just presented affects an assumption made by Itai regarding the time
+7]. To see how, observe that if
+needed to construct optimal multi-way code trees [4,
+the internal weights are ignored, the trees in Fig. 2 are 3-way code trees. The one in (a) is
+the join of two 3-way trees together with the leaf weighted "4", while (b) is formed by
+concatenating two 3-way trees with a rightmost tree consisting of weights (1, 4, 1). The
+last weight before the rightmost tree in the least-cost concatenation is called the
+breakpoint. For code trees, Itai assumed the equivalent of the monotonicity property,
+namely that when a weight is added at the right, a breakpoint greater than or equal to
+the previous one can always be found. But Fig. 2 shows that this need not be true, since
+the breakpoint in (a) is the 7th leaf weight (following F), while it is the 6th (after E) in
+
+OPTIMAL MULTI-WAY SEARCH TREES
+
+429
+
+(b). Hence the dynamic programming construction procedure which he outlined is
+O(N 3 log m), not O(N2 log m) as claimed.
+
+In [7-1 it is shown that, during construction, the rightmost root in a multi-way search
+tree or code tree can shift the maximum possible number of keys away from the added
+key. Thus the dependence on key set size of dynamic programming methods for
+multi-way tree construction piesented so far is O(N3). However our counterexamples
+to the monotonicity property rely on the existence of nonzero leaf (q) weights; in the
+next section we show that when these weights are absent, the addition of a key at the
+right cannot force the rightmost key in the root to move left.
+
+6. Proof of monotonicity property when qs absent. The purpose of this section is
+0, 0 <= h <- N, r(i,/, k), the largest key on the root page of all trees
+
+to show that when qh
+in T(i,/, k), satisfies
+
+r(i, j- 1, k)<-r(i, ], k)<-r(i + 1, ], k),
+
+k<j-i<_N, l<-k<-m.
+
+The proof is a generalization of the one for binary trees outlined in [3,
+6.2.2]; however
+it should be noted that for binary trees, the result holds whether the qs are zero or not.
+Note also that to stay consistent with the general case, we will use (i, j) to denote the
+P/), even though the absence of the qs makes (i + 1, ]) more natural.
+weights (p/+l,
+The following definitions are needed:
+
+DEFINITION 1. Define AB to hold between nonempty sets of integers A, B if
+a e A, b e B and b < a =), a e B and b A. Informally, if A, regarded as a sequence, is
+"left" of B in terms of position, then AB holds if "overlapping" members are
+common to both sets. The relation has the following property, which we state without
+proof:
+
+DEFINITION 2. R(i,, k), 1 <= k <= m, is the set of rightmost keys (henceforth called
+DEFINITIOr 3. L(i,, k) 1 <- k <= m, is the set of leftmost keys (leftmost roots) on the
+
+rightmost roots) on the root pages of trees in T(i, j, k); in other words, it is the set of
++ k -<_ h -<
+
+for which (3) is minimized if k > 1, or (4) is minimized if k
+
+root pages of trees in T(i,j, k). We have L(i,j, 1)=R(i,j, 1) for l<-j-i<=N, and for
+2<-k<-m,k<j-i<-N,
+
+1.
+
+LEMMA 1.
+
+is transitive.
+
+L(i, ], k)={i<h <=]-k + llc(i, h-l, m)+ w(i, h-l)
+
++ Ph + C (h, ], k
+
+1) is a minimum}
+
+Proofoutline. We first show that except for possible addition of the new key, the set
+of rightmost roots does not change when the existing key set is augmented at its right
+(alphabetically high) end by a key with weight zero (Lemma 2). The main theorem
+, j- 1) are fixed while Pi
+(Theorem 1) is proven in two parts. In Lemma 4, weights (i,
+is increased from x to y; in this case it is shown that there will always be a rightmost
+x. Together with Lemma 2, this
+root-> any key which is a rightmost root when pi
+shows that R (i, ]- 1, k)R (i, ], k), or, informally, that we need never move left in the
+key set to look for a new rightmost root when a key is added at the right. The equivalent
+result for leftmost roots is then used to show that the rightmost root does not have to
+move right when a key is added at the left, thus completing the proof. Finally, Theorem
+1 is used to prove Theorem 2, the desired result.
+
+O, then R (i, ]
+
+1, k) R (i, j, k)
+
+{j}, k <
+
+LEMMA 2. Let qh
+
+O, 0 <= h <= N. If Pi
+
+j-iN.
+
+430
+
+L. GOTLIEB
+
+Proof. Since pj
+
+0, adding it to a tree in T(i,/- 1, k) cannot increase the cost, but
+cannot lead to a better rearrangement either, or removing it would then leave a better
+tree than the original, which was optimal. Therefore any tree in T(i, j- 1, k) can be
+converted to one in T(i, ], k) by straight insertion of pj, which does not change the
+rightmost key in the root. A similar argument shows that any tree in T(i, ], k) in which pj
+is not the rightmost root must also be in T(i,/- 1, k) when pj is removed.
+
+The main theorem to be proved is
+THEOREM 1. If qh
+
+O, 0
+
+h <-N, then
+
+R(i,i-1, k)R(i,j, k)R(i + 1,], k),
+
+and
+
+L(i + 1,/, k),
+
+L(i, /, k)
+
+L(i, j- 1, k)
+
+L(i, ], k)_ {i + 1, + 2}; hence the theorem holds trivially.
+
+Proof. By induction on ]- > k.
+Basis. If ]-i=k+l, then R(i,f-l,k)={]-l},
+
+Induction. Assuming that the theorem holds for k < ]
+
+k<j-i<-N,l<-k<__m.
+
+L(i,]-l,k)={i+l},
+
+R(i, Lk)c_{]-l,.i}.
+
+Similarly
+
+will show that it remains true for ]- -d.
+
+R(i+l,f,k)={]},
+L(i+l,Lk)={i+2},
+
+and
+and
+
+< d < N, 1 <_- k -<_ m, we
+
+LEMMA 3. It" u-w<d, and u<v<w, then R(u,w,k)R(v,w,k), and
+
+L(u, v, k)
+
+L{u, w, k).
+
+b + ly
+
+Proof. Let r
+
+The cost of Tx can be expressed as a linear function of Pi, mamely a + lx
+
+Ry(i, ], k) be the corresponding set when p y > x, while weights (i,
+fixed; then Rx(i, ], k)Ry(i, ], k).
+
+p, and
+p. Of the nine possible outcomes for a compared to b, lx
+ly, in which
+
+Proof. By the induction hypothesis and Lemma 1.
+LEMMA 4. Let Rx(i,], k) denote the set o] rightmost roots when p=x >-0, and
+, ]- 1) remain
+Rx(i, ], k), T, be an optimal k-rooted tree with rightmost root r and
+p x, and I, be the level of pi in Tx; similarly for s
+Rv(i, ], k), Tr, y and lv. Suppose
+s < r. The lemma will be proved if we can modify Tx without changing its rightmost root
+so that it is optimal for y, and similarly for Tr with respect to x.
+similarly, cost (Ty)
+compared to ly, all contradict the definitions of T, and Ty except a
+case the Lemma is proved, and a < b, Ix > ly.
+When a < b and I, > Iv, cost (T,) meets cost (Tr) at z > 0, and Fig. 3 shows the two
+basic situations possible at this point. In 3(a), Tx is optimal for Pi <- z, while Tr is
+optimal for p >-z. In 3(b), neither is optimal at z, because for x < p. < y, there are
+intermediate trees (two in the figure) which are optimal and cost less than either T, or
+Tr. We consider the case of (a) first.
+, fix be the sequence of rightmost roots along the path from
+the root page down to the page containing p, and let sl,. ., st,, be the corresponding
+sequence for T. Now s s < r r by assumption, and r, < st,
+], since lx > l, and
+rt,,- ], the index of the last key; thus there must be a level h such that rh > Sh and
+rh+x < Sh+a. Both Tx and Ty are optimal at z, so rh+x
+Rz(Sh, f, m).
+Rz(Sh, ], m) R(rh, ], m). But rh+x <Sh+, SO by definition of , it follows that Sh+
+Since
+get
+
+Rz(rh, f, m) and Sh/l
+
+In tree T,, let rl, r2,
+
+apply Lemma 3
+
+d, we can
+
+Sh < rh <],
+
+Sh <]--
+
+b, lx
+
+to
+
+and
+
+]
+
+Rz(rh), j, m) and rh+l
+
+Rz(Sh, f, m).
+
+OPTIMAL MULTI-WAY SEARCH TREES
+
+431
+
+(a) Tx, Ty optimal
+where costs intersect
+
+ca
+
+st (Ty)
+
+b + l p
+
+(b) Tx, T not optimal
+where costs intersect
+
+cost
+
+0
+
+0
+
+cost
+
+b
+
+a2
+
+al
+
+0
+
+x xl
+
+z
+
+x2
+
+x3
+
+Y
+
+pj
+
+FIG. 3. Cost of Tx, Ty as functions of Pi.
+
+In other words, there is a rearrangement of Tx, call it T, which is optimal for Pi
+
+z,
+and has Sh+l (at level h + 1) as the rightmost root of the subtree for keys to the right of rh.
+Now the subtree to the right of Sh/l, containing pj, can remain unchanged from Ty, since
+Ty is also optimal at z, and this subtree starts at the same level as it did in Ty. Thus the
+level of pj in T is l, and cost (Tx)= a+ ly
+Pi and both
+b, and T, with rightmost root r, is optimal for y. Similarly we
+agree at z; therefore a
+can rearrange Ty, without changing its rightmost root s, to T, which has the same cost at
+Tx. Thus r
+
+Ry(i,, k) and s R(i,, k).
+
+p. But cost (Ty)= b + ly
+
+, Xl/l
+sequence of.trees T To, T1,
+is optimal on [x, Xt+l], 0 _-< I =< I. (Fig. 3(b) illustrates the situation for
+the rightmost root of Tt; for the sequence of roots (rt(O),.. , rt(1)), we have r
+and rt(l)
+
+If cost (T) meets cost (Ty) at a point where neither is optimal, then there is a
+y, such that Tt
+3.) Let rt(I) be
+rt(O)
+s. If s < r, an induction argument shows that the sequence can be transformed
+
+, T Ty, and values x
+
+x 1,
+
+432
+
+L. GOTmB
+
+Ry(i, L k)). The basis for
+so that s is the first term (i.e., s
+sequences of length two was established above, and the induction step is straightfor-
+ward.
+
+Rx(i, L k)), and r is the last (r
+
+From Lemma 2, R(i,f-l,k)=Rx(i, Lk)-{f} if x=0, and from Lemma 4,
+Rx(i,L k)Ry(i,L k) for x <y; hence R(i,f-l,k)R(i,L k), as desired. By sym-
+metry, the equivalent of Lemmas 2 and 4 for leftmost roots can be used to show that
+L(i, L k)
+
+L(i + 1, L k), 1 <= k <= m. Thus it remains to show
+
+R(i, Lk)R(i+l,Lk) and L(i,]-l,k)L(i, Lk).
+
+For k=l these
+R(i,L k)R(i+l,L k) for k>l.
+
+are
+
+immediate,
+
+since
+
+R(i, L1)=L(i, L1). We will show
+
+Let T1 e T(i, ], k) with rightmost root rl and leftmost root 11, and similarly for
+T2 e T(i + 1, ], k), r2 and 12. Assume r2 <rl; 11 may be equal to, less than, or greater
+than 12, and Fig. 4 illustrates the three cases.
+
+(i +
+(i, +
+(i, i+1
+(i, + 1
+
+12
+
+ll
+
+ll
+
+ll
+
+r2
+
+rl
+
+rl
+
+rl
+
+i)
+i)
+])
+
+T2
+
+TI,/1 =/2
+
+Tl, ll>12
+T1, ll < t2
+
+FIG. 4. ProvingR(i, Lk)R(i+l,Lk).
+
+If ll
+
+12, then since r2 and rl are both in R (/1, ], k
+
+1), the subtrees on (/1, j) in
+T1 and T2 can be switched; thus r2eR(i, j, k) and rl eR(i + 1, j, k). Suppose ll > 12.
+Since from above, L(i,], k)L(i + l, j, k), there is a re-arrangement of T2 which is
+optimal but has l as its leftmost root. In this tree, the keys to the right of ll can be
+arranged as they are in T1, giving r i as the rightmost root. Thus r 1 R (i + 1, j, k) and a
+similar re-arrangement of T1 gives r2eR(i,j, k). Finally, suppose 11</2; then
+R(ll, j,k-1)R(12, j,k-1) by Lemma 3, and since r2<rl, r2 must also be in
+R (/1, j, k
+to the right of 1, with rightmost root r 1, can be replaced by one with the same cost and
+rightmost root r2, i.e., r2eR(i,j,k); a similar replacement in T2 gives rle
+R(i+l,i,k).
+
+1) by definition of. Therefore the k-1 rooted tree
+
+1) and rl in R (/2, ], k
+
+A symmetric argument shows that L(i,]-l, k)L(i,], k), k> 1, and thus
+
+completes the proof of the theorem.
+
+The needed result is expressed by"
+THEOREM 2. If qh
+
+0, 0 <= h <= N, then r(i,, k), the largest possible rightmost root,
+
+[3
+
+satisfies
+
+r(i, ]- 1, k)<-r(i, L k)<-r( + 1, j, k),
+
+k<]-i<-N, l<-_k<-m.
+
+Pro@ By induction on ]- > k.
+1, k)
+If/"
+
+k + 1, then r(i, ]
+
+bilities for r(i, ], k) are ]
+for k < ]
+
+1, r(i + 1, L k) L and the only two possi-
+1 or ], so the theorem holds. Assuming that the theorem holds
+
+]
+
+< d < N, 1 _-< k <_- m, we will show that it remains true for ]
+
+First, observe that from the induction hypothesis, r(i, ]
+
+1, k) <
+r(i + 1, ], k). To show the left inequality, suppose r e R (i, ], k)< r(i, ]- 1, k). Then since
+r(i,]-l,k)eR(i,]-l,k) and R(i, ]-l, k)R(i, ], k) by Theorem 1, r(i,]-l,k)e
+R(i, ], k), that is, the rightmost possible root in T(i, ], k)is >-r(i, ]- 1, k).
+
+d.
+1, k) <- r(i + 1, ]
+
+OPTIMAL MULTI-WAY SEARCH TREES
+
+433
+
+To show r(i, L k)<=r( + 1, L k), suppose rR(i, L k)> r(i + 1, L k)R(i + 1, j, k).
+By Theorem I we have R (i,/, k) R (i + 1, L k), so r R (i + 1, j, k). But r is greater than
+r(i + 1, L k), which by definition is the largest rightmost root, a contradiction. Therefore
+any member of R(i, L k), and in particular, r(i, L k), is <=r(i + 1, L k).
+
+[3
+
+7. Conclusion. The algorithm outlined in
+
+3 employs "double" dynamic pro-
+grammingmbuilding optimal trees on increasingly larger key sets, and at the same time
+building trees with successively more keys on the root page. The technique is powerful"
+even when the monotonicity property does not hold, it reduces the number of possible
+root pages from () to N, which is independent of page capacity. In [5], the method is
+used to construct optimal weighted B-trees. Since these have the property that a page
+may have anywhere from the minimum number of keys allowable to the maximum, the
+basic O(Nam) algorithm is not completely supplanted by the refinement of
+
+4.
+
+Acknowledgments. I would like to thank my advisor, Prof. John D. Lipson, for
+
+advice and encouragement.
+
+REFERENCES
+
+Reading, MA., 1969, Section 4.6.3.
+
+[1] D. E. KNUTH, Optimum binary search trees, Acta Informat., 1 (1971), pp. 14-25; Errata, 1 (1972), p. 270.
+[2] , The Art of Computer Programming, vol. 2, Seminumerical Algorithms, Addison-Wesley,
+[3] ., The Art of Computer Programming, vol. 3, Sorting and Searching, Addison-Wesley, Reading,
+[4] ALON ITAI, Optimal alphabetic trees, this Journal, 5 (1976), pp. 9-18.
+[5] L. GOTLIEB, Optimal Multi-way Search Trees, TR 128/78, Department of Computer Science, Uni-
+
+MA., 1973.
+
+versity of Toronto, 1978.
+
+[6] V. K. VAISHNAVI, H. P. KRIEGEL AND D. WOOD, Optimal Multi-way Search Trees, TR 78-CS-13,
+
+Dept. of Applied Mathematics, McMaster University, Hamilton, Ontario, 1978.
+
+[7] L. GOTLIEB AND D. WOOD, The construction of multiway search trees and the monotonicity principle,
+
+Internat. J. Comput. Math., to appear.
+

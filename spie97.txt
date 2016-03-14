@@ -1,0 +1,3422 @@
+In Proceedings of the 1997 SPIE International Conference
+
+on Performance and Control of Netork Systems 
+
+On the E(cid:11)ect of Tra(cid:14)c Self-similarity on Network Performance
+
+Kihong Parka
+
+Gitae Kimb Mark Crovellab
+
+aDepartment of Computer Sciences, Purdue University
+
+West Lafayette, IN 	
+
+bComputer Science Department, Boston University
+
+Boston, MA 
+
+ABSTRACT
+
+Recent measurements of network tra(cid:14)c have shown that self-similarity is an ubiquitous phenomenon present in both
+local area and wide area tra(cid:14)c traces. In previous work, we have shown a simple, robust application layer causal
+mechanism of tra(cid:14)c self-similarity, namely, the transfer of (cid:12)les in a network system where the (cid:12)le size distributions
+are heavy-tailed.
+In this paper, we study the e(cid:11)ect of scale-invariant burstiness on network performance when
+the functionality of the transport layer and the interaction of tra(cid:14)c sources sharing bounded network resources is
+incorporated.
+
+First, we show that transport layer mechanisms are important factors in translating the application layer causal-
+ity into link tra(cid:14)c self-similarity. Network performance as captured by throughput, packet loss rate, and packet
+retransmission rate degrades gradually with increased heavy-tailedness while queueing delay, response time, and fair-
+ness deteriorate more drastically. The degree to which heavy-tailedness a(cid:11)ects self-similarity is determined by how
+well congestion control is able to shape a source tra(cid:14)c into an on-average constant output stream while conserving
+information.
+
+Second, we show that increasing network resources such as link bandwidth and bu(cid:11)er capacity results in a super-
+linear improvement in performance. When large (cid:12)le transfers occur with nonnegligible probability, the incremental
+improvement in throughput achieved for large bu(cid:11)er sizes is accompanied by long queueing delays vis-(cid:18)a-vis the case
+when the (cid:12)le size distribution is not heavy-tailed. Bu(cid:11)er utilization continues to remain at a high level implying that
+further improvement in throughput is only achieved at the expense of a disproportionate increase in queueing delay.
+A similar trade-o(cid:11) relationship exists between queueing delay and packet loss rate, the curvature of the performance
+curve being highly sensitive to the degree of self-similarity.
+
+Third, we investigate the e(cid:11)ect of congestion control on network performance when subject to highly self-similar
+tra(cid:14)c conditions. We implement an open-loop congestion control using unreliable transport on top of UDP where
+the data stream is throttled at the source to achieve a (cid:12)xed arrival rate. Decreasing the arrival rate results in a
+decline in packet loss rate whereas link utilization increases. In the context of reliable communication, we compare
+the performance of three versions of TCP|Reno, Tahoe, and Vegas|and we (cid:12)nd that sophistication of control leads
+to improved performance that is preserved even under highly self-similar tra(cid:14)c conditions. The performance gain
+from Tahoe to Reno is relatively minor while the performance jump from TCP Reno to Vegas is more pronounced
+consistent with quantitative results reported elsewhere.
+
+Keywords: Self-similar tra(cid:14)c, network performance, congestion control and quality of service
+
+. INTRODUCTION
+
+Recent measurements of tra(cid:14)c in local area networks have shown that network tra(cid:14)c is often bursty on a wide
+range of time scales, a much wider range than is captured by traditional tra(cid:14)c models. Scale-invariant burstiness
+can be described using the notion of self-similarity, and much work has been done in the last few years in verifying
+its ubiquitous presence in networked environments and investigating the causes of tra(cid:14)c self-similarity and its
+consequences.{,,,
+
+Other author information. K. Park: Supported in part by NSF grant CCR-	; park@cs.purdue.edu.
+
+G. Kim: Supported in part by NSF grant CCR-	; kgtjan@cs.bu.edu.
+M. Crovella: Supported in part by NSF grant CCR-	; crovella@cs.bu.edu.
+
+A number of papers have studied the implications of long-range dependence for tra(cid:14)c modeling and network
+performance evaluation. The research avenues may be broadly classi(cid:12)ed into two categories, one dealing primarily
+with tra(cid:14)c characterization and modeling issues, the other concentrating on performance evaluation. In the (cid:12)rst
+category of work,{,, tra(cid:14)c traces from physical network measurements are used to identify the presence of scale-
+invariant burstiness, and models are constructed capable of generating synthetic tra(cid:14)c with matching characteristics.
+These works have shown that long-range dependence is a phenomenon occurring in both local area and wide area
+network tra(cid:14)c, and individual tra(cid:14)c sources such as compressed video have been shown to possess self-similarity as
+a source-intrinsic property.,, In the second category are papers that have evaluated the e(cid:11)ect of self-similar tra(cid:14)c
+in the context of idealized or simpli(cid:12)ed networks.,,,	, These papers show that long-range dependent tra(cid:14)c has
+an adverse e(cid:11)ect on network performance, the principal result being that the distribution of queue lengths under
+self-similar tra(cid:14)c decays more slowly as compared to short-range-dependent sources (e.g., Poisson). In a somewhat
+di(cid:11)erent approach,, it is shown that for small bu(cid:11)er sizes or short time scales, long-range dependence has only
+a marginal in(cid:13)uence. This is as expected since low frequency components|relative to bu(cid:11)er size and time scale|
+in the frequency domain act like \DC-components," and burstiness, which is an important factor in determining
+performance, is dominated by high-frequency components which collectively tend to exhibit short-range correlations.
+
+The e(cid:11)ects of self-similarity on the performance of resource-bounded networks incorporating the in(cid:13)uence of
+a protocol stack have not been extensively studied. This question is practically relevant because, although self-
+similarity is expected to adversely a(cid:11)ect network performance, knowledge of the degree of performance degradation
+due to self-similarity allows us to assess its relative importance as a performance problem and possibly control its
+consequences. The control aspects are studied in Park. In this paper we investigate the e(cid:11)ects of self-similar tra(cid:14)c
+on network performance when the functionality of the protocol stack and the interaction of tra(cid:14)c sources sharing
+bounded network resources is explicitly incorporated. We employ transport/network-layer simulations of reliable
+and unreliable transport protocols with or without congestion control to study the impact of self-similarity under
+controlled environments. Setting up such a test environment is, by itself, nontrivial due to the fact that, in general,
+the characteristics of the observed tra(cid:14)c is itself in(cid:13)uenced by the actions of the control algorithms in the protocol
+stack.
+
+Our results are facilitated by a high-level approach to self-similar tra(cid:14)c generation that allows the degree of
+link tra(cid:14)c self-similarity to be intrinsically and intimately controlled by a mechanism acting at the application layer.
+In a nutshell, this process involves the generation of (cid:12)le or object transfers whose size distribution is heavy-tailed
+(formal de(cid:12)nition given later).
+In other words, (cid:12)les or objects of extremely large sizes are communicated with
+nonnegligible probability among hosts in a generic network system. We have shown that this high-level structural
+mechanism su(cid:14)ces to generate link tra(cid:14)c self-similarity, and the degree of the observed self-similarity is shown to
+be directly related to the heavy-tailedness of the (cid:12)le size distribution. An important advantage of this scheme is
+that self-similarity can be controlled at the application layer without directly feeding a self-similar time series from a
+host to the network anywhere in the system. This in turn allows us to evaluate the e(cid:11)ects of the protocol stack|in
+particular, the transport layer|in a manner where its e(cid:11)ects can be discerned. Simulation issues related to the
+evaluation of control protocols under self-similar tra(cid:14)c conditions are further discussed in Park.
+
+Our work is related to the ON/OFF model of Willinger at al. where it is shown that the superposition of a
+large number of independent / renewal reward processes with heavy-tailed ON/OFF durations results in fractional
+Gaussian noise when suitably normalized. The main drawback of this simple, elegant characterization which goes
+back to some early work by Mandelbrot	 is the independence assumption of the tra(cid:14)c streams which ignores their
+interaction and mutual dependence in real networks. The latter leads to a coupling of the tra(cid:14)c sources which
+stems from the sharing of bounded network resources. This paper extends our previous work and complements the
+(cid:12)ndings of Willinger et al. by taking into account the impact of network resources and the in(cid:13)uence exerted by
+transport protocols. Our main (cid:12)ndings can be summarized as follows.
+
+First, we show that transport layer mechanisms|congestion control and reliable communication|are crucial
+components in translating heavy-tailedness of (cid:12)le size distribution into link tra(cid:14)c self-similarity. Network perfor-
+mance as captured by throughput, packet loss rate, and packet retransmission rate degrades gradually with increasing
+heavy-tailedness while queueing delay, response time, and fairness deteriorate more drastically. The degree to which
+heavy-tailedness a(cid:11)ects self-similarity is determined by how well congestion control is able to shape a source tra(cid:14)c
+into an on-average constant output stream while conserving information.
+
+Second, we show that increasing network resources such as link bandwidth and bu(cid:11)er space results in a super-
+linear improvement in performance. When large (cid:12)le transfers occur with nonnegligible probability, the incremental
+
+improvement in throughput achieved for large bu(cid:11)er sizes is accompanied by long queueing delays vis-(cid:18)a-vis the case
+when the (cid:12)le size distribution is not heavy-tailed. Bu(cid:11)er utilization continues to remain at a high level implying that
+further improvement in throughput is only achieved at the expense of a disproportionate increase in queueing delay.
+A similar trade-o(cid:11) relationship exists between queueing delay and packet loss rate, the curvature of the performance
+curve being highly sensitive to the degree of self-similarity. This implies that multi-media applications|a tra(cid:14)c
+source with voluminous data rate requirements which promotes a structural environment conducive to network tra(cid:14)c
+self-similarity|are also the tra(cid:14)c sources that su(cid:11)er most from their sensitive quality of service (QoS) requirements
+unless resource reservations or strati(cid:12)cation of best-e(cid:11)ort services is employed. Increasing link bandwidth, given a
+(cid:12)xed large bu(cid:11)er capacity, has the e(cid:11)ect of decreasing queueing delay much more drastically under highly self-similar
+tra(cid:14)c conditions than when tra(cid:14)c is less self-similar. This suggests that high-bandwidth communication links be
+employed to alleviate the exponential trade-o(cid:11) relationship between queueing delay and packet loss/throughput for
+supporting QoS-sensitive tra(cid:14)c. The e(cid:11)ect of bandwidth on queueing delay is much less pronounced when bu(cid:11)er
+capacity is small. Increasing link bandwidth also has the auxiliary e(cid:11)ect of compressing the time axis of the self-
+similar tra(cid:14)c time series and amplifying its magnitude, making it easier for long-range dependence to be detected
+and exploited at time scales where transport protocol control decisions are a(cid:11)ected.
+
+Third, we show that congestion control is e(cid:11)ective in the sense that it leads to a graceful decline in performance
+when subject to highly self-similar tra(cid:14)c conditions. We implement an open-loop (cid:13)ow control performing unreliable
+transport using UDP where the data stream is throttled at the source to achieve a (cid:12)xed maximum arrival rate.
+Decreasing the arrival rate results in a decline in packet loss rate and an increase in link utilization. It also has
+the e(cid:11)ect of making the tra(cid:14)c source conform more closely to the idealized assumptions of the ON/OFF model,
+in particular, as re(cid:13)ected by the independence of tra(cid:14)c sources when contention for network resources becomes
+negligible. In the context of reliable communication, we compare the performance of three versions of TCP|Reno,
+Tahoe, and Vegas|and we (cid:12)nd that sophistication of control leads to improved performance that is preserved even
+under highly self-similar tra(cid:14)c conditions. The performance gain from Tahoe to Reno is relatively minor while the
+performance jump from TCP Reno to Vegas is more pronounced consistent with quantitative measurements reported
+elsewhere.,
+
+The rest of the paper is organized as follows. In the next section, we describe the network model including the
+set-up of our simulation environment. This is followed by a description of the self-similar tra(cid:14)c generation process
+and dual separation of the protocol stack which are central to the understanding of the subsequent performance
+results. The next three sections evaluate network performance, (cid:12)rst, with respect to self-similarity, second, as a
+function network resources, and lastly through the use of di(cid:11)erent congestion control algorithms. We conclude with
+a discussion of our results and ongoing work.
+
+. NETWORK MODEL AND SIMULATION SET-UP
+
+.. Network Model
+
+The network is given by a directed graph G = (V; E) consisting of n nodes and m links. Each output link has a
+bu(cid:11)er, link bandwidth, and latency associated with it. vi  V is a server node if it has a probability density function
+pi(X) where X (cid:21)  is a random variable denoting (cid:12)le (or message) size. We will call pi(X) the (cid:12)le size distribution of
+server vi. vi is a client node (it may at the same time be also a server node) if it has two probability density functions
+hi(X), di(Y ), X  f; : : : ; ng, Y  R+, where hi is used to select a server, and di is the idle time distribution which
+is used in determining the time of the next request. In the context of reliable communication, if Tk is the time at
+which the kth request by client vi was reliably serviced, the next request is scheduled at time Tk + Y where Y has
+distribution di. In unreliable (UDP) communication, this causal requirement is waived. A -server, -client network
+con(cid:12)guration with a bottleneck link between gateways G and G is shown in Figure .
+
+A (cid:12)le is completely determined by its size X. Each (cid:12)le is split into q = dX=M e packets where M is the
+maximum segment size. The segments are routed through a packet-switched internetwork in which packets are
+dropped at bottleneck nodes in case of bu(cid:11)er over(cid:13)ow. Each client alternates between independently placing (cid:12)le
+transfer requests to servers, receiving data from the server, and spending some period of time idle. Xi (cid:24) pi(X),
+Yi (cid:24) di(X), i = ; : : : ; n, are i.i.d., and we require that pi(X) be heavy-tailed (formal de(cid:12)nition given later). The
+idle time distribution, on the other hand, is allowed to be non-heavy-tailed (e.g., exponential).
+
+C
+
+1
+
+2
+
+C
+
+...
+
+C
+
+32
+
+G
+
+1
+
+G
+
+2
+
+S
+
+1
+
+S
+
+2
+
+Figure . Network con(cid:12)guration.
+
+.. Simulation Set-up
+
+We use the LBNL Network Simulator, ns, as the basis for our simulation environment. ns is an event-driven
+simulator derived from Keshavs REAL network simulator supporting several (cid:13)avours of TCP (TCP Tahoe and
+TCP Reno) and router scheduling algorithms. Although not production TCP code, we have found nss emulation
+of TCP satisfactory for the purposes of studying the e(cid:11)ect of congestion control, as well as emulating reliable
+transport. A test suite description can be found in Floyd.
+
+We have modi(cid:12)ed ns in order to model our interactive client/server environment. This entailed extending the
+one-way data (cid:13)ow restriction of a single ns TCP session to full-duplex, and implementing the client/server nodes
+as separate application layer agents. A UDP-based unreliable transport protocol was added to the existing protocol
+suite, and an open-loop end-to-end (cid:13)ow control was implemented on top of it. The arrival rate was adjusted by
+a parameter which determined the spacing between successive packets. We also implemented TCP Vegas as a
+module of ns and it was used in performance comparisons between the three versions of TCP under self-similar
+tra(cid:14)c conditions(cid:3). In addition to the tracing functions that native ns provides, we added utilities for monitoring
+an expanded set of network statistics including provisions for detecting retransmission, reliable throughput, and
+computing (cid:12)le transmission completion times.
+
+Our simulation results were obtained from several hundred runs of ns. Each run executed for  simulated
+seconds, logging tra(cid:14)c at  millisecond granularity. The result in each case was a time series of one million data
+points, which ensured that our statistical measurements of self-similarity were based on time series of adequate
+length. Although most of the runs reported here were done with a -server/-client bottleneck con(cid:12)guration (cf.
+Figure ), other con(cid:12)gurations were tested including performance runs with the number of clients increasing up to
+. The bottleneck link was varied from .Mbps up to OC- levels, and bu(cid:11)er sizes were varied in the range
+kB{kB. Non-bottleneck links were set at Mbps and the latency of each link was set to ms. The maximum
+segment size was (cid:12)xed at kB for most runs. For any reasonable assignment to bandwidth, bu(cid:11)er size, mean (cid:12)le
+request size, and other system parameters, we found that by either adjusting the number of clients or the mean
+of the idle time distribution di, appropriately, any intended level of contention could be achieved. This enabled us
+to carry out performance evaluations by varying the two main network resources|bottleneck bu(cid:11)er capacity and
+bandwidth|and the degree of self-similarity.
+
+. APPLICATION LAYER CAUSALITY OF SELF-SIMILAR LINK TRAFFIC
+
+.. Dual Separation of Protocol Stack
+
+One of the main goals of this paper is to evaluate the role of the protocol stack, in particular, the transport layer in
+determining network performance when subject to self-similar tra(cid:14)c conditions. To this end, we take a dual view of
+the protocol stack by partitioning its functionality into an application layer and a transport/network layer, collapsing
+the layers beneath the network layer into a single data link abstraction, simply referred to as the link layer or link.
+We also ignore (cid:12)ner subdivisions of the layers above the transport layer modeling it as a single entity. The application
+layer is completely characterized by the probability distributions mentioned in Section .. File size distribution is
+the main control variable with idle time distribution playing a secondary role. In Park et al., we have shown that
+independent of idle time distribution, (cid:12)le size distribution alone su(cid:14)ces to induce self-similar link tra(cid:14)c by making
+the distribution more or less heavy-tailed. We use the Pareto distribution (de(cid:12)nition given in Section .) with
+shape parameter (cid:11) for this purpose adjusting the location parameter k to keep the average (cid:12)le size|sampled over
+
+(cid:3)The TCP Vegas module in ns was implemented by Alia Atlas.
+
+Heavy-Tailed File Size
+
+Distribution 
+
+Congestion Control
+
+and  Reliability
+
+Application
+
+Layer
+
+Transport /
+
+Network Layer
+
+Application
+
+Layer
+
+Transport /
+
+Network Layer
+
+Self-Similar  Link Traffic H
+
+and  Performance
+
+Figure . Transformation of the heavy-tailedness of (cid:12)le size distribution property at the application layer via the
+action of the transport/network layer to its manifestation as self-similar link tra(cid:14)c at the link layer.
+
+ seconds|invariant across the (cid:11) values ., ., ., .	 considered. We have used some other distributions
+to generate communication demand at the application layer, and in the case of the exponential distribution which
+possesses a short tail, performance results were comparable to that of the Pareto distribution with (cid:11) = :	. These
+results are omitted in the paper.
+
+The transport/network layer is composed of a number of protocols implementing reliable/unreliable communica-
+tion with congestion control, and packets are routed by the network layer across a packet-switched internetwork. The
+most important aspect of the dual protocol stack separation is the positioning of the \causal seed" of self-similarity
+at its highest point of a(cid:11)ection|the application layer. File transfer requests are generated at the top without the
+imposition of an external self-similar time series anywhere in the system. The self-similar tra(cid:14)c observed at the link
+layer is an induced phenomenon, partly in(cid:13)uenced by transport layer actions|i.e., tra(cid:14)c shaping e(cid:11)ect|allowing
+for an intrinsic evaluation of the in(cid:13)uence and impact of transport protocols on network performance.
+
+How well the transport layer performs its function is dependent upon the availability of network resources, and
+we model network resources via two variables, bu(cid:11)er capacity and link bandwidth. Bu(cid:11)er capacity comes into play
+when multiple tra(cid:14)c streams are multiplexed onto the same output port of a gateway, its size determining packet
+loss rate as well as queueing delay. Our performance results are expressed as functions of bottleneck bu(cid:11)er capacity,
+link bandwidth, and the heavy-tailedness of (cid:12)le size distribution represented by (cid:11) in the application layer. The
+characteristics of network tra(cid:14)c at the link layer are captured by the Hurst parameter H (de(cid:12)ned later) which
+measures the degree of self-similarity of a time series. The overall structure of the set-up is depicted in Figure .
+
+.. Heavy-Tailedness of File Size Distribution and Link Tra(cid:14)c Self-similarity
+
+An important characteristic of the aforementioned mechanism for inducing self-similar link tra(cid:14)c from the application
+layer is the assumption that the sizes of (cid:12)les or messages being transferred are drawn from a heavy-tailed distribution.
+A distribution is heavy-tailed if it asymptotically follows a power law. That is,
+
+P [X > x] (cid:24) x(cid:0)(cid:11)
+
+as x ! 
+
+where  < (cid:11) < . One of the simplest heavy-tailed distributions is the Pareto distribution whose probability density
+function is given by
+
+p(x) = (cid:11)k(cid:11)x(cid:0)(cid:11)(cid:0)
+
+where (cid:11) is the shape parameter, k >  is the location parameter, and x (cid:21) k. The distribution function has the form
+
+F (x) = P [X (cid:20) x] =  (cid:0) (k=x)(cid:11):
+
+Heavy-tailed distributions have a number of properties that are qualitatively di(cid:11)erent from distributions more com-
+monly encountered in networking research, in particular, the exponential distribution. If (cid:11) (cid:20) , the distribution
+has in(cid:12)nite variance, and if (cid:11) (cid:20) , the distribution has also in(cid:12)nite mean. Thus, as (cid:11) decreases, a large portion of
+the probability mass resides in the tail of the distribution. In practical terms|and relating to our network model|
+a random variable that follows a heavy-tailed distribution can give rise to extremely large (cid:12)le size requests with
+nonnegligible probability.
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+2e+07
+
+1.5e+07
+
+1e+07
+
+5e+06
+
+0
+
+2e+06
+
+1.5e+06
+
+1e+06
+
+500000
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+0
+
+)
+s
+e
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+200000
+
+150000
+
+100000
+
+50000
+
+0
+
+100s aggregation (alpha 1.05)
+
+2000
+
+4000
+
+6000
+
+time (sec)
+
+8000
+
+10000
+
+10s aggregation (alpha 1.05)
+
+3500
+
+3700
+
+3900
+time (sec)
+
+4100
+
+4300
+
+1s aggregation (alpha 1.05)
+
+3350
+
+3370
+
+3390
+time (sec)
+
+3410
+
+3430
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+2e+07
+
+1.5e+07
+
+1e+07
+
+5e+06
+
+0
+
+2e+06
+
+1.5e+06
+
+1e+06
+
+500000
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+0
+
+)
+s
+e
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+200000
+
+150000
+
+100000
+
+50000
+
+0
+
+100s aggregation (alpha 1.35)
+
+2000
+
+4000
+
+6000
+
+time (sec)
+
+8000
+
+10000
+
+10s aggregation (alpha 1.35)
+
+3500
+
+3700
+
+3900
+time (sec)
+
+4100
+
+4300
+
+1s aggregation (alpha 1.35)
+
+3350
+
+3370
+
+3390
+time (sec)
+
+3410
+
+3430
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+2e+07
+
+1.5e+07
+
+1e+07
+
+5e+06
+
+0
+
+2e+06
+
+1.5e+06
+
+1e+06
+
+500000
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+0
+
+)
+s
+e
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+200000
+
+150000
+
+100000
+
+50000
+
+0
+
+100s aggregation (alpha 1.95)
+
+2000
+
+4000
+
+6000
+
+time (sec)
+
+8000
+
+10000
+
+10s aggregation (alpha 1.95)
+
+3500
+
+3700
+
+3900
+time (sec)
+
+4100
+
+4300
+
+1s aggregation (alpha 1.95)
+
+3350
+
+3370
+
+3390
+time (sec)
+
+3410
+
+3430
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+2e+07
+
+1.5e+07
+
+1e+07
+
+5e+06
+
+0
+
+2e+06
+
+1.5e+06
+
+1e+06
+
+500000
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+0
+
+)
+s
+e
+t
+y
+b
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+
+200000
+
+150000
+
+100000
+
+50000
+
+0
+
+100s aggregation (expo)
+
+2000
+
+4000
+
+6000
+
+time (sec)
+
+8000
+
+10000
+
+10s aggregation (expo)
+
+3500
+
+3700
+
+3900
+time (sec)
+
+4100
+
+4300
+
+1s aggregation (expo)
+
+3350
+
+3370
+
+3390
+time (sec)
+
+3410
+
+3430
+
+Figure . TCP run. Throughput as a function of (cid:12)le size distribution and three aggregation levels. File size
+distributions constitute Pareto with (cid:11) = :; :; :	, and exponential.
+
+Figure  shows visuallyy that our set-up is able to induce self-similar link tra(cid:14)c, the degree of scale-invariant
+burstiness being determined by the (cid:11) parameter of the Pareto distribution. The plots show the time series of
+network tra(cid:14)c measured at the output port of a bottleneck link (i.e., from gateway G to G in Figure ). The
+downstream tra(cid:14)c is measured in bytes per unit time where the aggregation level or time unit varies over (cid:12)ve orders
+of magnitude from ms, ms, sec, sec, to sec. Only the top three aggregation levels are shown in Figure .
+For (cid:11) close to , we observe a smoothing e(cid:11)ect as the aggregation level is increased, indicating a weak dependency
+structure in the underlying time series. As (cid:11) approaches , however, burstiness is preserved even at large time scales
+indicating that the ms time series possesses long-range dependent. The (cid:12)rst two aggregation levels (ms, ms)
+are omitted because the di(cid:11)erence between the aggregated time series manifests itself visually from the  second
+time scale onwards. The last column depicts time series obtained by employing an exponential (cid:12)le size distribution
+at the application layer with the mean normalized so as to equal that of the Pareto distributions. We observe that
+the aggregated time series between exponential and Pareto with (cid:11) = :	 are statistically indistinguishable.
+
+Although Figure  gives clear visual evidence of the di(cid:11)erence in self-similarity of link tra(cid:14)c as a function of
+our control variable (cid:11), a quantitative measure of self-similarity is obtained by using the Hurst parameter H which
+expresses the speed of decay of a time series autocorrelation function. A time series with long-range dependence has
+an autocorrelation function of the form
+
+r(k) (cid:24) k(cid:0)(cid:12)
+
+as k ! 
+
+where  < (cid:12) < . Hence, when compared to the exponential decay exhibited by traditional tra(cid:14)c models, the
+autocorrelation function of a long-range dependent process decays according to a power-law. The Hurst parameter
+
+ySelf-similar phenomena are well-suited to visual illustration facilitating an intuitive interpretation. This augments the statistical
+
+estimations of self-similarity given later in the paper.
+
+is related to (cid:12) via H =  (cid:0) (cid:12)=. Hence, for self-similar time series, = < H < . As H ! , the degree of self-
+similarity increases. A test for self-similarity of a time series can be reduced to the question of determining whether
+H signi(cid:12)cantly deviates from =.
+
+H
+
+l
+
+ 
+f
+o
+ 
+e
+u
+a
+V
+ 
+d
+e
+t
+a
+m
+
+i
+t
+s
+E
+
+1
+
+0.95
+
+0.9
+
+0.85
+
+0.8
+
+0.75
+
+0.7
+
+0.65
+
+0.6
+
+0.55
+
+0.5
+
+Base Run 1,000,000 Samples Each
+
+Variance-Time
+R/S
+(3 - alpha)/2
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+Alpha of Filesize Distribution
+
+2
+
+Figure . Hurst parameter estimates (R/S and V-T) for (cid:11) varying from . to .	.
+
+Figure  shows H-estimates based on Variance-Time (V-T) and R/S methodsz for a baseline network con(cid:12)guration
+consisting of TCP Reno, link speed of .Mbps, kB bu(cid:11)er size, and  server/ clients. The plot shows H as a
+function of the Pareto distribution parameter for (cid:11) = :; :; :; :; : and :	. Each point on the plot is
+the average of  estimates based on di(cid:11)erent random seeds, and the error bars show the spread of the maximum
+and minimum in the estimates obtained. This particular con(cid:12)guration results in a packet drop rate of (cid:25) % for
+the most bursty case ((cid:11) = :). The plot shows that even when resources are bounded leading to interaction
+among the  tra(cid:14)c streams contending for network resources, the Hurst parameter estimates vary with (cid:12)le size
+distribution in a roughly linear manner. That is, the heavy-tailed property of the (cid:12)le size distribution as captured by
+(cid:11) directly determines link-level tra(cid:14)c self-similarity of the downstream tra(cid:14)c as measured by H. The H = ( (cid:0) (cid:11))=
+relation shows the values of H that would be predicted by the ON/OFF model in the idealized case corresponding
+to a fractional Gaussian noise process when the tra(cid:14)c sources are independent with constant ON/OFF amplitudes.
+Although their overall trends are similar (nearly coinciding at (cid:11) = :), the slope of the simulated system with
+resource limitations and reliable transport layer running TCP Renos congestion control is slightly less than (cid:0), with
+an o(cid:11)set below the idealized line for (cid:11) close to  and above the line for (cid:11) close to .
+
+.. E(cid:11)ect of Self-similarity
+
+. PERFORMANCE EVALUATION
+
+In this section, we evaluate network performance when the degree of self-similarity is varied. The scale-invariant
+burstiness of link tra(cid:14)c is a(cid:11)ected solely by the heavy-tailedness of (cid:12)le size distribution at the application layer (cf.
+Figure  in Section ), captured by the shape parameter (cid:11) of the Pareto distribution which acts as the control variable.
+Other candidate (cid:12)le size distributions possessing short tails (e.g., exponential) yield similar performance results as
+the Pareto distribution with (cid:11) = :	 and are not shown here. First, we present performance data when the transport
+layer implements reliable communication with congestion control. We use TCP Reno as our principal benchmark
+protocol. Other versions of TCP yield similar results and their performance di(cid:11)erences are studied in Section .. We
+also present performance results evaluating the e(cid:11)ect of self-similarity when unreliable communication is employed
+at the transport layer. We use UDP-based transmission for this purpose, with a greedy transport agent driving the
+UDP module at maximum rate subject to bandwidth limitation and a nominal slow-down proportional to the (cid:12)le
+size which accounts for processing overhead.
+
+... Packet loss and retransmission
+
+Figure  shows the e(cid:11)ect of varying the heavy-tailedness of the Pareto distributionx for (cid:11) = :; :; :, and :	.
+The left and middle (cid:12)gures show packet loss rate and packet retransmission rate as a function of (cid:11) for four values of
+
+zVariance-time (V-T) and R/S are frequently used methods, for estimating the Hurst parameter H.
+xWe remark that the location parameter of the Pareto distribution was adjusted so that the actual mean of the (cid:12)le size requests
+
+sampled over  seconds remained invariant at .kB for the range of (cid:11) values considered.
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0
+
+link buffer 3 kB
+link buffer 10 kB
+link buffer 46 kB
+link buffer 128 kB
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+
+i
+
+i
+
+n
+o
+s
+s
+m
+s
+n
+a
+r
+t
+
+e
+r
+ 
+t
+
+e
+k
+c
+a
+p
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0
+
+link buffer 3 kB
+link buffer 10 kB
+link buffer 10 kB
+link buffer 128 kB
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+link bandwidth 1
+link bandwidth 1.5
+link bandwidth 3
+link bandwidth 9
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . TCP run. Packet loss rate (left) and packet retransmission rate (middle) as a function of (cid:11) for four values
+of bu(cid:11)er capacity. Packet loss rate (right) as a function of (cid:11) for four values of link bandwidths.
+
+bu(cid:11)er capacities, kB, kB, kB, and kB. When the bottleneck bu(cid:11)er size is very small (kB), there is little
+di(cid:11)erence in performance across the (cid:11) values, exhibiting a (cid:13)at performance curve. This is due to the burstiness
+at (cid:11) = :	 being already su(cid:14)cient to induce high packet loss. Since TCP employs feedback control triggering
+back-o(cid:11) upon perceived packet loss, the potential for an ampli(cid:12)ed e(cid:11)ect at smaller (cid:11) values is muted by the initial
+packet drops occurring, on average, across all (cid:11) values. The ampli(cid:12)cation e(cid:11)ect is realized and clearly visible when
+feedback congestion control is not used as in the case of the non-(cid:13)ow-controlled UDP-based protocol (cf. Figure 
+below). When bu(cid:11)er size is large (kB), the increased capacity allows even the high burstiness at (cid:11) = : to be
+accommodated, and we see a gradual deterioration in packet loss and retransmission as (cid:11) approaches .
+
+The slope of the performance curve is most pronounced for intermediate values of the bottleneck bu(cid:11)er capacity
+(kB, kB) at which the di(cid:11)erence in burstiness between (cid:11) = : and (cid:11) = :	 takes its highest toll. However,
+we note that packet loss and retransmission remain a linear function of (cid:11) and this \robustness" with respect to
+self-similarity is achieved by the action of congestion control. We will see in Section .. that in its absence, a
+nonlinear degradation in performance results as (cid:11) approaches . Figure  (right) shows a similar behavior with
+respect to packet loss rate when the bottleneck bandwidth is varied (Mb/s, .Mb/s, Mb/s, 	Mb/s) for a (cid:12)xed
+bu(cid:11)er size of kB.
+
+... Throughput and queueing delay
+
+Figure  (left) shows reliable throughput as a function of (cid:11) for four values of bu(cid:11)er capacity. Reliable throughput %
+is de(cid:12)ned as the average over all (cid:12)le transfers (indexed by k) over time of the ratio
+
+where Sk is the kth (cid:12)le size, Wk is the total number of bytes expended to reliably transmit the kth (cid:12)le, and
+Hk = Wk (cid:0) Sk is the net overhead incurred including packet retransmissions. Hence, the fewer the lost packets and
+
+%k =
+
+Sk
+Wk
+
+=
+
+Sk
+
+Sk + Hk
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+ 
+
+l
+
+e
+b
+a
+
+i
+l
+
+e
+r
+
+100
+
+98
+
+96
+
+94
+
+92
+
+90
+
+88
+
+86
+
+84
+
+82
+
+link buffer 2 kB
+link buffer 10 kB
+link buffer 46 kB
+link buffer 128 kB
+
+link buffer 2kB
+link buffer 10kB
+link buffer 46kB
+link buffer 128kB
+
+35000
+
+30000
+
+25000
+
+20000
+
+15000
+
+10000
+
+5000
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+n
+o
+
+i
+t
+
+a
+z
+
+i
+l
+i
+t
+
+u
+
+ 
+r
+e
+
+f
+f
+
+u
+b
+ 
+k
+n
+
+i
+l
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+0
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+ 
+
+l
+
+e
+b
+a
+
+i
+l
+
+e
+r
+
+100
+
+98
+
+96
+
+94
+
+92
+
+90
+
+88
+
+86
+
+84
+
+82
+
+0
+
+2
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+4
+10
+packet loss rate (percent)
+
+6
+
+8
+
+12
+
+14
+
+Figure . TCP run. Reliable throughput (left), mean queue length (middle) as a function of (cid:11); reliable throughput
+as a function of packet loss rate (right).
+
+resulting retransmissions, the closer % is to . In the case of reliable communication with TCPs window control,
+we use reliable throughput as a measure of \e(cid:11)ective throughput" to better account for retransmission overhead
+and distinguish it from raw throughput. As with packet loss rate, Figure  (left) shows performance curves that
+are most sensitive with respect to self-similarity for intermediate values of bu(cid:11)er capacity. This is as expected since
+throughput and packet loss rate are almost linearly correlated as seen in Figure  (right).
+
+Figure  (middle) shows mean queue length at the bottleneck link output bu(cid:11)er as a function of (cid:11) for four values
+of bu(cid:11)er capacity, kB, kB, kB, and kB. For small values of bu(cid:11)er size, even at (cid:11) = :	 the bu(cid:11)er over(cid:13)ow
+is high, and because of TCPs congestion control (see the discussion above), bu(cid:11)er utilization remains invariant
+across all (cid:11) values. When bu(cid:11)er capacity is large (kB), the highly self-similar tra(cid:14)c at (cid:11) = : is able to
+utilize the increased queueing capacity to achieve further improvement in throughput. This occurs, however, at a
+disproportionate|i.e., exponential|increase in queueing delay relative to the change in (cid:11). We will see in Section .
+that this nonlinear relationship also manifests itself as a sharp increase in the curvature of the delay-throughput
+curve.
+
+... Unreliable non-(cid:13)ow-controlled transport
+
+Figure  shows packet loss rate, link utilization, and mean queue length as a function of (cid:11) for four values of bu(cid:11)er
+capacity when an unreliable UDP-based non-(cid:13)ow-controlled transport protocol is used. An extension of the unreliable
+non-(cid:13)ow-controlled protocol to a (cid:13)ow controlled version implementing a simple source-throttled open-loop control
+is discussed in Section .. The present scheme serves to show the in(cid:13)uence of the protocol stack in determining
+network performance as a function of self-similarity at one extreme end of the spectrum of possible transport layer
+controls.
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+ 
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+link buffer 3 kB
+link buffer 10 kB
+link buffer 28 kB
+link buffer 64 kB
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+n
+o
+
+i
+t
+
+a
+z
+
+i
+l
+i
+t
+
+u
+
+ 
+k
+n
+
+i
+l
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+link buffer 3 kB
+link buffer 10 kB
+link buffer 28 kB
+link buffer 64 kB
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+20000
+
+18000
+
+16000
+
+14000
+
+12000
+
+10000
+
+8000
+
+6000
+
+4000
+
+2000
+
+0
+
+1
+
+link buffer 3 kB
+link buffer 10 kB
+link buffer 28 kB
+link buffer 64 kB
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . UDP run. Packet loss rate (left), link utilization (middle), and mean queue length as a function of (cid:11).
+
+In contrast to the gradual increase in packet loss achieved when TCP is employed (see Figure ), we observe
+a superlinear degradation in the packet loss rate as (cid:11) approaches . Throughput as captured by link utilization
+improves only sublinearly as a function of (cid:11). Thus, TCPs congestion control and reliability mechanism have the
+e(cid:11)ect of pulling down the superlinear dependence of network performance on self-similarity to a more robust linear
+relationship with respect to packet loss and throughput. Figure  (right) shows that mean queue length continues
+to depend superlinearly on (cid:11) for large bu(cid:11)er sizes. It is not surprising that UDP-based unreliable transport without
+additional control performs poorly under various network conditions. However, the fact that TCPs congestion
+control and reliability mechanism are able to achieve a linear dependence on the degree of self-similarity is empirical
+and we will study this feature, especially its high cost with respect to increased queueing delay, in the next section.
+
+.. E(cid:11)ect of Network Resources
+
+The previous section has shown that self-similarity as captured by the shape parameter (cid:11) of the Pareto distribution
+acting at the application layer, exerts a direct in(cid:13)uence on network performance through its manifestation as self-
+similar tra(cid:14)c at the link layer. How and with what magnitude it a(cid:11)ects performance is modulated by the protocols
+acting at the transport/network layer. In this section, we study the e(cid:11)ect of network resources on performance,
+especially with respect to the trade-o(cid:11) relationship between throughput and delay as well as packet loss and delay,
+all under varying self-similar tra(cid:14)c conditions.
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+16
+
+14
+
+12
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0
+
+0
+
+20
+
+40
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+
+i
+
+i
+
+n
+o
+s
+s
+m
+s
+n
+a
+r
+t
+
+e
+r
+ 
+t
+
+e
+k
+c
+a
+p
+
+100
+
+120
+
+140
+
+18
+
+16
+
+14
+
+12
+
+10
+
+8
+
+6
+
+4
+
+2
+
+0
+
+0
+
+20
+
+40
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+100
+
+120
+
+140
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+ 
+
+l
+
+e
+b
+a
+
+i
+l
+
+e
+r
+
+100
+
+98
+
+96
+
+94
+
+92
+
+90
+
+88
+
+86
+
+84
+
+82
+
+0
+
+20
+
+40
+
+60
+
+80
+
+buffer size (kB)
+
+alpha = 1.05
+alpha = 1.35
+alpha = 1.65
+alpha = 1.95
+
+100
+
+120
+
+140
+
+60
+
+80
+
+buffer size (kB)
+
+60
+
+80
+
+buffer size (kB)
+
+Figure . TCP run. Packet loss rate (left) and packet retransmission rate (middle) as a function of bu(cid:11)er capacity.
+Reliable throughput (right) as a function of bu(cid:11)er capacity.
+
+... Bu(cid:11)er capacity
+
+Figure  shows the e(cid:11)ect of varying the bottleneck link bu(cid:11)er capacity for bu(cid:11)er sizes in the range kB{kB
+on packet loss rate, packet retransmission rate, and reliable throughput using TCP Reno. In Figure  (left), we
+see a sharp threshold behavior of packet loss rate as a function of bu(cid:11)er size, \partitioning" bu(cid:11)er capacity into a
+highly sensitive and a saturated domain. This holds, modulo a shift e(cid:11)ect, for all the (cid:11) values considered. A similar
+observation holds for packet retransmission rate and reliable throughput as the graphs in Figure  (middle) and
+(right) indicate. However, the dependence on bu(cid:11)er size for small values of (cid:11) is less smooth and exhibits stretches
+of abruptness.
+
+Whereas for throughput and packet loss rate the improvement in performance for large bu(cid:11)er sizes was gradual,
+Figure 	 (left) shows that the qualitative dependence of mean queue length for large bu(cid:11)er sizes is determined by
+the degree of self-similarity. For (cid:11) close to , the functional dependence of mean queue length on bu(cid:11)er capacity
+is clearly sublinear (roughly logarithmic) whereas for (cid:11) close to , the dependence becomes linear. For very large
+values of the bu(cid:11)er size we expect the delay curve to saturate even when (cid:11) is close to  although the practical
+signi(cid:12)cance of the di(cid:11)erence in the magnitude of their queueing delay will be preserved. The proportional increase
+in bu(cid:11)er occupancy for (cid:11) close to  indicates that, even for large bu(cid:11)er sizes, tra(cid:14)c burstiness is high enough to
+cause constant utilization.
+
+35000
+
+30000
+
+25000
+
+20000
+
+15000
+
+10000
+
+5000
+
+)
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+0
+
+0
+
+20
+
+40
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+35000
+
+30000
+
+25000
+
+20000
+
+15000
+
+10000
+
+5000
+
+)
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+35000
+
+30000
+
+25000
+
+20000
+
+15000
+
+10000
+
+5000
+
+)
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+60
+
+80
+
+100
+
+link buffer size (kB)
+
+120
+
+140
+
+0
+
+0
+
+2
+
+4
+10
+packet loss rate (percent)
+
+6
+
+8
+
+12
+
+14
+
+0
+
+82
+
+84
+
+86
+
+88
+
+90
+
+92
+
+94
+
+96
+
+98
+
+100
+
+reliable throughput (percent)
+
+Figure 	. TCP run. Mean queue length as a function of bu(cid:11)er capacity for various values of (cid:11) (left), mean queue
+length vs. packet loss rate trade-o(cid:11) relation (middle), and mean queue length vs. reliable throughput trade-o(cid:11) relation
+(right).
+
+The large di(cid:11)erence in the growth of queueing delay vis-(cid:18)a-vis reliable throughput and packet loss rate as a
+function of bu(cid:11)er capacity manifests itself in a trade-o(cid:11) relationship which is shown in Figures 	 (middle) and
+(right). Figure 	 (middle) shows the delay-packet loss curve for four values of self-similarity, (cid:11) = :; :; :,
+and :	. For (cid:11) close to , we observe an exponential trade-o(cid:11) relationship between queueing delay and packet loss
+rate, with signi(cid:12)cant di(cid:11)erences in the curvature among the four performance curves. In the context of facilitating
+multi-media tra(cid:14)c such as video and voice in a best-e(cid:11)ort manner while satis(cid:12)cing their diverse quality of service
+
+(QoS) requirements, the performance curves in Figure 	 (middle) show that low packet loss, on average, can only
+be achieved at a signi(cid:12)cant increase in queueing delay and vice versa. Since video and voice tra(cid:14)c tend to be large-
+volume transfers whose increased presence causes the intrinsic self-similarity of the overall system to be ampli(cid:12)ed, it
+is the QoS-sensitive tra(cid:14)c that both promotes scale-invariant burstiness as well as su(cid:11)ers most from its consequences
+via the sensitive dependence of the delay-packet loss trade-o(cid:11) relation on the degree of self-similarity in the system.
+Figure 	 (right) shows the delay-throughput curve which exhibits a trade-o(cid:11) relationship similar to queueing delay
+vs. packet loss rate, its curvature increasing as (cid:11) approaches .
+
+... Bottleneck link bandwidth
+
+Figure  (left) shows the e(cid:11)ect of varying bottleneck link bandwidth on packet loss rate for four values of (cid:11). As
+in the bu(cid:11)er capacity case, we see a threshold e(cid:11)ect with packet loss rate being most sensitive for small values of
+link bandwidth followed by a gradual decline in packet drop as bandwidth is increased. A similar situation holds for
+packet retransmission rate which is omitted here. Figure  (middle) shows the e(cid:11)ect of increasing bandwidth on
+queueing delay for (cid:11) = :, :, :, :	 when bu(cid:11)er capacity is (cid:12)xed at kB. At (cid:11) = :	, we see a saturation
+e(cid:11)ect as bandwidth is increased from .Mbps to 	Mbps producing successively smaller improvements in mean queue
+length which indicates a diminishing return of the marginal utility of link bandwidth with respect to queueing delay.
+As (cid:11) approaches , however, the situation reverses such that at (cid:11) = :, the opposite is true. That is, as bandwidth
+is increased, we see an accelerated decline in mean queue length vis-(cid:18)a-vis the case when (cid:11) is large. Figure  (right)
+shows performance results for the same set-up except that the bottleneck bu(cid:11)er size was (cid:12)xed at the smaller value of
+kB. Unlike before, we now observe a constant slope in the delay curve as a function of (cid:11) across all the bandwidth
+values considered, and it does not exhibit a saturation e(cid:11)ect nor acceleration e(cid:11)ect at either end of (cid:11). This implies
+that when the bottleneck bu(cid:11)er capacity is small, then increasing bandwidth carries only a gradual improvement in
+queueing delay independent of whether tra(cid:14)c is highly self-similar or not.
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+1
+
+2
+
+3
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+4
+
+6
+bandwidth (Mb/s)
+
+5
+
+7
+
+8
+
+9
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+20000
+
+18000
+
+16000
+
+14000
+
+12000
+
+10000
+
+8000
+
+6000
+
+4000
+
+2000
+
+0
+
+1
+
+BW 1.5
+BW 3
+BW 4.5
+BW 6
+BW 9
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+1600
+
+1400
+
+1200
+
+1000
+
+800
+
+600
+
+400
+
+200
+
+0
+
+1
+
+BW 1.5
+BW 3
+BW 4.5
+BW 6
+BW 9
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . TCP run. Packet loss rate as a function of link bandwidth for four values of (cid:11) (left), mean queue length
+as a function of (cid:11) for (cid:12)ve values of bandwidths .Mbps, Mbps, .Mbps, Mbps, 	Mbps for a (cid:12)xed bu(cid:11)er capacity
+of kB (middle), and for (cid:12)xed bu(cid:11)er capacity kB (right).
+
+In the context of network design, the previous observations imply that when the overall system is prone to high
+levels of long-range dependence as in the case of multi-media tra(cid:14)c, increasing bu(cid:11)er capacity alone is a bad idea
+since it carries a signi(cid:12)cant queueing delay penalty while improving packet loss only gradually. A bandwidth-driven
+network resource allocation policy, assuming a (cid:12)xed overall tra(cid:14)c demand, is a more e(cid:11)ective approach since it
+improves both throughput and queueing delay gradually, while potentially yielding a more signi(cid:12)cant improvement
+in queueing delay if bu(cid:11)er capacity is large.
+
+Figure  shows an auxiliary e(cid:11)ect of increasing link bandwidth, namely, compression of the time axis of the
+self-similar link tra(cid:14)c time series as well as ampli(cid:12)cation of its amplitude. The variance/mean ratio of link tra(cid:14)c is
+related to the index of dispersion count and measures the variance of the aggregated time series at (cid:12)ve aggregation
+levels|ms, ms, sec, sec, sec|against the mean. The larger this ratio for (cid:11) small vis-(cid:18)a-vis when (cid:11) is
+large, the more \bursty" the underlying time series and the easier it is to detect statistical di(cid:11)erences between highly
+self-similar and less-so tra(cid:14)c. Moreover, if the di(cid:11)erence is preserved for (cid:12)ne levels of aggregation, then the easier it
+is observe and exploit the dependency structure in (cid:11) (cid:25)  tra(cid:14)c.
+
+1.8e+06
+
+1.6e+06
+
+1.4e+06
+
+1.2e+06
+
+1e+06
+
+800000
+
+600000
+
+400000
+
+200000
+
+n
+a
+e
+m
+
+ 
+/
+ 
+
+e
+c
+n
+a
+i
+r
+a
+v
+
+100 sec
+10 sec
+1 sec
+100 msec
+10 msec
+
+1.8e+06
+
+1.6e+06
+
+1.4e+06
+
+1.2e+06
+
+1e+06
+
+800000
+
+600000
+
+400000
+
+200000
+
+n
+a
+e
+m
+
+ 
+/
+ 
+
+e
+c
+n
+a
+i
+r
+a
+v
+
+100 sec
+10 sec
+1 sec
+100 msec
+10 msec
+
+0
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+0
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . TCP run. Variance/mean ratio for link throughput as a function of time-scale and (cid:11) when bottleneck
+bandwidth is Mb/s (left) and when bottleneck bandwidth is Mb/s (right).
+
+... Unreliable non-(cid:13)ow controlled transport
+
+The sensitivity results and trade-o(cid:11) relationships of Section .. are con(cid:12)rmed in the case of the non-(cid:13)ow-controlled
+UDP-based unreliable transport protocol discussed earlier. Packet loss rate and mean queue length, as a function of
+bu(cid:11)er capacity, exhibit qualitative shapes similar to their corresponding graphs for (cid:13)ow-controlled reliable transport
+using TCP Reno in Section ... In fact, they have an even more sensitive dependence on (cid:11). The plots are omitted
+here for brevity.
+
+Figure  depicts the delay-packet loss and delay-throughput trade-o(cid:11) relationships showing a sharp increase in
+the curvature of the performance graphs as a function of self-similarity. The delay-link utilization curve, although
+ampli(cid:12)ed in shift, is smoother than its corresponding counter-part for (cid:13)ow-controlled reliable communication|the
+delay-reliable throughput curve. This suggests that the jaggedness in Figure 	 was caused by TCPs reliability and
+congestion control mechanism.
+
+20000
+
+18000
+
+16000
+
+14000
+
+12000
+
+10000
+
+8000
+
+6000
+
+4000
+
+2000
+
+)
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+0
+
+0
+
+5
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+alpha 1.05
+alpha 1.35
+alpha 1.65
+alpha 1.95
+
+20000
+
+18000
+
+16000
+
+14000
+
+12000
+
+10000
+
+8000
+
+6000
+
+4000
+
+2000
+
+)
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+10
+
+15
+
+20
+
+25
+
+30
+
+packet loss rate (percent)
+
+35
+
+40
+
+0
+
+40
+
+50
+
+60
+
+70
+
+80
+
+link utilization (percent)
+
+90
+
+100
+
+Figure . UDP run. Mean queue length vs. packet loss rate (left) and mean queue length vs. link utilization
+(right).
+
+.. E(cid:11)ectiveness of Congestion Control
+
+The previous sections have shown performance results as a function of self-similarity and network resources, and the
+impact of the transport layer in a(cid:11)ecting performance. In this section, we compare the performance results across
+several congestion control algorithms, (cid:12)rst, in the case of (cid:13)ow-controlled unreliable transport using UDP, and second,
+by comparing performance di(cid:11)erences across three versions of TCP|Reno, Tahoe, and Vegas.
+
+... Flow-controlled unreliable transport
+
+We employ a simple open-loop (cid:13)ow-controlled unreliable transport protocol based on UDP to test the e(cid:11)ect of
+stretching out a (cid:12)le transfer session into an output stream of \on-average" constant height. The arrival rate is
+throttled by a rate parameter (cid:28) which determines the minimum (time) spacing between successive packets. Thus, by
+suitably adjusting the inter-packet spacing parameter (cid:28) , the maximum arrival rate of a tra(cid:14)c source is controlled.
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+1
+
+inter-packet spacing 0 msec
+inter-packet spacing 2 msec
+inter-packet spacing 4 msec
+inter-packet spacing 6 msec
+inter-packet spacing 8 msec
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+n
+o
+
+i
+t
+
+a
+z
+
+i
+l
+i
+t
+
+u
+
+ 
+k
+n
+
+i
+l
+
+8
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+inter-packet spacing 0 msec
+inter-packet spacing 2 msec
+inter-packet spacing 4 msec
+inter-packet spacing 6 msec
+inter-packet spacing 8 msec
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+s
+e
+
+t
+y
+b
+(
+ 
+
+h
+
+t
+
+g
+n
+e
+
+l
+ 
+
+e
+u
+e
+u
+q
+
+ 
+
+n
+a
+e
+m
+
+3000
+
+2500
+
+2000
+
+1500
+
+1000
+
+500
+
+0
+
+1
+
+inter-packet 0 msec
+inter-packet 2 msec
+inter-packet 4 msec
+inter-packet 6 msec
+inter-packet 8 msec
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . Flow-controlled UDP for four values of interpacket spacings: Packet loss rate (left), link utilization
+(middle), and mean queue length (right) as a function of (cid:11).
+
+As (cid:28) ! , the tra(cid:14)c source becomes more and more like the ON/OFF model of Willinger et al.|except for the
+(cid:12)nite number of tra(cid:14)c sources|due to the decoupling achieved by making the consequences of resource contention
+negligible.
+
+Figure  (left) shows packet loss rate as a function of (cid:11) for (cid:12)ve values of (cid:28) , (cid:28) = ms, ms, ms, ms, ms. For
+small (cid:28) , we observe the characteristic nonlinear increase in packet loss rate as (cid:11) ! . As (cid:28) is increased, however,
+packet loss rate (cid:13)attens out until the curve becomes horizontal and packet loss approaches . Figure  (middle)
+shows the corresponding e(cid:11)ect on link utilization. We observe that link utilization approaches saturation as (cid:28) is
+increased for all values of (cid:11). The rightmost plot shows the e(cid:11)ect of (cid:28) on mean queue length which, after exhibiting
+a nonlinear dependence on (cid:11) for small values of (cid:28) , (cid:13)attens out as (cid:28) is increased.
+
+Figure  shows the Hurst parameter estimates using the V-T and R/S methods. The curves exhibit an upward
+shift as the interpacket spacing parameter (cid:28) is increased. This is due to fewer packets being discarded because of
+bu(cid:11)er over(cid:13)ow, thus better preserving the tail of the (cid:12)le size distribution which manifests itself as large (cid:12)le transfer
+sessions at the transport layer.
+
+e
+
+t
+
+a
+m
+
+i
+t
+s
+e
+H
+
+ 
+
+1
+
+0.95
+
+0.9
+
+0.85
+
+0.8
+
+0.75
+
+0.7
+
+0.65
+
+0.6
+
+0.55
+
+0.5
+
+R-S rate 0 msec
+R-S rate 2 msec
+R-S rate 4 msec
+R-S rate 6 msec
+R-S rate 8 msec
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+e
+
+t
+
+a
+m
+
+i
+t
+s
+e
+H
+
+ 
+
+1
+
+0.95
+
+0.9
+
+0.85
+
+0.8
+
+0.75
+
+0.7
+
+0.65
+
+0.6
+
+0.55
+
+0.5
+
+V-T rate 0 msec
+V-T rate 2 msec
+V-T rate 4 msec
+V-T rate 6 msec
+V-T rate 8 msec
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . Flow-controlled UDP run. Hurst parameter estimates using Variance-Time (left) and R/S (right) for
+(cid:12)ve values of interpacket spacings.
+
+... Performance comparison of TCP Reno, Tahoe, and Vegas
+
+In this section, we present preliminary (cid:12)ndings on the performance and e(cid:11)ectiveness of three versions of TCP
+implementing progressively more sophisticated congestion control features when going from TCP Tahoe to Reno to
+the recently proposed TCP Vegas. Figure  (left) compares the packet loss rate of Tahoe, Reno, and Vegas as
+a function of self-similarity under identical network conditions. Bottleneck bu(cid:11)er capacity was set to kB and link
+bandwidth was set at .Mbps. All three protocols exhibit the characteristic linear dependence on (cid:11) as seen in the
+more comprehensive study of TCP Reno under various bu(cid:11)er capacities and link bandwidths (Section .). The
+gap in performance between Tahoe, Reno, and Vegas remains consistent, and its width stays \roughly" the same
+across all (cid:11) values. That is, even under highly self-similar tra(cid:14)c conditions, the performance gap is preserved across
+the three congestion control algorithms. The performance gain from Tahoe to Reno is relatively minor while the
+
+performance jump from Reno to Vegas is more pronounced, its magnitude falling into the same ballpark range as
+the quantitative measurements reported elsewhere.,
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+s
+s
+o
+
+l
+ 
+t
+
+e
+k
+c
+a
+p
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+TCP-Tahoe
+TCP-Reno
+TCP-Vegas
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+
+e
+
+t
+
+a
+r
+ 
+
+i
+
+i
+
+n
+o
+s
+s
+m
+s
+n
+a
+r
+t
+
+e
+r
+ 
+t
+
+e
+k
+c
+a
+p
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+7
+
+6
+
+5
+
+4
+
+3
+
+2
+
+1
+
+0
+
+TCP-Tahoe
+TCP-Reno
+TCP-Vegas
+
+1
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+)
+t
+
+n
+e
+c
+r
+e
+p
+(
+ 
+t
+
+u
+p
+h
+g
+u
+o
+r
+h
+
+t
+ 
+
+l
+
+e
+b
+a
+
+i
+l
+
+e
+r
+
+100
+
+98
+
+96
+
+94
+
+92
+
+90
+
+1
+
+TCP-Tahoe
+TCP-Reno
+TCP-Vegas
+
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9
+
+alpha
+
+2
+
+Figure . TCP Reno vs. Tahoe vs. Vegas run. Packet loss rate (left), packet retransmission rate (middle), and
+reliable throughput (right) as a function of (cid:11).
+
+. CONCLUSION
+
+In this paper, we have taken an integrated look at network performance under self-similar tra(cid:14)c conditions by
+studying the interaction of three components spanning the protocol stack: heavy-tailed (cid:12)le size distribution in the
+application layer, congestion control and reliable message transmission at the transport layer, and network tra(cid:14)c
+observed at the link layer. We have examined network performance from three viewpoints, (cid:12)rst, with respect to
+the impact of self-similarity, second, as a function of network resources and the resulting trade-o(cid:11) relationship of
+performance variables, and third, by comparing the relative performance of several congestion control schemes and
+their e(cid:11)ectiveness.
+
+We have shown that self-similar tra(cid:14)c can have serious adverse impact on network performance. While throughput
+declines gradually as self-similarity increases, queueing delay increases more drastically. When tra(cid:14)c is highly self-
+similar, we (cid:12)nd that queueing delay grows nearly proportionally to the bu(cid:11)er capacity present in the system. This
+e(cid:11)ect is consistent with the observation from queueing analysis that queue length distribution decays much more
+slowly for long-range dependent tra(cid:14)c. Taken together, these two observations have potentially dire implications for
+quality of service provision in networks. To achieve a constant level of throughput or packet loss as self-similarity is
+increased, extremely large bu(cid:11)er capacity is needed. However, increased bu(cid:11)ering leads to large queueing delays and
+thus we (cid:12)nd that the e(cid:11)ect of self-similarity is to signi(cid:12)cantly steepen the tradeo(cid:11) curve between throughput/packet
+loss and delay.
+
+While these results indicate that QoS provision is a di(cid:14)cult problem in self-similar environments, our results also
+indicate some ways in which the e(cid:11)ects of self-similarity may be mitigated. In particular, we have shown that one of
+the characteristics of highly self-similar tra(cid:14)c is that increasing network bandwidth can result in more pronounced
+improvement in packet delay than is the case when tra(cid:14)c is weakly self-similar. In fact, the reduction in packet delay
+from increased bandwidth is much larger for self-similar tra(cid:14)c than for non-self-similar tra(cid:14)c when the underlying
+bu(cid:11)er capacity is not too small. This suggests that rather than reducing bu(cid:11)er capacity to improve queueing delay,
+an alternative|and possibly more e(cid:11)ective|strategy in self-similar environments is to place emphasis on bandwidth
+when architecting network systems.
+
+There are a number of limitations to the present work. One, we have focused on the tails of the distributions of
+(cid:12)le sizes and we have concentrated on the Pareto distribution for simplicity. Distributions of (cid:12)le sizes observed in
+practice, although still heavy-tailed, are known to have a di(cid:11)erent shape for small values. While we do not believe
+this di(cid:11)erence will signi(cid:12)cantly a(cid:11)ect our results, we are examining this issue now. Two, our network topology is not
+representative of real networks, again adopted mainly for simplicity. This issue is also currently being explored.
+
+. K. Park, G. Kim, and M. Crovella, \On the relationship between (cid:12)le sizes, transport protocols, and self-similar
+
+network tra(cid:14)c," in Proc. IEEE International Conference on Network Protocols, pp. {, October 		.
+
+REFERENCES
+
+. W. Leland, M. Taqqu, W. Willinger, and D. Wilson, \On the self-similar nature of ethernet tra(cid:14)c," in Proc.
+
+ACM SIGCOMM 	, pp. {	, 		.
+
+. A. Adas and A. Mukherjee, \On resource management and QoS guarantees for long range dependent tra(cid:14)c,"
+
+in Proc. IEEE INFOCOM 	, pp. 	{, 		.
+
+. R. Addie, M. Zukerman, and T. Neame, \Fractal tra(cid:14)c: measurements, modelling and performance evaluation,"
+
+in Proc. IEEE INFOCOM 	, pp. 	{	, 		.
+
+. M. Crovella and A. Bestavros, \Self-similarity in world wide web tra(cid:14)c: Evidence and possible causes," in Pro-
+ceedings of the 		 ACM SIGMETRICS International Conference on Measurement and Modeling of Computer
+Systems, May 		.
+
+. M. Garret and W. Willinger, \Analysis, modeling and generation of self-similar VBR video tra(cid:14)c," in Proc.
+
+ACM SIGCOMM 	, pp. 	{, 		.
+
+. C. Huang, M. Devetsikiotis, I. Lambadaris, and A. Kaye, \Modeling and simulation of self-similar variable bit
+
+rate compressed video: a uni(cid:12)ed approach," in Proc. ACM SIGCOMM 	, pp. {, 		.
+
+. W. Leland, M. Taqqu, W. Willinger, and D. Wilson, \On the self-similar nature of Ethernet tra(cid:14)c (extended
+
+version)," IEEE/ACM Transactions on Networking , pp. {, 		.
+
+	. N. Likhanov and B. Tsybakov, \Analysis of an ATM bu(cid:11)er with self-similar (\fractal") input tra(cid:14)c," in Proc.
+
+IEEE INFOCOM 	, pp. 	{		, 		.
+
+. I. Norros, \A storage model with self-similar input," Queueing Systems , pp. {	, 		.
+. V. Paxson and S. Floyd, \Wide-area tra(cid:14)c: the failure of Poisson modeling," in Proc. ACM SIGCOMM 	,
+
+pp. {, 		.
+
+. W. Willinger, M. Taqqu, R. Sherman, and D. Wilson, \Self-similarity through high-variability: statistical anal-
+
+ysis of Ethernet LAN tra(cid:14)c at the source level," in Proc. ACM SIGCOMM 	, pp. {, 		.
+
+. D. Heyman and T. Lakshman, \What are the implications of long-range dependence for VBR-video tra(cid:14)c
+
+engineering?," IEEE/ACM Transactions on Networking , pp. {, June 		.
+
+. P. Jacquet, \Queueing with aggregated up/down arrivals," 		. Preprint.
+. M. Grossglauser and J.-C. Bolot, \On the relevance of long-range dependence in network tra(cid:14)c," in Proc. ACM
+
+SIGCOMM 	, pp. {, 		.
+
+. B. Ryu and A. Elwalid, \The importance of long-range dependence of VBR video tra(cid:14)c in ATM tra(cid:14)c engi-
+
+neering: myths and realities," in Proc. ACM SIGCOMM 	, pp. {, 		.
+
+. K. Park, \Self-similar network tra(cid:14)c and its control," To appear in Proc. th Allerton Conference on Commu-
+
+nication, Control and Computing , October 		.
+
+. K. Park, \On the e(cid:11)ect and control of self-similar network tra(cid:14)c: a simulation perspective," To appear in Proc.
+
+		 Winter Simulation Conference , December 		.
+
+	. B. B. Mandelbrot, \Long-run linearity, locally gaussian processes, h-spectra and in(cid:12)nite variances," Intern.
+
+Econom. Rev. , pp. {, 		.
+
+. K. Park, M. Sitharam, and S. Chen, \Quality of service provision in noncooperative network environments,"
+
+Tech. Rep. CSD-TR-	-	, Department of Computer Sciences, Purdue University, 		.
+
+. L. Brakmo and L. Peterson, \TCP Vegas: end to end congestion avoidance on a global internet," IEEE J. Select.
+
+Areas Commun. (), pp. {, 		.
+
+. J. Ahn, P. Danzig, Z. Liu, and L. Yan, \Evaluation of TCP Vegas: Emulation and experiment," in Proc. ACM
+
+SIGCOMM 	, pp. {	, 		.
+
+. S. Floyd, \Simulator tests." Available in ftp://ftp.ee.lbl.gov/papers/simtests.ps.Z. ns is available at
+
+http://www-nrg.ee.lbl.gov/nrg., July 		.
+
+. V. Jacobson, \Congestion avoidance and control," in Proc. ACM SIGCOMM , pp. {	, 	.
+. K. Park, \Warp control: a dynamically stable congestion protocol and its analysis," Journal of High Speed
+
+Networks (), pp. {, 		.
+
+. J. Beran, Statistics for Long-Memory Processes, Monographs on Statistics and Applied Probability, Chapman
+
+and Hall, New York, NY, 		.
+

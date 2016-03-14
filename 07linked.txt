@@ -1,0 +1,498 @@
+LINKED DATA STRUCTURES
+
+1
+
+Linked Lists
+
+A linked list is a structure in which objects refer to the same kind of object,
+and where:
+
+(cid:15) the objects, called nodes, are linked in a linear sequence.
+
+(cid:15) we keep a reference to the (cid:12)rst node of the list (called the \front" or
+
+\head").
+
+The nodes are used to store data. For example, here is a class for nodes in
+a linked list of ints:
+
+public class IntNode {
+
+public int value;
+public IntNode link;
+public IntNode(int v) { value = v; }
+
+}
+
+Note: having public instance variables is not as bad here as it might (cid:12)rst look.
+Why?
+
+Drawing a linked list
+
+The next slide shows in detail how memory might look for a linked list con-
+taining 5 nodes.
+
+2
+
+Static area not of interest in this example.
+
+Assume we have a class
+
+LExample whose main builds a
+linked list for front to refer to.
+
+main:9
+
+LExample
+
+xAE
+
+IntNode
+
+x7F
+
+IntNode
+
+int value 98
+
+int value 161
+
+IntNode link null
+
+IntNode link xAE
+
+IntNode front x88
+
+x57
+
+IntNode
+
+xD0
+
+IntNode
+
+int value 5
+
+int value 14
+
+IntNode link x7F
+
+IntNode link x57
+
+x88
+
+IntNode
+
+int value -31
+
+IntNode link xD0
+
+3
+
+A simpler picture
+
+front
+
+31
+
+5
+
+161
+
+14
+
+98
+
+When drawing such diagrams, always be careful to anchor the references
+clearly, i.e., to show where they are stored.
+
+Note that there are several conventions for drawing a null reference, including:
+
+Preferred:
+
+Not as nice:
+
+4
+
+Tracing
+
+Its easy for linked structures to get all tangled up, so you will have to develop
+some new debugging skills for working with them.
+
+When writing, debugging, or understanding code with linked structures, it is
+extremely useful to trace by hand, using diagrams.
+
+Exercise: Trace this code.
+
+public class Example {
+
+public static void main(String[] args) {
+
+// Make a variable to refer to the list,
+// and put one element into the list.
+IntNode front = new IntNode(95);
+
+// Put another element into the list
+IntNode temp = new IntNode(104);
+temp.link = front;
+front = temp;
+
+// We can chain together dots:
+System.out.println(front.link.value); // 95
+
+}
+
+}
+
+5
+
+Questions and Exercises
+
+(cid:15) What happens if we repeat the 3 lines \Put another : : :" several times,
+
+using a di(cid:11)erent integer each time?
+
+(cid:15) Suppose you want to write a general method that inserts a new element
+at the front of a linked list of IntNodes, for use in the example code.
+What header would you use? Have you considered the case where the
+list is empty?
+
+(cid:15) Write your insert method.
+
+(cid:15) Write a general method that prints out the contents of a linked list of
+
+IntNodes.
+
+(cid:15) Write a test driver for your two methods and use it to test them.
+
+(cid:15) Think up other methods to practice using linked lists.
+
+6
+
+Hints for working with linked structures
+
+(cid:15) Trace your code by hand, using pictures, as you write it.
+
+(cid:15) If you are ever unsure of what some code does to references, make up
+fake memory addresses for the references and treat them like ordinary
+integers.
+
+(cid:15) Every time you write a line like this:
+
+blah.bloop
+
+to follow a reference, be sure the reference (in this case blah) is not null.
+Either (1) use an if, or (2) be sure that the reference cannot possibly
+be null in that context, and assert that fact in a comment.
+
+7
+
+Linked Lists vs Arrays
+
+Arrays are contiguous
+
+(cid:15) In an array, the elements have to be in a contiguous (connected and
+
+sequential) portion of memory.
+
+(cid:15) Memory immediately next to the array may already be in use for some-
+
+thing else.
+
+(cid:15) So programming languages dont generally provide for arrays that can
+
+grow and shrink in place.
+
+Question: Doesnt Javas ArrayList do just that?
+
+Linked lists are not contiguous
+
+(cid:15) In a linked list, the reference in each node says where to (cid:12)nd the next
+
+one.
+
+(cid:15) So the nodes can be all over memory.
+
+8
+
+Implications
+
+(cid:15) With an array, we must choose a size once and for all. (This can waste
+
+memory, or we could run out of spaces).
+
+(cid:15) With a linked list, we can add and remove elements at will. (Each one
+does take up a little more space for its link (cid:12)eld, and it may take time
+to get to the insertion / removal spot).
+
+(cid:15) With an array, we can immediately access the nth element.
+
+(cid:15) With a linked list, we cannot. We have to follow n pointers.
+
+9
+
+Which is better?
+
+Neither arrays nor linked lists are best; it depends on
+
+(cid:15) what youre going to do most
+(e.g., search or update?), and
+
+(cid:15) what your priorities are
+(e.g., time or space?).
+
+Java also takes time managing the location of objects in memory. It has to
+(cid:12)nd an empty range of memory when we construct a new object. And it
+looks for unreferenced objects, to reuse their memory. But this is outside the
+scope of our course.
+
+10
+
+Deletion from a Linked List
+
+Question: If the list is sorted, should we use binary search to (cid:12)nd the element
+to delete?
+
+Unlike an array, there is no need to shift any elements up to (cid:12)ll the \hole"
+left by deletion. We just unlink the unwanted element.
+
+front
+
+31
+
+14
+
+5
+
+161
+
+98
+
+11
+
+Implementing the queue ADT: Deletion
+
+/** A node in a linked list. */
+class ListNode {
+
+public Object value;
+public ListNode link;
+
+/** A ListNode containing o. */
+public ListNode(Object o) { value = o; }
+
+}
+
+/** Note: elements are compared by equals(Object). */
+interface ExtendedQueue extends Queue {
+
+/** Return whether I contain o. */
+public abstract boolean contains(Object o);
+
+/** Remove first (starting from the front)
+
+* occurrence of o from me if its there. */
+
+public abstract void delete(Object o);
+
+}
+
+public class LinkedQueue implements ExtendedQueue {
+
+/** Front node in my linked list. */
+private ListNode front;
+
+// Methods go here. See next slide for delete.
+
+}
+
+12
+
+Method details
+
+/** Remove first (starting from the front)
+
+* occurrence of o from me if its there. */
+
+public void delete(Object o) {
+
+ListNode previous = null;
+ListNode current = front;
+
+// Follow links until we fall off, or until we
+// find the node to delete.
+while (current != null && ! current.value.equals(o)) {
+
+previous = current;
+current = current.link;
+
+}
+
+// If we didnt fall off, we found it.
+// Update either the front of the list or the previous link.
+if (current != null) {
+
+if (current == front) {
+
+front = current.link;
+
+} else {
+
+previous.link = current.link;
+
+}
+
+}
+
+}
+
+13
+
+Questions:
+
+(cid:15) Why did we initialize previous?
+
+(cid:15) When implementing Queue with a linked list, should we keep a pointer to
+
+the end of the linked list? What about when implementing Stack?
+
+Exercises:
+
+(cid:15) Devise a thorough set of test cases for delete.
+
+(cid:15) Modify delete so that it handles null elements.
+
+(cid:15) In delete, previous is used to pass information from one iteration to
+the next: it remembers information from the previous iteration. Write
+delete using only one local variable, by looking ahead.
+
+(cid:15) Implement all Queue methods in LinkedQueue.
+
+(cid:15) Trace the code by hand for each method.
+
+14
+
+Other Linked Data Structures
+
+References can be used to create many di(cid:11)erent data structures.
+
+Circularly-linked lists
+
+front
+
+apple
+
+bee
+
+honey
+
+wasp
+
+tree
+
+The last element contains a reference to the (cid:12)rst element, rather than null.
+
+15
+
+Doubly-linked lists
+
+Each element keeps both a frontwards and a backwards reference.
+
+front
+
+ace
+
+by
+
+hi
+
+/** A node for a doubly linked list of Strings. */
+class DoubleNode {
+
+public String value;
+public DoubleNode next, prev;
+
+/** A DoubleNode containing v. */
+public DoubleNode(String v) {
+
+value = v;
+
+}
+
+}
+
+This could be useful for a list presented on screen, so we can easily write
+code to scroll up and down.
+
+16
+
+When traversing a doubly-linked list to prepare for insertion or deletion, there
+is no need to use both a current and previous reference: each node has a
+built-in reference to the previous element.
+
+Deletion with a doubly-linked list:
+
+front
+
+deleteRecord
+
+ace
+
+by
+
+Insertion with a doubly-linked list:
+
+front
+
+insertBefore
+
+ace
+
+by
+
+apple
+
+newRecord
+
+hi
+
+hi
+
+17
+
+Exercise: Write complete insertion and deletion methods for a sorted doubly-
+linked list.
+
+/** Insert a new node containing s into the appropriate
+
+* position in the sorted, doubly-linked list whose
+* first node is front.
+* Return the (possibly new) first node. */
+
+public static DoubleNode insert(DoubleNode front,
+
+String s)
+
+/** Delete s, if it exists, from the doubly-linked list
+
+* whose first node is front.
+* Return the (possibly new) first node. */
+
+public static DoubleNode delete(DoubleNode front,
+
+String s)
+
+Questions:
+
+(cid:15) The above comments arent clear about the behaviour in certain circum-
+
+stances.
+What are those circumstances?
+
+(cid:15) Why do we make these methods static?
+
+Exercise: Think about the pros and cons of using a doubly-linked list of
+Comparables instead of Strings.
+
+18
+

@@ -1,0 +1,539 @@
+List, Stack and Queue
+
+Tom Chao Zhou
+CSC2100B Data Structures Tutorial 3
+
+Outline
+
+(cid:132) Structure
+(cid:132) Linked List
+(cid:133) Overview
+(cid:133) Implementation
+
+(cid:132) Stack
+
+(cid:133) Overview
+(cid:133) Implementation
+
+(cid:132) Queue
+
+(cid:133) Overview
+(cid:133) Implementation
+
+Structure
+
+(cid:132) A collection of values (members)
+
+(cid:133) Like a class in java or c++, but without methods and access controls (private, 
+
+protected, public.)
+
+struct time
+{
+
+int hh;
+int mm;
+int ss; 
+
+};
+...
+struct time t1;
+t1.hh = 20;
+t1.mm=12;
+t1.ss=30;
+
+Structure
+
+(cid:132) We can also use pointer to structure
+struct time
+{
+
+int hh;
+int mm;
+int ss; 
+
+};
+struct time* t1;
+(*t1).hh=20;
+(cid:132) Pointer to structure is very common. 
+(cid:132) The above is equivalent to:
+(cid:132) struct time* t1;
+(cid:132) t1->hh = 20;   // same as (*t1).hh=20;
+
+Some words about typedef
+
+(cid:132) Allow us to define alias for a data type:
+
+(cid:133) typedef int My_integer_type;
+(cid:133) My_interger_type x =3;
+
+(cid:132) Tpedef can be used for structures:
+typedef struct time
+{
+
+int hh;
+int mm;
+int ss; 
+
+}Time_type;
+Time_type t1;
+t1.hh = 12;
+
+Dynamic Memory Allocations
+
+(cid:132) We can allocate memory at run time using malloc
+
+(cid:133) malloc can be used to allocate a piece of memory of the specified size, 
+
+and returns a pointer to it.
+
+(cid:132) Example:
+
+(cid:133) Time_type *t1;
+(cid:133) t1 = (Time_type*)malloc(sizeof(Time_type));
+(cid:133) Allocate enough memory for storing a Time_type variable (which is a 
+
+structure).
+
+(cid:133) Return a pointer to it.
+(cid:133) Cast it to a pointer to Time_type, and assign it to t1.
+
+Dynamic Memory Allocations
+
+(cid:132) Use free to de-allocate the memory when it is no longer needed.
+(cid:132) This is important because there is no garbage collection in C. So 
+
+you will run out of memory if you keep allocating without de-
+allocating. (Memory Leak)
+
+Time_type *t1;
+t1 = (Time_type*)malloc(sizeof(Time_type));
+...
+t1->hh = 12;
+...
+free(t1);
+//de-allocate when we no longer need it.
+
+Linked List Overview
+
+(cid:132) A list of structures (nodes)
+(cid:132) Each structure contains
+(cid:133) Element (to store data)
+(cid:133) Pointer to next structure
+
+(cid:132) Insert()
+(cid:132) Delete()
+(cid:132) Print()
+
+Linked List Implementation
+
+struct node_s
+{
+
+int data;
+struct node_s *next;
+
+};
+typedef struct node_s node;
+//To create a node variable
+node anode; //static, allocate in compile time
+or
+node *anode = (node*)malloc(sizeof(node)); //dynamic allocation
+
+Linked List Implementation
+
+(cid:132) Link two nodes together
+node a,b;
+a.next = &b;
+b.next = NULL;
+
+//use pointer
+node* a, *b;
+a = (node*)malloc(sizeof(node));
+b = (node*)malloc(sizeof(node));
+b->next = NULL;
+a->next = b;
+
+Linked List Implementation
+
+(cid:132) Insert a node to a list
+
+node a,b,c;
+c.next = NULL;
+//originally, only a and c
+a.next = &c;
+//insert b between a and c
+b.next = &c;
+a.next = &b;
+
+Linked List Implementation
+
+(cid:132) Delete a node from a list
+
+node a,b,c;
+c.next = NULL;
+//orginial
+a.next = &b;
+b.next = &c;
+//remove b from the list
+a.next = &c;
+
+Linked List Implementation
+
+Stack
+
+books on your table?
+
+Stack Overview
+
+(cid:132) Last In First Out (LIFO)
+(cid:132) Push()
+(cid:132) Pop()
+(cid:132) Top()
+(cid:132) is_empty()
+
+Stack Implementation
+
+(cid:132) Can be implemented by linked list or array
+
+(cid:132) Create an empty stack
+node *create_stack()
+{
+
+node* emptyStack;
+emptyStack = (node*)malloc(sizeof(node));
+emptyStack->next = NULL;
+return emptyStack;
+
+}
+
+Stack Implementation
+
+(cid:132) Push an entry into the stack
+void Push(int inputdata, node *stack)
+{
+
+node* newnode = (node*)malloc(sizeof(node));
+newnode->data = inputdata;
+newnode->next = stack->next; //should be first
+stack->next = newnode; 
+//how about change the above 
+//2 lines?
+
+}
+
+Stack Implementation
+
+(cid:132) Pop an entry from the stack
+int Pop(node* stack)
+{
+
+int temp;
+node* toBePopped;
+if(stack->next!=NULL)
+{
+
+temp = stack->next->data;
+toBePopped = stack->next;
+stack->next = stack->next->next;
+free(toBepopped);
+return temp;
+
+}
+else
+
+}
+
+return 0; //error code, you can define according to the demand
+
+Stack Implementation
+
+(cid:132) Return the top element in the stack
+int top(node* stack)
+{
+
+if(stack->next!=NULL)
+
+return stack->next->data;
+
+else
+
+return 0;
+
+}
+(cid:132) Determine if the stack is empty
+int is_empty(node *stack)
+{
+
+return (stack->next==NULL);
+
+}
+
+If you are implementing a large project, usually we can 
+separate the declaration and implementation to .h and .c files.
+
+Stack Implementation
+
+#include <stdio.h>
+#include stack.h
+
+int main()
+{
+
+node* mystack = create_stack();
+Push(1,mystack);
+Push(2,mystack);
+Push(3,mystack);
+while(!is_empty(mystack))
+{
+
+printf(%d\n,Pop(mystack));
+
+}
+return 0;
+
+}
+
+Stack Implementation using Array
+
+(cid:132) Implement a stack using array
+typedef struct
+{
+
+int *data; //data is an array of integer
+int top; //position of top element
+int size; //maximum number of data in the stack
+
+}Stack;
+
+Stack Implementation using Array
+(cid:132) createStack, makeEmpty
+
+//return 1 for success, 0 for fail
+int createStack(Stack* astack,int size)
+{
+
+astack->data = (int*)malloc(sizeof(int)*size);
+if(astack->data==NULL) //malloc failed
+
+return 0;
+
+astack->size = size;
+astack->top = -1;
+return 1;
+
+}
+
+}
+
+void makeEmpty(Stack *astack)
+{
+
+astack->top = -1;
+
+Stack Implementation using Array
+
+else
+
+return 1;
+
+return 0;
+
+}
+int isFull(Stack* astack)
+{
+
+if(astack->top >= astack->size-1) //we put the 1st element at the 0th position
+
+(cid:132) isEmpty, isFull
+int isEmpty(Stack* astack)
+{
+
+if(astack->top<0)
+
+else
+
+return 1;
+
+return 0;
+
+}
+
+int top(Stack* astack)
+{
+
+if(!isEmpty())
+
+return astack->data[astack->top];
+
+else
+
+return 0; //mean error code
+
+}
+int pop(Stack* astack)
+{
+
+if(!isEmpty())
+{
+
+int adata = top(astack);
+astack->top--;
+return adata; 
+
+}
+else
+
+return 0;
+
+}
+
+//return 1 if we can successfully push 
+//element, return 0 if we fail
+int push(Stack* astack, int adata)
+{
+
+if(!isFull())
+{
+
+astack->top++;
+astack->data[astack->top] = adata;
+return 1;
+
+}
+else
+
+}
+
+return 0;   
+
+Queue
+
+ticket office of the Ocean park?
+
+Queue Overview
+
+(cid:132) First In First Out (FIFO)
+(cid:132) Enqueue
+(cid:132) Dequeue
+
+Queue Implementation
+
+(cid:132) A queue may be implemented using linked-list or array
+(cid:132) Implement a queue using array
+
+Queue Implementation
+
+(cid:132) Implementing a queue using circular array
+typedef struct
+{
+
+int* data;   //data is an array of int
+int head;  //current head
+int tail;     //current tail
+int num;  //number of elements in queue
+int size;  //size of queue
+
+}Queue;
+
+Queue Implementation
+
+(cid:132) createQueue
+//return 1 for success, 0 for fail
+int createQueue(Queue* aqueue, int size)
+{
+
+aqueue->data = (int*)malloc(sizeof(int)*size);
+if(aqueue->data==NULL)
+
+return 0;
+
+aqueue->head=0;
+aqueue->tail=-1;
+aqueue->num=0;
+aqueue->size=size;
+return 1;
+
+}
+
+Queue Implementation
+
+(cid:132) enqueue
+
+//return 1 is successfully enqueue, return 0 if the queue is full
+int enqueue(Queue *aqueue,int adata)
+{
+
+if(aqueue->num<aqueue->size)
+{
+
+aqueue->tail = (aqueue->tail+1)%aqueue->size; //mode operation
+aqueue->data[queue->tail]=adata;
+aqueue->num++;
+return 1;
+
+}
+else
+
+return 0;
+
+}
+
+Queue Implementation
+
+(cid:132) dequeue
+//return the data if successfully dequeue, return 0 if fail
+int dequeue(Queue* aqueue)
+{
+
+if(aqueue->num>0)
+{
+
+int adata = aqueue->data[aqueue->head];
+aqueue->head = (aqueue->head+1)%aqueue->size; //mode operation
+aqueue->num--;
+return adata;
+
+}
+else
+
+return 0;
+
+}
+
+Queue Implementation
+
+(cid:132) isEmpty, isFull
+int isEmpty(Queue *aqueue)
+{
+
+return (aqueue->num==0);
+
+}
+int isFull(Queue *aqueue)
+{
+
+return (aqueue->num==aqueue->size);
+
+}
+
+Queue Implementation
+
+(cid:132) front, makeEmpty
+//see the front element, similar to dequeue but do not remove the data
+int front(Queue* aqueue)
+{
+
+return aqueue->data[aqueue->head];
+
+}
+
+}
+
+void makeEmpty(Queue* aqueue)
+{
+
+aqueue -> head = 0;
+aqueue -> tail = -1;
+aqueue -> num = 0;
+

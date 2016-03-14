@@ -1,0 +1,1650 @@
+J Supercomput
+DOI 10.1007/s11227-007-0132-6
+
+Energy-aware scheduling and simulation methodologies
+for parallel security processors with multiple voltage
+domains
+
+Yung-Chia Lin  Yi-Ping You  Chung-Wen Huang 
+Jenq Kuen Lee  Wei-Kuan Shih 
+Ting-Ting Hwang
+
+ Springer Science+Business Media, LLC 2007
+
+Abstract Dynamic voltage scaling (DVS) and power gating (PG) have become
+mainstream technologies for low-power optimization in recent years. One issue that
+remains to be solved is integrating these techniques in correlated domains operat-
+ing with multiple voltages. This article addresses the problem of power-aware task
+scheduling on a scalable cryptographic processor that is designed as a heterogeneous
+and distributed system-on-a-chip, with the aim of effectively integrating DVS, PG,
+and the scheduling of resources in multiple voltage domains (MVD) to achieve low
+energy consumption. Our approach uses an analytic model as the basis for estimating
+the performance and energy requirements between different domains and addressing
+the scheduling issues for correlated resources in systems. We also present the results
+of performance and energy simulations from transaction-level models of our security
+processors in a variety of system configurations. The prototype experiments show that
+our proposed methods yield significant energy reductions. The proposed techniques
+will be useful for implementing DVS and PG in domains with multiple correlated
+resources.
+
+Y.-C. Lin  Y.-P. You  C.-W. Huang  J.K. Lee ((cid:2))  W.-K. Shih  T.-T. Hwang
+Department of Computer Science, National Tsing Hua University, Hsinchu 30013, Taiwan
+e-mail: jklee@cs.nthu.edu.tw
+
+Y.-C. Lin
+e-mail: yclin@pllab.cs.nthu.edu.tw
+
+Y.-P. You
+e-mail: ypyou@pllab.cs.nthu.edu.tw
+
+C.-W. Huang
+e-mail: cwhuang@pllab.cs.nthu.edu.tw
+
+W.-K. Shih
+e-mail: wshih@cs.nthu.edu.tw
+
+T.-T. Hwang
+e-mail: tingting@cs.nthu.edu.tw
+
+Keywords Security processor  Scheduling  Power management  Dynamic voltage
+scaling  Power gating  Parallel processing
+
+Y.-C. Lin et al.
+
+1 Introduction
+
+The development of techniques to reduce the power consumption of embedded
+system-on-a-chip (SOC) systems is receiving increasing attention. Pure software
+techniques [1] and hardware techniques [2, 3] can demonstrably reduce power re-
+quirements at the instruction and circuit levels, respectively. Several techniques in-
+volving hardware/software collaboration [4, 5] have been proposed to achieve power
+reduction at the architecture and system levels. Among the developed techniques, dy-
+namic voltage scaling (DVS), power gating (PG), and multiple-domain partitioning
+are considered the most practical to achieve SOC designs with low power consump-
+tion.
+
+DVS [6] can reduce both the dynamic and static power consumption. DVS re-
+duces the dynamic power consumption P by dynamically scaling the supply volt-
+age Vdd and the relative running frequency f of the processing element (PE) when
+maximum-speed operation is not demanded. DVS uses the following equations for
+the architecture-level estimation of dynamic power consumption:
+
+Pdynamic = C    f  V 2
+dd,
+f = k  (Vdd  Vth)2/Vdd,
+
+where C is the switching capacitance,  is the switching activity, k is a proportionality
+constant specific to the CMOS technology, and Vth denotes the threshold voltage.
+
+The leakage power at the architecture-level is usually estimated using the follow-
+
+ing equation [7]:
+
+Pstatic = Vdd  N  kdesign  Ileakage,
+
+where N is the number of transistors, kdesign is the effective transistor width of the
+cell which depends on the design, and Ileakage denotes the normalized leakage current
+that depends on the silicon technology, threshold voltage, and a sub threshold swing
+parameter. The equation above indicates that DVS is also effective for leakage power
+reduction, since it reduces the supply voltages.
+
+Other useful techniques include PG and the use of multiple voltage domains
+(MVD). PG [8] is an effective technique for leakage power reduction as it reduces
+the number of active devices by using a sleep circuit that disconnects the supply
+power from inactive circuitry. The main difficulty in PG technology is issuing off/on
+commands at the appropriate times so as to minimize performance degradation and
+maximize the reduction in leakage power [913]. In its use of MVD or voltage is-
+lands [14], PG also gives more opportunity to reduce the voltage consumption at
+each decomposed power domain.
+
+There are several issues associated with the application and integration of DVS and
+PG techniques in MVD with correlated resources that still need to be explored. This
+article investigates a scalable security processor (SP) as a case study to illustrate how
+
+Energy-aware scheduling and simulation methodologies
+
+to address the issues about the power-aware voltage/frequency assignment of MVD
+and the correlation of multiple resources among MVD. In this article, we present
+a practical scheme to effectively integrate DVS, PG, and the scheduling of multiple
+domain resources to achieve low energy consumption, for addressing the problem of
+power-aware task scheduling on scalable cryptographic processors that are equipped
+with heterogeneous distributed SOC designs.
+
+Our testbed is a scalable SP that has been developed in collaboration with the VLSI
+design group at our university [1520]. This project is aimed at producing a config-
+urable prototype of high-performance low-power SPs, and it incorporates DVS, PG,
+and multiple-domain partitioning in the designed processors. The architecture of the
+SPs is that of a heterogeneous distributed embedded system in which the PEs are
+various cryptographic modules. Each cryptographic module is designed to have DVS
+and PG capabilities.
+
+We propose a novel three-phase iterative scheme equipped with an analytic model
+that estimates the performance and energy requirements of different components in
+a system and addresses the scheduling issues for correlated resources in systems. The
+employed scheduling algorithm in our case study for SP utilizes a heuristic that in-
+tegrates DVS and PG and thereby increases the total energy saving. We also present
+our methodologies used for the transaction-level modeling (TLM) of our SPs for
+both performance and energy simulations. This allows design-space explorations and
+experiments on a variety of system configurations. The simulators are written in Sys-
+temC, and they model the bus and controller at a cycle-accurate transaction level and
+the cryptographic engines at a timed-transaction level. These proposed techniques
+are essential to implementing DVS and PG with multiple domain resources that are
+correlated. Experiments performed in the simulation environments for our SPs have
+revealed that the discrepancies in the cycles and the power usage of our environment
+relative to a hardware RTL simulation result are less than 4.55% and 9.3%, respec-
+tively. The scheduling results of our proposed mechanisms show energy reductions
+of up to 32.41% without any degradation in the throughput of the SPs.
+
+The remainder of the article is organized as follows. The architecture used in our
+target platform and the design of its power management are described in Sect. 2. The
+proposed iterative scheduling scheme and the corresponding analytical modeling-
+based approach to handling correlations among PEs and non-PEs are explained in
+Sect. 3. The implementations of the simulator with MVD and configurable functions,
+and the experimental setup and the results are described in Sect. 4. Section 5 reviews
+related works about MVD techniques and scheduling methods, and Sect. 6 concludes
+the article. Additionally, Appendix 1 details the joint variable-voltage scheduling with
+power gating which is employed in our case study, and Appendix 2 gives the expla-
+nation of the analytical models used in our proposed iterative approach.
+
+2 Configurable SP with multiple-voltage-domain architecture
+
+In this section we briefly describe a configurable architecture for SPs. Variations of
+this architecture have been used by many network-device manufacturers, such as
+Broadcom, Hifn [21], Motorola [22], and SafeNet. SPs may include the following
+key cryptographic functions:
+
+Y.-C. Lin et al.
+
+ Data encryption (e.g. DES, 3DES, RC4, and AES).
+ User authentication only (e.g. DSS and DSA).
+ Hash function (e.g. SHA-1, MD5, and HMAC).
+ Public-key encryption (e.g. RSA and ECC).
+ Public-key exchange (e.g. Diffie-Hellman Key Exchange).
+ Compression (e.g. LZS and Deflate).
+
+The main feature of our SP is the scalable architecture, which is achieved by con-
+structing internal buses therein. Therefore, versatile cryptographic engines can be
+integrated into the SP by adopting compatible bus interface wrappers. The other con-
+figurable parameters include the number of external buses, transfer engines, channels,
+and the internal buses. In the SP, a descriptor-base DMA controller is implemented to
+interpret the descriptors and manipulate the cryptographic engines to perform appro-
+priate cryptographic operations. The processing flow and cryptographic operations
+are handled by descriptors to reduce the control signals from the main processor. The
+descriptor is a data structure that contains the type of encryption/decryption functions,
+the encryption key, the length of data, and data-address pointers. The descriptor also
+has a pointer to the next descriptor, so the DMA module could utilize the link list of
+descriptors to gather data without much overhead.
+
+Figure 1 shows our architecture, consisting of a main controller, DMA modules,
+internal buses, and crypto modules [1520]. The main controller has a slave interface
+to an external bus that accepts the control signals and returns the operation feed-
+back via the interrupt port. In the main controller, the instruction decoder and the
+microprogram sequencer are in charge of descriptor decoding and signal passing.
+The resource-allocation module distributes the resources as the descriptor demands.
+Process-scheduler and power-management modules are added to the main controller
+for task scheduling and optimizing power consumption.
+
+The DMA module integrates the master interfaces of external bus with the chan-
+nels and the transfer engines. Each channel stores the header of its processing de-
+scriptor. The transfer engines pass the data from the external bus to dedicated cryp-
+
+Fig. 1 Security processor (SP) architecture
+
+Energy-aware scheduling and simulation methodologies
+
+Table 1 Voltage scaling delays of the DVG
+
+Voltage: scaling up
+State
+
+Delay (s)
+
+V01.2
+V01.5
+V01.8
+
+20
+35
+63
+
+State
+
+V1.21.5
+V1.21.8
+V1.51.8
+
+Delay (s)
+
+Voltage: scaling down
+State
+
+Delay (s)
+
+10
+30
+16
+
+V1.81.5
+V1.81.2
+V1.51.2
+
+8
+12
+5
+
+tographic engines via the internal bus which is designed to support multiple layers
+for high-speed data transmission. Because the execution time of the cryptographic
+engine may be varied, this cryptographic engine will signal the main controller when
+operations are complete.
+
+The SP is separated in several voltage domains, where each domain can operate
+at certain voltage/frequency. If communication signals cross between different volt-
+age domains, we need level converters to downshift/upshift them [2325]. Therefore,
+clustering modules with frequent communications into the same voltage domain can
+reduce the use of level shifters and thereby improve the delays and power consump-
+tion. The main controller and descriptor DMAs frequently share the descriptor infor-
+mation that is grouped in the system voltage domain. The internal buses and cryp-
+tographic engines have their own voltage domains. The power-management module
+in the main controller provides software-controllable voltage/frequency adjustment
+of voltage domains. Components controlled by the power-management module have
+four main power states: Full(1.8 V), Low(1.5 V), Ultralow(1.2 V), and Sleep(0 V).
+Cooperating with the process-scheduler module, tasks can be assigned power states
+from among Full, Low, and Ultralow, with PG as the Sleep modes.
+
+For supplying multiple operating voltages, the power-management module con-
+trols a dynamic voltage generator (DVG) chip that provides the voltages to be used
+for DVS. The DVG works at 60 MHz and can output three supply voltages (1.2 V,
+1.5 V, and 1.8 V) for the SP from a 3.3 V input. Table 1 lists the voltage scaling
+delays of the DVG. The DVG delays are estimated from the Cadence mixed-mode
+environment (Verilog_XLTM). When the power-management module sets the power
+state to Sleep, it calls the clamping modules to gate off the power supply of specified
+cryptographic module without scaling the voltage.
+
+To illustrate the kernel operations of SPs, Fig. 2 shows an AES operation in the ar-
+chitecture. The user program first calls the encryption libraries that pack the process-
+ing data as descriptors and activate the SP. When the SP controller is aware of a start
+signal, it retrieves the memory address of descriptors and makes a channel ready to
+receive the descriptor information. At the setup channel data phase, the main con-
+troller continually arranges the transfer engine and the master interface of the external
+bus to move the descriptor information into the channel.
+
+Next, in the AES operation phase, after sequentially requesting the AES crypto-
+graphic engine, internal bus, transfer engine, and master interface of the external bus,
+the transfer engine will read data from memory and fill the buffer of the AES crypto-
+graphic engine. Once data transmission is complete, the main controller releases the
+requested resources except for the AES cryptographic engine. When the operation of
+the AES engine is complete, it will send a signal to the main controller. As the main
+
+Y.-C. Lin et al.
+
+Fig. 2 AES operation on a descriptor-based SP
+
+controller is aware of this state, it enters the store result phase in which it requests
+the internal bus, transfer engine, and external-bus-master interface to store the out-
+put data. The main controller then releases all the resources. The steps and phases in
+Fig. 2 can also be interleaved.
+
+3 Power-aware scheduling approach
+
+In this section we discuss the scheduling issues for lowering the power usage in our
+parallel security architectures, focusing on the problem of scheduling independent pe-
+riodic tasks. We consider a distributed embedded system containing major PEs (cryp-
+tographic modules) which are capable of K-level supply voltages and the PG mode.
+Moreover, we assume the other non-PE components (such as buses and channels)
+are capable of DVS. Non-PEs may greatly correlate with the PEs and the correlation
+cannot be determined before scheduling. For example, in our SP design, a typical
+encryption or decryption task must take additional time slots beside the processing
+inside cryptographic engines as shown in Fig. 3. The additional time slots, which are
+engaged by the transmissions using the shared DMA channels and internal buses,
+will vary for each task because they depend on the scheduling of other tasks and the
+DVS/PG state of non-PEs.
+
+To efficiently handle the scheduling problems involving all the components in
+such a complicated system, we propose a three-phase iterative scheme for power-
+aware scheduling, namely the iterative analytical approach on MVD (IAA-MVD)
+scheduling method as follows:
+
+Energy-aware scheduling and simulation methodologies
+
+Fig. 3 An illustration of
+correlation between non-PEs
+and PEs in SP
+
+Fig. 4 Main procedures of the proposed IAA-MVD
+
+1. Employ a scheduling method to schedule only the processing on PEs, including
+the settings of the running voltage/frequency of each task in major PEs and the
+appropriate times to invoke PG, and assume the maximum performance of non-
+PEs (such as bus and channels) to give initial values of additional latency caused
+by non-PEs for all task.
+
+2. Apply analytic approximation techniques to rapidly determine the running volt-
+ages/frequencies of the remaining components in the system. Analytic methods
+also allow correct estimation of computation latency in PEs caused by these com-
+ponents in the system.
+
+3. Reemploy the scheduling method involved in phase 1 with information generated
+in phase 2, and deliver the final scheduled setting of each task. Iteratively proceed
+with phases 2 and 3 until the scheduling results are constant.
+
+The overall procedures of IAA-MVD are illustrated in Fig. 4. The scheduling
+method used in our IAA-MVD is not dedicated and most of the variable-voltage
+scheduling methods developed for multiple PEs may be incorporated appropriately
+into the proposed scheme. In the remainder of this section we brief the scheduling
+method used in our experiments, which is the extended work based on our previous
+research efforts [26], and present the second phase of the scheduling method.
+
+3.1 Joint variable-voltage scheduling with power gating for PEs
+
+It is known that the scheduling problem of a set of nonpreemptable independent tasks
+with arbitrary execution times on fixed-voltage multiprocessors is NP-complete [27].
+
+Y.-C. Lin et al.
+
+The application of the reduction techniques reveals that the same scheduling problem
+on variable-voltage multiprocessors is NP-hard. To deal with the problem of reduc-
+ing power consumption in real-time systems, we propose a heuristic algorithm to
+schedule tasks executing in a system with a variable supply voltage. The proposed
+scheduling algorithm is based on the EDF (Earliest Deadline First) [28] algorithm
+which, as the name implies, always executes the task with the earliest deadline.
+
+The proposed scheduler maintains a list, called the reservation list [29], in which
+these tasks are sorted by deadlines. Since each periodic task arrives with a certain
+periodicity, we can obtain the arrivals and deadlines information of tasks in a given
+interval. Initially, all the tasks are in the list sorted by their deadlines, and the task
+with the earliest deadline is then picked for scheduling. The scheduler first checks if
+the task can be executed completely prior to its deadline at a lower voltage without
+influencing any unscheduled tasks in the reservation list. In this way the scheduler
+will determine how to schedule tasks at the lowest voltage as possible. The scheduler
+will also decide if idle PEs can be turned off so as to also maximize the static power
+reduction. Although the scheduler handles tasks with only homogeneous PEs, it can
+effectively handles the systems with heterogeneous PEs if tasks can be categorized
+and only performed on their dedicated types of PEs. In our SP, for instance, AES
+and RSA tasks can only be processed by AES cryptographic engines and RSA cryp-
+tographic engines, respectively. Therefore, we can separate the scheduling of these
+tasks with their dedicated PEs by our method. The detailed algorithm is explained in
+Appendix 1. As our focus will be on correlating scheduling with analytical models,
+we think this scheduling algorithm only represents one of the possible methods on
+the scheduler for major PEs.
+
+3.2 Voltage/speed selection of non-PEs
+
+We apply analytic modeling techniques to compute the suitable voltages for non-PE
+components (such as buses and transfer engines) such that the total performance of
+the system fits the scheduling results of major PEs.
+
+We first describe the analytical model developed for th SP. Suppose the system
+has multiple PEs that are labeled with an index in the range 1, . . . , l. Several channels
+labeled with one such index (1, . . . , n) are built into the control unit for simultane-
+ously accessing the PEs. Data are transferred between channels and PEs across a few
+internal buses, which are labeled with indexes in the range 1, . . . , m. We can view
+each kth PE and jth internal bus as a server with a constant service rate of Msk and
+bits per second, respectively. Let Pi,k be the probability that channel i makes its
+M
+next service request to PE k. Define i as the average fraction of the time that the
+ith channel is not waiting for a service request to be completed from any of PEs and
+(cid:3)
+internal buses. Also, let k,i and 
+j,i be the fractions of time spent by the ithchannel
+waiting for service requests to PE k and internal bus j , respectively. Define
+as
+
+(cid:3)
+sj
+
+1
+
+Mrk,i
+
+the ratio of the time that descriptors of the ith channel spend performing overhead
+of PE service requests (not including the time waiting in queues and having requests
+serviced by the kth PE) to the total processing data size. Let
+
+k = n(cid:2)
+i=1
+
+Pi,k
+
+Mrk,i
+Msk
+
+and k = (1 + k)Msk
+j=1 M
+
+(cid:3)
+
+(cid:3)
+sj
+
+m
+
+,
+
+Energy-aware scheduling and simulation methodologies
+
+where k is the average scaling ratio of the data size throughout the processing per-
+formed by the kth PE. The average time that each channel spends on initiating, host
+memory communication, and descriptor processing (i) is related to the time spent
+waiting (k,i and 
+
+(cid:3)
+
+k,i + m(cid:2)
+j=1
+
+(cid:3)
+j,i) as follows:
+i + l(cid:2)
+k=1
+n(cid:4)
+(1  k,i ) + ki = 1,
+i=1
+(1  
+
+j,i ) + l(cid:2)
+(cid:3)
+k=1
+
+n(cid:4)
+i=1
+
+= 1,
+
+
+
+j,i
+
+kki = 1.
+
+The detailed model construction and proof are provided in Appendix 2.
+
+(cid:3)
+sj
+
+(cid:3)
+j,i, and choose a minimal M
+
+Suppose tasks for l PEs are scheduled by the scheduler as described in Sect. 3.1.
+(cid:3)
+We can derive i, k,i, and 
+j,i  the metrics of the expected performance  from
+the scheduling results: the average service rate Msk of the kth PE and ki, which is
+semantically equal to the utilization of the kth PE due to task assignments. Assuming
+that the SP has n channels and m internal buses connecting PEs, we can select the
+appropriate voltages/frequencies of internal buses and transfer engines by solving the
+(cid:3)
+previous equations: we use the expected values of M
+to evaluate the resulting i,
+sj
+that maximizes the system load efficiency,
+k,i, and 
+(cid:3)
+j,i are all positive and i should be as small as possible.
+for which i, k,i, and 
+Apart from the voltage/frequency selection, the proposed analytic modeling tech-
+niques is used to revise the latency parameters in the schedulers during phases 2 and
+3 of the IAA-MVD scheduling. In realistic environments of the considered systems,
+the computation times of tasks in PEs should actually include the latency due to data
+transmission and bus contention. The data-transmission latency can be calculated
+based on the data size, bus speed, and detailed transfer operations during scheduling.
+The bus-contention latency, however, cannot be correctly estimated if any run-time
+information is lacking. Thus we shall use the worst-case estimation of the latency
+to calculate the task computation time in order to avoid missing any deadlines un-
+der run-time conditions. In the first phase of IAA-MVD scheduling scheme, we use
+the maximum performance settings of internal buses and transfer engines (which re-
+lax the slack-time computation) to schedule tasks. We conservatively assume that the
+worst case for each task is waiting for all tasks in PEs except the one in which it
+is scheduled to complete their data transmission with the maximum time spent by
+the largest possible data transmission. The proposed analytic approximation phase
+of voltage selection estimates the possible low-power settings of internal buses and
+transfer engines that match the scheduling results, and is also able to estimate a more-
+(cid:3)
+accurate worst-case latency in each PE than the theoretical one using 
+j,i and ki,
+which would reflect the possible worst-case latency in the scheduling results. We then
+perform the third phase of the IAA-MVD scheduling scheme that uses values derived
+in the second phase to obtain the final scheduling results. Due to the monotonicity
+property of PE usage in our scheduling algorithms in Sect. 3.1, iteratively performing
+
+phases 2 and 3 of the IAA-MVD scheduling will converge on a stable scheduling
+result.
+
+Y.-C. Lin et al.
+
+4 Experiments
+
+In this section, we first evaluate the accuracy of performance and power of the SP
+simulator. We then show how our IAA-MVD scheduling methods can be used for
+energy reductions to a set of benchmarks.
+
+4.1 Security processor simulation methodology
+
+The simulators for performance evaluations and design space explorations are im-
+plemented in SystemC. SystemC can model the hardware/software co-design at the
+(untimed) functional level, the transaction level [30], and the pin level (RTL level). In
+the simulator, the bus and controller are modeled at a cycle-accurate transaction level
+and the cryptographic engines are modeled at a timed-transaction level.
+
+In our experiments, we evaluated the precision of our architecture-level energy
+simulator, and used this model as a basis for evaluating our proposed scheduling
+methods.
+
+The first experiment evaluated the cycle accuracy of our configurable SystemC
+TLM simulation using the Verilog RTL simulation by Cadence NC_Verilog. The
+architecture comprised one internal bus, one RSA module, two AES modules, two
+HMAC modules, one RNG module, and one cryptographic DMA with four channels.
+In RSA operation patterns, the maximum error in the cycles is 0.14% and the mean
+error is 0.05%, where the error is measured as the difference between two simulation
+cycles of SystemC TLM and Verilog RTL divided by the simulation cycles of Verilog
+RTL. In our AES operation patterns, the maximum error is 4.55% and the mean error
+is 0.21%. The mean errors of the HMAC and RNG modules are less than 0.2%.
+
+In Table 2, the RSA and AES power model in SystemC which established in
+the simulator are compared with the power results of PrimePowerTM (Synopsys) in
+the Verilog RTL. The errors in the mean powers of the RSA and AES are 0.57%
+and 9.30%, respectively, where the error is measured as the difference between two
+power results of SystemC TLM and Verilog RTL divided by the simulation cycles of
+Verilog RTL.
+
+4.2 Iterative analytical approaches
+
+We evaluated our proposed scheduling methods by implementing a randomized
+security-task generator to generate benchmark descriptor files for the simulator. The
+
+Table 2 Power values for RSA and AES
+
+Type
+
+RSA
+AES
+
+Avg. power (SystemC TLM)
+
+Avg. power (Verilog RTL)
+
+Error avg.(%)
+
+0.2232 W
+0.0176 W
+
+0.2245 W
+0.01941 W
+
+0.57
+9.30
+
+Energy-aware scheduling and simulation methodologies
+
+Table 3 Benchmark settings and results
+
+Suite
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+Arrival distribution
+Number of jobs
+Jobs/time (s)
+AES:RSA
+Max data size (bytes)
+Maximum AES deadline (s)
+Maximum RSA deadline (s)
+
+Uniform
+300
+1500
+30:1
+1280
+3072
+13312
+
+Normal
+
+Exponential
+
+375
+
+1500
+
+375
+
+1500
+
+375
+
+3430
+15872
+
+3072
+13312
+
+3430
+15872
+
+3072
+13312
+
+3430
+15872
+
+Iterate
+only once
+
+Iterate till
+end
+
+dynamic energy
+reduction (%)
+leakage energy
+reduction (%)
+total energy re-
+duction (%)
+dynamic energy
+reduction (%)
+leakage energy
+reduction (%)
+total energy re-
+duction (%)
+
+28.14
+
+28.21
+
+27.24
+
+16.93
+
+31.33
+
+16.13
+
+16.03
+
+29.05
+
+30.28
+
+82.33
+
+83.52
+
+83.40
+
+83.57
+
+83.53
+
+83.67
+
+83.51
+
+83.67
+
+83.38
+
+28.30
+
+28.38
+
+27.41
+
+17.13
+
+31.49
+
+16.34
+
+16.24
+
+29.22
+
+30.44
+
+30.41
+
+32.19
+
+29.01
+
+21.34
+
+34.75
+
+19.37
+
+17.49
+
+32.47
+
+35.08
+
+83.61
+
+83.77
+
+83.97
+
+84.65
+
+83.98
+
+85.06
+
+84.48
+
+84.37
+
+84.77
+
+30.58
+
+32.35
+
+29.17
+
+21.53
+
+34.91
+
+19.57
+
+17.69
+
+32.63
+
+35.23
+
+generator produced simulated operating-system-level jobs of decryption/encryption,
+with each job having operation types, data sizes, keys and content, arrival times, and
+deadlines randomized on the basis of an adjustable configuration of job-arrival distri-
+butions, job numbers, job density, ratio of distinct operation types, job-size variance,
+and job-deadline variance. Each generated job was then converted by the generator to
+the corresponding descriptors that could be executed by the simulator. In our prelim-
+inary experiments, we assumed that the SP comprised six AES modules, two RSA
+modules, five internal buses, and eight channels and transfer engines. The generated
+benchmarks come from nine test suites with the task-generator configurations listed
+in Table 3. They can be divided into three types of arrival distribution. Each distrib-
+ution type has three suites with different task slackness dependent on the job density
+and job deadline range: the first suite features a high density and a short deadline,
+the second features a high density and a long deadline, and the third features a low
+density and a long deadline.
+
+We generated 100 distinct descriptor files for each suite and computed their av-
+erage energy consumptions for different components from the results of the simu-
+lator, as shown in Fig. 5. The bars labeled by N are the scheduling results without
+power management, and others labeled by P and PI are the results with enabling our
+proposed power management by iterating only once and iterating till the results un-
+changed respectively. The numbers of iterations in the results labeled by PI vary with
+respect to the workloads, averaging between five and six. The energy overhead of
+applying DVS and PG is too low to appear clearly on the charts, as is the leakage of
+RSA modules. The top chart gives the energy reduction for AES modules, the middle
+
+Y.-C. Lin et al.
+
+Fig. 5 Energy consumption estimated by the simulator with (Piterate only once; PIiterate till
+end) and without (N) our proposed power management
+
+Energy-aware scheduling and simulation methodologies
+
+chart gives the energy reduction for RSA modules, and the bottom chart shows the
+energy reduction for non-PE components which are assigned by our analytic approx-
+imation phase, for all benchmark suites. The simulations also finally confirm that no
+deadline is missed using the latency approximation by our analytical modeling tech-
+niques. Although the energy consumptions is dominated by RSA operations in our
+experimental architecture and workloads, the charts show that our scheme performs
+well for all components in the system. Moreover, combining PG with DVS schedul-
+ing reduces the leakage by up to 85.06% (as indicated in Table 3), which is expected
+to become even more important as the leakage power increases in chips constructed
+using CMOS processes down to below 0.13 m [31, 32]. Table 3 also gives the overall
+energy reduction for all test suites. The bottom row of the table indicates that a to-
+tal energy reduction of up to 35.23% was achieved by our power-aware scheduling
+scheme. Furthermore, the results by using only one iteration show that limiting the
+number of iterations may still provide adequate energy reduction, which could be
+feasible for incorporating methods of online scheduling.
+
+5 Related work and discussion
+
+5.1 Low-power design
+
+In hardware design, the operating voltage and clock rate are the two primary factors
+affecting the power consumption and processing speed. There is a great demand for
+a hardware device to exhibit sufficient performance with low power consumption.
+Clock gating (CG) [2] refers to inactivating the input clocks in a hardware circuit
+when there is no work to be done. For sequential circuits, the clock signal is consid-
+ered to be a major contributor to the dynamic power dissipation since the clock is the
+only input that switches all the time and usually is highly loaded, hence the CG tech-
+nique is quite helpful. Frequency scaling (FS) [33] supports different operating fre-
+quencies. When the operating requirements are low, the frequency is scaled down to
+reduce the number of wasted/useless cycles whilst keeping the supply constant. The
+PG [8] technique clamps the supply voltage of the hardware module. It uses high-Vth
+transistors to switch the supply voltage and reduce the leakage power. DVS supports
+different voltage levels and switches the operating voltage during run-time. It must
+employ multiple-Vth transistors and the DVG. Because frequency scaling accompa-
+nies voltage scaling at run-time, this technique is also called as dynamic voltage and
+frequency scaling (DVFS) [34]. In the multiple clock domain (MCD) [35] technique,
+the hardware is separated into modules based on certain attributes, with each domain
+having its own clock. The synchronization of domains and power reduction in this
+technique are referred to as The globally-asynchronous locally-synchronous (GALS)
+design is one of the popular techniques to implement MCD systems, and the available
+power-reduction techniques are also beneficial for this kind of implementation [36].
+The supply voltage of MCD may be uniform. If the voltage level differs between the
+domains, the hardware design is in MVD or multiple voltage islands [14]. To support
+the required throughput with lower power consumption in the design with multiple
+voltage domains, techniques such as CG, PG, FS, and DVFS could be applied.
+
+Y.-C. Lin et al.
+
+5.2 Variable-voltage scheduling
+
+Variable-voltage scheduling manages tasks with execution deadlines and reduces the
+energy consumption by lowering the running voltage/frequency, whilst ensuring that
+all tasks finish execution before their deadlines. Several variable-voltage scheduling
+techniques have been developed to exploit DVS for power reduction in real-time sys-
+tems. For example, workload descriptions have been used to statically schedule tasks
+on the basis of energy efficiency for variable-voltage processors [37], and a heuristic
+non-preemptive scheduling algorithm have been proposed for independent tasks ex-
+ecuting on variable-voltage processors [38]. DVS scheduling for dependent tasks in
+distributed embedded systems has also been studied [39, 40]. However, none of the
+developed techniques considers task scheduling employing the advantages of both
+DVS and PG to jointly reduce dynamic power dissipation and static power leaks,
+or addresses the issue that in a complex SOC design there may be additional DVS-
+enabled components that correlate the operation of DVS-enabled PEs and affect the
+task scheduling for the entire system. Also, some researches have been exploited to
+use analytical techniques for minimizing energy in a two-device data flow chain [41],
+and optimizing energy consumption on systems of multiple voltage islands based
+on rate and latency constraints [42], while we primarily focus on the systems with
+task-based scheduling problems on PEs, differentiated from their studies.
+
+6 Conclusions
+
+The growing complexity and numbers of transistors involved in the SOC designs
+with multiple domains demand new and more-effective power-reduction techniques
+than ever. In this article, we have presented a practical method to integrate and ex-
+tend the existing dynamic and static power-reduction mechanisms for increasing the
+power efficiency in complex distributed embedded systems. A novel three-phase it-
+erative scheme was proposed to effectively estimate the performance and energy re-
+quirements of various components correlated in systems. By using of an analytical
+approximation, this approach selects voltages/frequencies of minor components (and
+not major PEs) so as to decrease the complexity of the overall scheduling problem
+in systems of with multiple correlated domains. We have demonstrated the proposed
+method on a fast SP capable of executing various cryptographic computations in par-
+allel, which is a significant application of a complex SOC design. The experimental
+results reveal that our power-management scheme achieves a significant power re-
+duction on our testbed, and may also profit other complex SOC designs.
+
+Appendix 1 Joint variable-voltage scheduling with power gating
+
+Slack-time computation
+
+We first define slack time in the scheduling. Suppose we are going to schedule task Ti,
+and there are still (n i) unscheduled tasks (i.e., Ti+1, Ti+2, . . . , Tn) in the reservation
+
+Energy-aware scheduling and simulation methodologies
+
+list. The slack time i (V ) is the maximum period allowed for Ti while the remain-
+ing (n  1) tasks are scheduled at supply voltage V in reverse order. To obtain the
+information for Ti, we first build a pseudo scheduler for the (n  i) tasks with the
+following behaviors. The (n  i) tasks are scheduled in a reversed manner, in which
+deadlines are treated as arrivals and the arrivals as deadlines, and starts from the point
+of the latest deadline (i.e., dn is the deadline of Tn) via the well-known earliest dead-
+line first (EDF) algorithm [28]. We then record the time of the end point of the pseudo
+schedule as i (V ).
+
+The slack time of the pseudo schedule at a supply voltage V can be obtained from
+
+the following equation:
+
+i (V ) = i (V )  Maximum(ai , fi1),
+
+where ai is the arrival time of Ti, fi1 is the finishing time of the last task Ti1. Fig-
+ure 6 gives an example of the slack-time computation, in which there are four tasks
+in the reservation list. Here two reservation lists are maintained: one is created by
+a pseudo scheduler to schedule tasks at the lowest voltage, and the other is compiled
+by the highest-voltage scheduler. The slack time i (VH ) and i (VL) is the time from
+the finishing time of the last task to the end point of the reservation list from the
+highest- and lowest-voltage schedulers, respectively. If we consider the overhead of
+DVS, the highest-voltage scheduler should add the maximum time-overhead of DVS
+to fi1 to compute i (VH). During the scheduling an exception is flagged if any dead-
+line cannot be met when scheduling at the highest voltage. This is because the for-
+ward and backward scheduling are equivalent on the qualification of time-constrained
+tasks, and hence if there is no backward scheduling there is also no forward schedul-
+ing. However, when the low voltage is supplied, we ignore deadline misses in the
+pseudo scheduling.
+
+Fig. 6 Examples of slack-time computation while scheduling Ti : (a) tasks performed at the highest volt-
+age; (b) tasks performed at the lowest voltage
+
+Y.-C. Lin et al.
+
+Scheduling algorithm
+
+The proposed scheduling algorithm is based on the EDF algorithm which, as the
+name implies, always executes the task with the earliest deadline. Figure 7 lists the
+algorithm. Assume that there are n periodic tasks to be scheduled. First, we sort the
+tasks in ascending order by deadlines, namely T1, T2, . . . , Tn, and put them in a list of
+unscheduled tasks, i.e., the reservation list. We then extract each task from the list on
+the basis of the schedule. Suppose the system provides m PEs, and each PE is capa-
+ble of K-level supply voltages, where level 1 represents the lowest voltage and level
+K represents the highest voltage. In order to reduce the complexity and expense of
+maintaining K reservation lists, we maintain two reservation lists: one for the pseudo
+scheduler at the lowest voltage and the other for the scheduler at the highest voltage.
+Steps 13 in Fig. 7 describe these procedures. For utilizing PG capabilities, we at-
+tempted to both make tasks run continuously and concatenate the idle time because
+PG mechanisms cost much more than DVS in terms of both performance and power.
+Next, in step 4 we compute the slack time for task Ti with both i (VH) and i (VL).
+
+Real-time scheduling algorithm with variable-voltage
+
+reservation lists in multiple PEs
+
+Input: n unscheduled periodic tasks and m PEs
+
+Output: Schedule of gating commands and the n tasks
+
+with variable supply voltages at P E1,...,m
+
+1. Sort tasks by deadlines in ascending order; i.e., T1, T2, . . . , Tn.
+2. Put them in the reservation list of
+
+the target PE (P Ej ). Initially, j = 1.
+
+3. Remove the first task, namely Ti, that has the earliest deadline from
+
+the reservation list. Repeat steps 36 while the list is not empty.
+
+4. Compute the slack time for task Ti with both the highest and
+
+lowest voltage pseudo schedulers, i.e., i (VH) and i (VL).
+
+5. Compute the computation time of Ti at the highest
+
+6. Letting ot (i) be the voltage scaling time, schedule Ti using the following rules:
+
+and lowest voltages, i.e., ci (VH) and ci (VL).
+- If ci (VL) + ot (i)  i (VL), schedule Ti for P Ej at VL if possible.
+- If i (VL) < ci (VL) + ot (i)  i (VH), call the decision algorithm.
+- If ci (VL) + ot (i) > i (VH) and
+- if ci (VH) + ot (i)  i (VH), schedule Ti for P Ej at VH.
+- if ci (VH) + ot (i) > i (VH), put Ti in an unscheduled list Lun.
+7. Check the idle time of P Ej and insert gating commands if possible.
+8. If P Ej is the last available PE and the list Lun is not empty,
+9. If the list Lun is not empty, let j = j + 1 and use the list
+10.If j < m, then gate off P Ej+1, . . . , P Em all the time.
+Schedule Ti at VL if deadline is met and the energy overhead is acceptable.
+Gate on/off if tasks are unaffected and the energy overhead is acceptable.
+
+Lun as the reservation list of the target P Ej . Next, go to step 3.
+
+then report a possible failure of real-time scheduling.
+
+Fig. 7 Reservation-list scheduling algorithm for variable-voltage problems in multiple PEs
+
+Energy-aware scheduling and simulation methodologies
+
+Fig. 8 Scenarios of scheduling
+task Ti
+
+The slack time i (V ) represents the maximum time interval allowed for task Ti to
+execute while all the remaining tasks in the reservation list are scheduled in reverse
+order with supply voltage V . In step 5 we compute the computation time of task Ti
+at both the highest and lowest voltages, denoted as ci (VH) and ci (VL). In step 6 we
+compare ci (VH) and ci (VL) with i (VL) and i (VH) to decide which voltage should
+be applied to the task. This algorithm results in three possible scenarios, as depicted
+in Fig. 8:
+1. ci (VL) plus the time overhead of voltage scaling is smaller than or equal to i (VL).
+If the energy overhead of voltage scaling is less than the energy saving, we can
+schedule task Ti at the lowest voltage without affecting any future task because
+there are no overlaps between task Ti and the unscheduled tasks while those tasks
+are assumed to be executed at the lowest voltage.
+
+2. ci (VL) plus the time overhead of voltage scaling is larger than i (VL) and smaller
+than or equal to i (VH). In this case we call the decision algorithm described
+in Sect. 6 to determine the voltage at which task Ti should be scheduled. This
+algorithm weights the alternatives to optimize the overall costs, using a criterion
+such as the power consumption.
+
+3. ci (VL) plus the time overhead of voltage scaling is larger than i (VH). This means
+that it is impossible for task Ti to complete executing by its deadline at any volt-
+age lower than the highest voltage, and hence it must be scheduled at the highest
+voltage. If task Ti is unschedulable for the current PE, we put it in a new list called
+Lun that contains all unschedulable tasks.
+In step 7 we check the remaining idle time between the scheduled tasks in the
+current PE and determine PG commands to be inserted if this reduces the energy
+consumption. In steps 8 and 9, if the list Lun generated in step 6 is not empty, we
+use this list as the reservation list for the next-available PE and schedule it using the
+procedures in steps 36. If no PE is available for scheduling, the scheduler should
+report failure. At the last step we turn off all unused PEs via PG to maximize both the
+static and dynamic power savings.
+
+Decision algorithm
+
+Assume that we are scheduling task Ti and that the computation time of Ti at the low
+voltage, ci (VL)+ ot (i) is larger than i (VL) and smaller than or equal to i (VH). An-
+other viewpoint is that the finishing time of task Ti at the low voltage falls within the
+
+Fig. 9 Watersheds of
+a population
+
+Y.-C. Lin et al.
+
+region bounded by i (VL) and i (VH). To achieve the objective of power reduction,
+we propose several algorithms for deciding at which voltage tasks should be sched-
+uled when weighting trade-offs between tasks. We use a probability density function,
+
+f (x) = 1
+2 
+
+(x)2
+
+2 2
+
+e
+
+where  < x < ,
+
+which defines the probability density function for the value x of a random observation
+from the population [43], to divide the population of a group into Q equal parts in
+terms of area under the distribution, and then schedule tasks at levels corresponding
+to the parts that the tasks belong to. In other words, let W 1, W 2, . . . , and W Q1 be
+a demarcation that separates the population into Q parts (as shown in Fig. 9); a task
+will be scheduled at level t if its value falls between W t1 and W t . The detailed
+algorithms are described as follows:
+
+1. Reservation list with first-come first-served scheduling
+
+Tasks are always scheduled at the lowest voltage possible without missing dead-
+lines. This algorithm does not apply a cost model to the decision.
+
+2. Reservation list with average power consumption
+
+We use the switching activity i to select the voltage level for Ti. We schedule
+a task at level (Q   + 1) if
+(cid:5)
+
+W 
+
+
+
+1
+2 
+
+e
+
+(W 
+
+)2
+2 2 = 
+
+
+
+,
+
+Q
+
+where W 
+tasks.
+
+ denotes the  th watershed of the population of switching activities of
+
+Appendix 2 Analytical models
+
+Here we detail the analytic model developed for the security architectures given in
+Sect. 2 as follows. We consider the typical execution process of an operation in the
+
+Energy-aware scheduling and simulation methodologies
+
+system described in Sect. 2. The execution of each operation can be viewed as a pro-
+cedure in which a channel requests an internal bus twice to serve the data transmission
+and requests a PE to manipulate the data. Assume that each channel execution can be
+treated as an exponentially distributed random process that produces sets of service
+requests with three correlated operations in the following fixed order: two for the in-
+ternal bus, and one for the PE. Following the notation in Sect. 3.2, let system_cyclesi
+be the total time spent by the ith channel on transmitting over the system bus (in-
+cluding accessing the host memory, descriptor processing, and idling). We can now
+define request_cyclesi, which has two elements: (i) the total time spent by the ith
+channel on preparing the PE request, the internal bus request, and processing time,
+and (ii) the total time for the data to traverse the channel, internal buses, and PEs.
+Now let channel_cyclesi be
+
+channel_cyclesi = system_cyclesi + request_cyclesi.
+
+We define Mrk,i as
+
+Mrk,i
+
+= data_amountk,i
+channel_cyclesi
+
+,
+
+which is the ratio of the amount of data requested to the time that descriptors of the
+ith channel spend performing the overhead of PE service requests, not including the
+time spent waiting in queues and having requests serviced by the kth PE.
+
+If we neglect the interaction between channels and assume that all internal buses
+are utilizable by all channels and PEs, we have the following analytic model devel-
+oped on top of a previous parallelizing theorem [44, 45]:
+
+Theorem 1 Let
+
+k = n(cid:2)
+i=1
+
+Pi,k
+
+Mrk,i
+Msk
+
+and k = (1 + k)Msk
+j=1 M
+
+(cid:3)
+
+(cid:3)
+sj
+
+m
+
+,
+
+where k is the average scaling ratio of the data size throughout the processing by
+the kth PE. The average time that each channel spends performing initiation, host
+memory communication, and descriptor processing (i) is related to the time spent
+waiting (k,i and 
+
+k,i + m(cid:2)
+j=1
+
+(cid:3)
+j,i) as follows:
+i + l(cid:2)
+k=1
+n(cid:4)
+(1  k,i ) + ki = 1,
+i=1
+(1  
+
+
+
+j,i
+
+j,i ) + l(cid:2)
+(cid:3)
+k=1
+
+n(cid:4)
+i=1
+
+(cid:3)
+
+= 1,
+
+kki = 1.
+
+Y.-C. Lin et al.
+
+Proof The first equation simply infers time conservation. Letting Ck,i be the aver-
+age channel-i-to-PE-k request cycle time for the system and total_cycle be the total
+operation time per request yields
+
+1
+Ck,i
+
+= data_amountk,i
+total_cycles
+
+(1)
+
+on average. By observing the workloads, we can compute Mrk,i (which is the ratio of
+the amount of requested data to the channel cycles). Based on the definition of Mrk,i
+and equation (1), we obtain
+
+1
+
+Mrk,i Ck,i
+
+= channel_cyclesi
+total_cycles
+
+= i .
+
+1 if channel i is not waiting for module k,
+0 otherwise
+1 if channel i is not waiting for bus j,
+0 otherwise.
+
+(2)
+
+(3)
+
+(4)
+
+Moreover, we define
+
+k,i = (cid:6)
+= (cid:6)
+(cid:3)
+
+
+
+j,i
+
+Let k be the probability that PE k is busy and 
+j is busy. We have
+
+(cid:3)
+j be the probability that internal bus
+
+k = 1  E(k,1k,2  k,n),
+(cid:3)
+(cid:3)
+j,n),
+
+= 1  E(
+
+ 
+
+(cid:3)
+j,1
+
+(cid:3)
+j,2
+
+
+
+j
+
+(5)
+
+(6)
+
+(cid:3)
+sj
+
+where E() is the expected value of the random variable . Therefore, kMsk and
+(cid:3)
+are the rates of completed requests to PE k and internal bus j , respectively.
+j M
+
+When the system is in equilibrium, kMsk is equivalent to the rate of submitted re-
+(cid:3)
+is equivalent to the rate of submitted requests to internal
+quests to PE k, and 
+sj
+Pi,k
+is the total rate of submitted requests to PE k from all chan-
+bus j . Since
+Ck,i
+nels,we have the equivalence
+
+(cid:3)
+j M
+
+i=1
+
+(cid:3)
+
+n
+
+n(cid:2)
+i=1
+
+Pi,k
+Ck,i
+
+= kMsk .
+
+(7)
+
+l
+
+k=1
+
+n
+
+i=1
+
+Pi,k
+Ck,i
+
+(cid:3)
+
+(cid:3)
+
+Likewise,
+
+is the average rate of submitted requests to all internal
+Pi,k (1+k )
+buses from all channels. Due to the law of data indestructibility,
+is the average rate of submitted requests to all internal buses from all channels and
+all PEs. Accordingly, we have the following equivalence:
+
+k=1
+
+i=1
+
+(cid:3)
+
+(cid:3)
+
+Ck,i
+
+n
+
+l
+
+l(cid:2)
+k=1
+
+n(cid:2)
+i=1
+
+Pi,k(1 + k)
+
+Ck,i
+
+= m(cid:2)
+j=1
+
+(cid:3)
+j M
+
+(cid:3)
+sj
+
+.
+
+
+
+(8)
+
+Energy-aware scheduling and simulation methodologies
+
+Mrk,i
+Msk
+
+,
+
+n
+
+i=1 Pi,k
+
+By combining (2), (5), (6), (7), and (8), we get
+(cid:7)
+
+k = (cid:3)
+E(k,1k,2  k,n) + ki = 1,
+(cid:3)
+j,i are binaries, we have by symmetry
+E(k,i ) = 1  k,i
+
+k = (1+k )Msk
+(cid:3)
+(cid:3)
+j=1 M
+m
+sj
+ 
+(cid:3)
+j,2
+
+,
+j,n) + (cid:3)
+(cid:3)
+
+j,i ) = 1  
+(cid:3)
+
+Nevertheless, since both k,i and 
+
+and E(
+
+
+
+
+
+(cid:3)
+j,1
+
+E(
+
+(cid:3)
+
+j,i
+
+k=1 kki = 1.
+
+l
+
+(9)
+
+for each channel i. We now make a critical approximation by assuming that all the
+channels have noncorrelated activities, and get
+
+E(k,1k,2  k,n) = E(k,1)E(k,2) E(k,n) = n(cid:4)
+i=1
+
+(1  k,i ),
+
+(cid:3)
+j,1
+
+E(
+
+(cid:3)
+j,2
+
+The result follows.
+
+ 
+
+j,n) = E(
+(cid:3)
+
+(cid:3)
+j,1)E(
+
+j,2) E(
+(cid:3)
+
+j,n) = n(cid:4)
+(cid:3)
+i=1
+
+(1  
+
+(cid:3)
+j,i ).
+
+(10)
+
+(cid:2)
+
+Acknowledgements
+This work was supported in part by Ministry of Economic Affairs under grant no.
+95-EC-17-A-01-S1-034 and 96-EC-17-A-01-S1-034, by National Science Council under grant no. 95-
+2220-E-007-001 and 95-2220-E-007-002 in Taiwan.
+
+References
+
+1. Lee CR, Lee JK, Hwang TT, Tsai SC (2003) Compiler optimizations on vliw instruction scheduling
+
+for low power. ACM Trans Des Automat Electron Syst 8(2):252268
+
+2. Devadas S, Malik S (1995) A survey of optimization techniques targeting low power vlsi circuits. In:
+
+Proceedings of the design automation conference, pp 242247
+
+3. Singh D, Rabaey J, Pedram M, Catthoor F, Rajgopal S, Sehgal N, Mozdzen T (1995) Power conscious
+
+cad tools and methodologies: a perspective. Proc IEEE 83:570594
+
+4. Hsu CH, Kremer U, Hsiao M (2001) Compiler-directed dynamic voltage/frequency scheduling for
+energy reduction in microprocessors. In: Proceedings of the 2001 international symposium on low
+power electronics and design
+
+5. Azevedo A, Issenin I, Cornea R, Gupta R, Dutt N, Veidenbaum A, Nicolau A (2002) Profile-based
+dynamic voltage scheduling using program checkpoints. In: Proceedings of the conference on design,
+automation and test in Europe
+
+6. Weiser M, Welch B, Demers A, Shenker S (1994) Scheduling for reduced CPU energy. In: Proceed-
+
+ings of USENIX symposium on operating systems design and implementation (OSDI), pp 1323
+
+7. Butts JA, Sohi GS (2000) A static power model for architects. In: Proceedings of the international
+
+symposium on microarchitecture, pp 191201
+
+8. Powell MD, Yang SH, Falsafi B, Roy K, Vijaykumar TN (2000) Gated-vdd:a circuit technique to
+
+reduce leakage in deep-submicron cache memories. In: Proceedings ISLPED
+
+9. You YP, Huang CW, Lee JK (2005) A sink-n-hoist framework for leakage power reduction. In: Pro-
+
+ceedings EMSOFT
+
+10. You YP, Lee CR, Lee JK (2002) Compiler analysis and support for leakage power reduction on mi-
+
+croprocessors. In: Proceedings LCPC
+
+11. You YP, Lee CR, Lee JK (2006) Compilers for leakage power reductions. ACM Trans Des Autom
+
+Electron Syst 11(1):147166
+
+Y.-C. Lin et al.
+
+12. Duarte D, Tsai Y, Vijaykrishnan N, Irwin MJ (2002) Evaluating run-time techniques for leakage power
+
+reduction. In: Proceedings ASPDAC
+
+13. Rele S, Pande S, Onder S, Gupta R (2002) Optimizing static power dissipation by functional units
+in superscalar processors. In: Proceedings of the international conference on compiler construction,
+pp 261275
+
+14. Lackey DE, Bednar PSZTR, Stout DW, Gould SW, Cohn JM (2002) Managing power and perfor-
+mance for system-on-chip designs using voltage islands. In: Proceedings of the 2002 IEEE/ACM
+international conference on computer-aided design, pp 195202
+
+15. Su CY, Hwang SA, Chen PS, Wu CW (1999) An improved Montgomery algorithm for high-speed rsa
+
+public-key cryptosystem. IEEE Trans Very Large Scale Integr Syst 7:280284
+
+16. Hong JH, Wu CW (2003) Cellular array modular multiplier for the rsa public-key cryptosystem based
+
+on modified booths algorithm. IEEE Trans Very Large Scale Integr Syst 11:474484
+
+17. Lin TF, Su CP, Huang CT, Wu CW (2002) A high-throughput low-cost aes cipher chip. In: 3rd IEEE
+
+AsiaPacific conference ASIC
+
+18. Su CP, Lin TF, Huang CT, Wu CW (2003) A highly efficient aes cipher chip. In: ASP-DAC
+19. Wang MY, Su CP, Huang CT, Wu CW (2004) An hmac processor with integrated sha-1 and md5
+
+algorithms. In: ASP-DAC
+
+20. Lee MC, Huang JR, Su CP, Chang TY, Huang CT, Wu CW (2002) A true random generator design.
+
+In: 13th VLSI design/CAD symposium
+
+21. Hifn (2003) 7954 security processor Data Sheet
+22. Gammage N, Waters G (2003) Securing the smart network with Motorola security processors
+23. Chang JM, Pedram M (1997) Energy minimization using multiple supply voltages. IEEE Trans Very
+
+Large Scale Integr Syst 5(4)
+
+24. Yu CC, Wang WP, Liu BD (2001) A new level converter for low-power applications. In: The 2001
+
+IEEE international symposium on circuits and systems, pp 113116
+
+25. ARM (2004) Intelligent energy controller technical overview
+26. You YP, Lee CR, Lee JK (2001) Real-time task scheduling for dynamically variable voltage proces-
+sors. In: Proceedings of the IEEE workshop on power management for real-time and embedded sys-
+tems
+
+27. Stankovic JA, Spuri M, Natale MD, Buttazzo G (1995) Implications of classical scheduling results
+
+for real-time systems. Computer 28(6):1625
+
+28. Liu CL, Layland JW (1973) Scheduling algorithms for multiprogramming in a hard read-time envi-
+
+ronment. J ACM 20(1):4661
+
+29. Shih WK, Liu JWS (1996) On-line scheduling of imprecise computations to minimize error. SIAM J
+
+Comput 25(5):11051121
+
+30. Pasricha S (2002) Transaction level modeling of soc with Systemc 2.0. Technical report, Synopsys
+
+Users Group Conference
+
+31. Semiconductor Industry Association (2003) International technology roadmap for semiconductors
+
+2003 edition. Technical report
+
+32. Doyle B, Arghavani R, Barlage D, Datta S, Doczy M, Kavalieros J, Murthy A, Chau R (2002) Tran-
+
+sistor elements for 30 nm physical gate lengths and beyond. Intel Technol J 6:4254
+
+33. Kim JM, Chae SI (1996) New mpeg2 decoder architecture using frequency scaling. In: IEEE interna-
+
+tional symposium on circuits and systems. ISCAS 96, vol 4, pp 253256
+
+34. Pouwelse J, Langendoen K, Sips H (2001) Dynamic voltage scaling on a low-power microprocessor.
+In: 7th ACM international conference on mobile computing and networking (Mobicom), Rome, Italy,
+pp 251259
+
+35. Semeraro G, Magklis G, Balasubramonian R, Albonesi D, Dwarkadas S, Scott M (2002) Dynamic
+
+frequency and voltage control for a multiple clock domain microarchitecture
+
+36. Iyer A, Marculescu D (2002) Power and performance evaluation of globally asynchronous locally
+synchronous processors. In: Proceedings 29th annual international symposium on computer architec-
+ture, pp 158168
+
+37. Pouwelse J, Langendoen K, Sips H (2001) Energy priority scheduling for variable voltage processors.
+
+In: Proceedings ISLPED
+
+38. Hong I, Kirovski D, Qu G, Potkonjak M, Srivastava MB (1999) Power optimization of variable-
+
+voltage core-based systems. IEEE Trans Comput Aided Des 18(12):17021714
+
+39. Luo J, Jha NK (2000) Power-conscious joint scheduling of periodic task graphs and aperiodic tasks
+
+in distributed real-time embedded systems. In: Proceedings ICCAD, pp 357364
+
+40. Luo J, Jha N (2002) Static and dynamic variable voltage scheduling algorithms for real-time hetero-
+
+geneous distributed embedded systems. In: Proceedings ASPDAC
+
+Energy-aware scheduling and simulation methodologies
+
+41. Rao R, Vrudhula S (2004) Energy optimization for a two-device data flow chain. In: Proceedings of
+
+the 2004 international conference on computer aided design, pp 268274
+
+42. Niyogi K, Marculescu D (2005) Speed and voltage selection for gals systems based on volt-
+age/frequency islands. In: Proceedings of the ACM/IEEE AsiaPacific design automation conference,
+China
+
+43. Lapin LL (1997) Modern engineering statistics. Wadsworth, Belmont
+44. Hwang K, Briggs F (1984) Computer architecture and parallel processing. McGrawHill, New York
+45. Bodin F, Windheiser D, Jalby W, Atapattu D, Lee M, Gannon D (1990) Performance evaluation and
+prediction for parallel algorithms on the bbn gp1000. In: Proceedings of the 4th ACM international
+conference on supercomputing, pp 401403
+

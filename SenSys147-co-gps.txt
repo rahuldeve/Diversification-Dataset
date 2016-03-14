@@ -1,0 +1,1601 @@
+Energy Efficient GPS Sensing with Cloud Offloading
+
+Jie Liu, Bodhi Priyantha, Ted Hart
+
+Heitor S. Ramos, Antonio A.F. Loureiro
+
+Microsoft Research
+
+Redmond, WA 98039, USA
+
+{liuj,bodhip,tedhar}@microsoft.com
+
+Federal University of Minas Gerais
+{hramos,loureiro}@dcc.ufmg.br
+
+Belo Horizonte, MG,
+
+Qiang Wang
+
+Harbin Institute of Technology
+
+Harbin, China
+
+wangqiang@hit.edu.cn
+
+Abstract
+
+Location is a fundamental service for mobile computing.
+Typical GPS receivers, although widely available, consume
+too much energy to be useful for many applications. Ob-
+serving that in many sensing scenarios, the location infor-
+mation can be post-processed when the data is uploaded to
+a server, we design a Cloud-Offloaded GPS (CO-GPS) solu-
+tion that allows a sensing device to aggressively duty-cycle
+its GPS receiver and log just enough raw GPS signal for post-
+processing. Leveraging publicly available information such
+as GNSS satellite ephemeris and an Earth elevation database,
+a cloud service can derive good quality GPS locations from a
+few milliseconds of raw data. Using our design of a portable
+sensing device platform called CLEO, we evaluate the accu-
+racy and efficiency of the solution. Compared to more than
+30 seconds of heavy signal processing on standalone GPS
+receivers, we can achieve three orders of magnitude lower
+energy consumption per location tagging.
+Categories and Subject Descriptors
+
+C.3 [SPECIAL-PURPOSE AND APPLICATION-
+
+BASED SYSTEMS]: [Real-time and embedded systems]
+General Terms
+
+Design
+Keywords
+
+location, assisted GPS, cloud-offloading, coarse-time
+
+navigation
+
+Permission to make digital or hard copies of all or part of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. To copy otherwise, to republish, to post on servers or to redistribute
+to lists, requires prior specific permission and/or a fee.
+SenSys12, November 69, 2012, Toronto, ON, Canada.
+Copyright c(cid:13) 2012 ACM 978-1-4503-1169-4 ...$10.00
+
+1
+
+Introduction
+Location is a fundamental service in mobile sensing. In
+outdoor applications such as wildlife tracking [28, 26], par-
+ticipatory environmental sensing [20], and personal health
+and wellness applications, GPS is the most common modal-
+ity for tagging data samples with their locations. GPS receiv-
+ing, although becoming increasingly ubiquitous and lower in
+cost, is processing-intensive and energy-consuming.
+
+Take ZebraNet sensor nodes [28] as an example. On av-
+erage, one GPS location fix requires turning on the GPS chip
+for 25 seconds at 462mW power consumption, which domi-
+nates its energy budget. As a result, the unit is equipped with
+a 540-gram (1.2 pound) solar cell array and a 287-gram (0.6
+pound) 2A-h lithium-ion battery in order to support one GPS
+position reading every 3 minutes. Power generation and stor-
+age accounts for over 70% of the sensor units total weight
+of 1151 grams (2.5 pounds).
+
+Recent mobile sensing applications, especially those
+leveraging participatory sensing paradigms,
+typically use
+smart phones as sensors. While smart phones have built-
+in GPS and cellular-based communication capabilities, their
+battery life is rarely longer than a few days. A typical smart
+phone will completely drain its battery in about 6 hours if the
+GPS is running continuously [14, 21]. This prevents them
+from being used in unattended deployments for long periods
+of time.
+
+As we will elaborate in section 2, there are two reasons
+behind the high energy consumption of GPS receivers: 1) the
+time and satellite trajectory information (called Ephemeris)
+are sent from the satellites at a data rate as low as 50bps.
+A standalone GPS receiver has to be turned on for up to 30
+seconds to receive the full data packets from the satellites for
+computing its location. 2) The amount of signal processing
+required to acquire and track satellites is substantial due to
+weak signal strengths and Doppler frequency shifts. As a
+result, a GPS chip cannot easily be duty-cycled for energy
+saving.
+In addition, it requires a powerful CPU for post-
+processing and least-square calculation.
+
+In this paper, we address the problem of energy consump-
+
+tion in GPS receiving by splitting the GPS location sensing
+into a device part and a cloud part. We take advantage of
+several key observations.
+ Many mobile sensing applications are delay-tolerant.
+Instead of determining the location at the time that each
+data sample is obtained, we can compute the locations
+off-line after the data is uploaded to a server. This is
+quite different from the design required by turn-by-turn
+navigation in standalone GPS devices.
+
+ Much of the information necessary to compute the loca-
+tion of a GPS receiver is available through other chan-
+nels. For example, NASA publishes satellite ephemeris
+through its web services, so the device does not have to
+stay on long enough to decode them locally from satel-
+lite signals. The only information that the device needs
+to provide is a rough notion of time, the set of visible
+satellites, and the code phase information from each
+visible satellite, as we will explain in section 2. Fur-
+thermore, code phases can be derived from every mil-
+lisecond of baseband signals. Thus, there is significant
+opportunity to duty-cycle the receivers if the location
+computation is moved to the cloud.
+
+ In comparison to the constraints on processing power
+and energy consumption, storage is relatively cheap to
+put on sensor devices, so we can liberally store raw GPS
+baseband signals together with sensor data.
+
+Due to the split between local and cloud processing, the
+device only needs to run for a few milliseconds at a time to
+collect enough GPS baseband signals and tag them with a
+rough time stamp. A cloud service can then process the sig-
+nals off-line, leveraging its much greater available process-
+ing power, online ephemeris, and geographical information
+to disambiguate the signals and to determine the location of
+the receiver. We call this approach Cloud-Offloaded GPS
+(CO-GPS).
+
+The CO-GPS idea also bears several challenges. For ex-
+ample, for an energy and processing cycle constrained em-
+bedded sensor, we cannot maintain a real-time clock that is
+synchronized to the satellites. Secondly, it is hard to get
+a nearby reference location (whose importance will be ex-
+plained in section 2) as proposed in [23]. Finally, because of
+aggressive duty cycling, the signal quality may suffer from
+temporary degradation.
+In this paper, we evaluate the ac-
+curacy of CO-GPS using real GPS traces and show that the
+time synchronization requirement is not very high and the
+amount of data needed for off-line processing is only a few
+kilobytes. We built a sensor node, called CLEO, based on
+the CO-GPS principle using a GPS receiving front end chip
+MAX2769 and a WWVB-based time synchronization mech-
+anism [19]. Through measurements, we show that it takes
+less than 0.5mJ to collect a GPS data point, in comparison to
+the order of 1J for GPS sensing on mobile phones  or more
+than three orders of magnitude energy efficiency gain on de-
+vices.
+In other words, with a pair of AA batteries (2Ah),
+CLEO can theoretically sustain continuous GPS sensing (at
+1s/sample granularity) for 1.5 years.
+
+The rest of the paper is organized as follows. In section 2,
+we first give an overview of how a typical GPS receiver pro-
+
+cesses satellite signals, in order to motivate our solution.
+Section 3 describes the principle of CO-GPS. We evaluate
+performance of CO-GPS using real GPS traces in section 4.
+Finally, section 5 presents the design of the CLEO sensor
+node and evaluates its energy consumption in GPS receiv-
+ing.
+2 GPS Receiving Overview
+
+A GPS receiver computes its location by measuring the
+distance from the receiver to multiple GNSS satellites (also
+called space vehicles, or SVs for short). Ultimately, it needs
+to infer three pieces of information:
+
+ A precise time T ;
+ A set of visible SVs and their locations at time T ;
+ The distances from the receiver to each SV at time T ,
+Typically, these are obtained from processing the signals and
+data packets sent from the satellites. With them, a receiver
+can use least-square (LS) minimization to estimate its loca-
+tion.
+
+often called the pseudoranges.
+
+To make this paper self-contained and to motivate our so-
+lution, we give a brief (and much simplified) description of
+the GPS receiving process. We start with standalone GPS re-
+ceiving and then discuss Assisted GPS (A-GPS) and in par-
+ticular a technique called coarse-time navigation. For a more
+formal treatment of the principles of GPS and A-GPS, please
+refer to [12, 27].
+2.1 GPS Signals
+
+There are 31 (plus one for redundancy) GNSS satellites
+in the sky, each orbiting the Earth about two cycles a day.
+A set of ground stations monitor the satellites trajectory
+and health, and send the satellite parameters to the satellites.
+These parameters include two kinds of trajectory informa-
+tion: the almanac, which contains the coarse orbit and status
+information, and the ephemeris, which contains the precise
+values of the satellites trajectory. All satellites are time-
+synchronized to within a few microseconds, and after clock
+correction, their time stamps can be synchronized within a
+few nanoseconds.
+
+The satellites simultaneously and continuously broad-
+cast time and orbit information through CDMA signals at
+L1 =1.575 GHz towards the Earth. The bit-rate of data pack-
+ets is a mere 50 bps, but the bits are modulated with a higher
+frequency (1MHz) signal for detecting propagation delays.
+A full data packet from a satellite broadcast is 30 seconds
+long, containing 5 six-second-long frames, as shown in Fig-
+ure 1. A frame always starts with a preamble (called Teleme-
+try Word, or TLM) and a time stamp (called Handover Word,
+or HOW). Each data packet contains the ephemeris of the
+transmitting satellite and the almanac of all satellites.
+In
+other words, a precise time stamp can be decoded every 6
+seconds, and the high accuracy satellite trajectory can be de-
+coded every 30 seconds. This low data rate explains why a
+standalone GPS, as seen in vehicles, can take up to a minute
+to acquire its first location, a metric called time to first fix
+(TTFF). The ephemeris information is constantly updated by
+the ground stations. In theory, the ephemeris data included
+in the SV broadcast is only valid for 30 minutes.
+
+to each other, a visible satellite will show a spike in the cor-
+relation results, and an invisible satellite will not cause any
+detectable spike.
+
+A challenge in acquiring satellites is the Doppler fre-
+quency shift caused by the motion of the satellite and by
+any movement of the receiver on the ground. For example,
+a rising GPS satellite can move at up to 800m/s towards a
+receiver, causing a frequency shift of L1  800/c = 4.2kHz,
+where c is the speed of light. A shift of the same magnitude
+occurs in the opposite direction for a setting satellite. To
+reliably compute a correction under this shift, the receiver
+must generate the C/A code within 500Hz of the shifted fre-
+quency. Therefore, in the frequency dimension, the receiver
+needs to search up to 18 bins. Most GPS receivers use 25 to
+40 frequency bins to accommodate local receiver motion and
+to provide better receiver sensitivity.
+
+After compensating for the Doppler frequency shifts, the
+receiver must determine code phase delays. Because the re-
+ceiver does not have a clock synchronized with the satellite,
+and because the signal propagation delay can be affected by
+atmospheric conditions, the receiver must search over the de-
+lay dimension. The receiver usually over samples the 1023
+bps C/A code. Assuming that the receiver samples the base-
+band signal at 8 MHz, in a brute force way, the receiver will
+search 8184 code phase positions to find the best correlation
+peak. Figure 3 shows an example of such correlation result
+in the frequency and code phase search space that indicates
+a successful satellite acquisition.
+
+Code phases change over time as the satellites and the
+device on the ground move. In continuous operation, GPS
+receivers use a tracking mode to adjust previously acquired
+Doppler frequency shifts and code phases to the new ones.
+This is a relatively inexpensive process, using feedback
+loops. So, once a GPS produces its first location fix, sub-
+sequent location estimates become fast. However, once the
+GPS receiver stops tracking, the utility of previously known
+Doppler shifts and code phases diminishes quickly. Typi-
+cally, after 30 seconds of non-tracking, the GPS receiver has
+to start all over again.
+
+Figure 3. An example of acquisition result.
+
+Figure 1. The frame content of a GPS packet of length
+1500 bits
+
+While the precise time and satellite locations are decoded
+from the packets, the pseudorange from each SV to the re-
+ceiver is obtained using much lower-level signal processing
+techniques. For that, we need to understand GPS signal mod-
+ulation.
+
+Figure 2. An illustration of GPS signal modulation
+scheme.
+
+As illustrated in Figure 2,
+
+each satellite encodes
+its signal
+(CDMA encoded) using a satellite-specific
+coarse/acquisition (C/A) code of length 1023 chips at
+1023 kbps. Thus, the C/A code repeats every millisecond,
+resulting in 20 repetitions of the C/A code for each data bit
+sent. The purpose of the C/A code is to allow a receiver
+to identify the sending satellite and to estimate how long it
+took the signal to propagate from that satellite to the receiver.
+Typically, the GPS signals take from 64 to 89 milliseconds
+to travel from a satellite to the Earths surface. Since light
+travels at 300 km/ms, in order to obtain an accurate distance
+measurement, the receiver must estimate the signal propaga-
+tion delay to the microsecond level. The millisecond (NMS)
+and sub-millisecond (subMS) parts of the propagation time
+are derived very differently: the NMS is decoded from the
+packet frames, while the subMS propagation time is detected
+at the C/A code level using correlations.
+2.2 Acquisition
+
+When a GPS receiver first starts up, it needs to detect what
+satellites are in view. This is done by detecting the presence
+of the corresponding C/A codes in the received signal, typ-
+ically by correlating the signal with each known C/A code
+template. Since the C/A codes are designed to be orthogonal
+
+TLM HOW Clock corrections and SV health TLM HOW Ephemeris parameters TLM HOW Almanac TLM HOW Almanac, ionospheric model, dUTC TLM HOW Ephemeris parameters 6 12 18 24 30 Time (sec) 300 bits (10 words) preamble time stamp 1.575GHz 50 bps 1023 kbps repeat every 1ms Correlation Acquisition is an expensive operation as it must search
+through 30+ frequency bins times 8,000+ code phase pos-
+sibilities for every single satellite. If the receiver has some
+prior information about the satellites, it may be able to do
+less work. Examples are:
+ Cold Start. When the receiver has no prior knowledge
+of the satellites and its own location, it has to search the
+entire space. Usually, GPS receivers do not buffer the
+raw data to perform the search, rather they perform one
+code phase search per millisecond as the signal streams
+in. Although there are hardware correlators that per-
+form acquisition in parallel, it still takes a few seconds
+to acquire one satellite. This is one of the main rea-
+sons for the slow initial position fix and high energy
+consumption for standalone GPS devices.
+
+ Warm Start. When the receiver has a previous lock
+to the satellites, it can start from the previous Doppler
+shift and code phases and search around them. In gen-
+eral, if the previous lock is less than 30 seconds old, a
+warm start can quickly find the new lock. Otherwise,
+the receiver has to revert to the cold start process.
+
+ Hot Start. When the previous satellite locks are within
+a second, the receiver can skip the acquisition process
+and start directly from tracking to refine the Doppler
+and code phases. In this mode, all information that the
+receiver needs is already in place. This is the reason
+that in mobile phones, continuous GPS sampling is
+defined as one location sample per second.
+
+ A-GPS. There are multiple ways that an infrastructure
+can help the GPS receiver start up faster.
+In partic-
+ular, in the Mobile-Station Based A-GPS (or AGPS-
+B) mode,
+the infrastructure provides the up-to-date
+ephemeris data so that the GPS receiver does not have
+to decode them from the satellite signals. The first suc-
+cessful decoding of HOW is enough to provide a loca-
+tion fix. In this case, the TTFF is usually around 6 sec-
+onds. In the Mobile-Station Assisted A-GPS (or AGPS-
+A) mode, the infrastructure is given the estimated lo-
+cation, so it can provide initial values for Doppler and
+code phase searches. This allows the receiver to jump
+directly into the warm start process.
+
+2.3 Location Calculation
+
+An important output of satellite acquisition and track-
+ing processes is the code phase produced by the correla-
+tion peaks.
+It gives the sub-millisecond level propagation
+delay. If the receiver has decoded the satellite time stamps
+(HOW), it knows the time that the signals have left the satel-
+lites. Then, it can add these sub-millisecond delays to obtain
+the whole propagation delay and thus the pseudoranges.
+
+With correct tracking, the receiver can decode the packets
+sent by the SVs. In general, without assistance information,
+the receiver needs to decode SV ephemeris every 30 min-
+utes (its valid time span) and time stamps every 6 seconds.
+Decoding is energy consuming since it has to run tracking
+continuously for the packet duration in order to receive all
+the bits. With A-GPS, the receiver is not required to decode
+ephemeris, but it must still decode HOW.
+
+Next, given ephemeris, the propagation delays obtained
+from code phases, and HOW, the GPS receiver performs po-
+sition calculation using constraint optimization techniques
+such as Least Squares minimization. Usually, the local clock
+at the receiver does not know the precise satellite time, so it
+is treated as one variable in the minimization solver. With the
+receivers latitude, longitude, altitude, and the precise satel-
+lite time as optimization variables, typical receivers must
+have at least 4 SVs in view.
+
+Notice that once the satellites are acquired, distance mea-
+surements, and thus the location of the receiver, can be es-
+timated every millisecond. A typical GPS receiver will av-
+erage over multiple Least Square solutions to further reduce
+noise and improve location accuracy.
+
+Finally, we discuss how much data is necessary for satel-
+lite acquisition. Since the baseband C/A code repeats ev-
+ery millisecond, in the ideal case, 1ms of data is enough for
+satellite acquisition. Assume a 8 MHz baseband sampling
+frequency, the minimum amount of data needed for acqui-
+sition is 8*1023 = 8184 samples. For most GPS receiver
+chips, each sample is two bits (one bit sign and one bit mag-
+nitude), thus the storage requirement for 1ms of baseband
+data is 2046 bytes. One corner case that deserves special at-
+tention is the bit transition in the middle of the 1ms signal.
+Since the C/A code is used to modulate the data packets at
+50bps, for every 20ms, there is a possibility of a bit transi-
+tion. If the transition is in the middle of the 1ms sample, then
+the acquisition of the corresponding satellite will fail. So, in
+practice, 2ms is more reliable for satellite acquisition.
+2.4 Coarse-Time Navigation
+
+The above discussion assumes that the receiver is stan-
+dalone with no assistance information. A-GPS receivers re-
+ceive assistance information from servers to improve their
+TTFF. Typically,
+the assistance information includes the
+ephemeris data so the receivers do not have to decode them
+from the satellite signals. Some A-GPS approaches also pro-
+vide Doppler shift and code phase guesses to the receiver so
+their acquisition searches do not start blindly.
+
+One A-GPS mechanism called Coarse-Time Navigation
+(CTN) is particularly relevant to this paper. With this
+method, the receiver does not require the timestamp (HOW)
+decoded from the satellite. Instead, it only needs a coarse
+time reference and treats common clock bias (i.e. the differ-
+ence between the receiver clock and the ideal satellite clock)
+as a variable in Least Square minimization. This method is
+first described in [27] and further exploited in [23] to reduce
+mobile phone GPS energy consumption.
+
+Without decoding the HOW, the receiver cannot synchro-
+nize to the satellites transmission times. So, a key idea
+in using CTN is to leverage a nearby landmark to estimate
+NMS. Since light travels at 300 km/ms, two locations within
+150km of each other will have the same millisecond part of
+the propagation delay, rounded to the nearest integer. For
+mobile phones, it is natural and convenient to use cell tower
+locations as the landmarks [23]. A cell tower usually covers
+a radius less than 10km.
+
+Although the millisecond part of the pseudorange can be
+estimated by using the landmark location, the lack of a syn-
+chronized clock presents an additional challenge. Since the
+
+satellites move in the sky, a wrong estimate of time results
+in using a wrong value for the satellite location and thus
+the calculations yield an erroneous receiver location. Integer
+rollover is the main source of such errors in CTN. Van Digge-
+len [27] proposes the following method to reconstruct the full
+pseudoranges while avoiding the integer rollover problem.
+The signal travel time can be written as
+
+NMS(k) + (k) = (k)  (k)
+
+t + b + (k)
+
+(1)
+
+= (k)  d(k)  (k)
+
+t + b + (k)
+
+(2)
+where NMS(k) and (k) are the millisecond and sub-milli-
+second components, respectively, of the transmission delay
+from SV k, (k) is the actual travel time of the signal leav-
+ing SV k, (k)
+is the satellite clock errors obtained from the
+t
+ephemeris at the a priori coarse time for the satellite k, and
+(k) represents some unknown errors (tropospheric model er-
+ror and other stochastic errors). The common clock bias b is
+the unknown to be eliminated.
+As (k) is unknown, it can be written as (k) = (k)  d(k),
+where (k) is the estimated travel time from the a priori posi-
+tion at the coarse time of transmission, and d(k) is the error in
+(k). The method involves the selection of a reference satel-
+lite, k = 0, where NMS(0) = round((0)  (0)) is the mil-
+lisecond part of the pseudorange of the reference SV1. This
+value is used to reconstruct the millisecond travel time of
+all other satellites relative to the reference satellite. Thus, if
+we subtract the Eq. (2) from the reference satellite full travel
+time we get
+
+NMS(k) = NMS(0) + (0)  (k)
+
+(cid:16)
+(cid:16)
+
++
+
+t + b + (k)(cid:17)
+t + b + (0)(cid:17)
+
+(k)  d(k)  (k)
+(0)  d(0)  (0)
+
+(3)
+
+landmarks. For embedded sensors without cellular connec-
+tions that are expected to have high mobility over their life-
+times, it is not always possible to provide nearby landmarks.
+Our key idea is to leverage the computing resources in the
+cloud to generate a number of candidate landmarks and then
+use other geographical constraints to filter out the wrong so-
+lutions.
+3.1 Shadow Locations
+
+The CO-GPS solution assumes a simple flow of informa-
+tion. In addition to application-specific functionality such as
+sensing, the device has three main components for location
+sensing  a GPS receiving module, a time synchronization
+module, and a data storage space.
+
+In this section, we assume that the device is reasonably
+synchronized with a global clock, which we will elaborate
+upon further in section 5.2. When the device needs to sense
+its location, it simply turns on the GPS receiving front end
+and records a few milliseconds of GPS baseband signal. As
+we discussed in the previous section, we require at least 2ms
+worth of data to avoid possible bit boundaries.
+
+The challenge of deriving receiver location with no refer-
+ence landmark is the possible outliers, which we call shadow
+locations. Figure 3.1 illustrate the reason behind it using two
+satellites. Here, we model the pseudoranges from each SV
+as a set of waves, each 1 light-ms apart. Clearly, these waves
+intersect at multiple locations. Since we do not know the
+exact millisecond part of the propagation delay, all intersec-
+tions, A,B,C,D, ... are feasible solutions, even though only
+one of them is real. When more satellites are visible, more
+constraints are added to the triangulation, which helps re-
+solve the ambiguity. However, the number of satellites alone
+is not enough.
+
+We still do not know the values of d(0) and d(k), but con-
+sidering that we have an initial position and coarse time close
+to the correct values (about 100 km and 1 min), the order of
+magnitude of (d(k) + (k) + d(0)  (0)) is far less than 1/2
+second, thus, we can correctly estimate NMS(k) by
+NMS(0) + (0)  (k)
+
+NMS(k) = round
+
+(cid:16)
+
++((k)  (k)
+
+t
+
+) ((0)  (0)
+
+t
+
+)
+
+.
+
+(4)
+
+(cid:17)
+
+Now, the full pseudorange is estimated by using NMS as
+the millisecond part, and the sub-millisecond is obtained by
+the code phase estimate. So, with CTN, the only device-
+dependent data are the acquisition results, which can be com-
+puted with as little as 1ms of raw signal. This is the key
+observation to move the location computation completely to
+the cloud.
+3 CO-GPS Design
+
+The design of Cloud-Offloaded GPS (CO-GPS) leverages
+the CTN principle but removes the dependency on nearby
+
+1[27] recommends the use of the highest satellite in view as reference,
+
+and provides a good reason for that.
+
+Figure 4. An illustration of multiple feasible solutions
+under NMS ambiguity.
+
+To illustrate this effect, we take a 1ms real GPS trace
+and apply CTN with an array of landmarks across the globe.
+There are 6 satellites in view. The landmarks are generated
+by dividing the latitude and longitude with a 1o resolution
+around the globe. In other words, we picked 180  360 =
+64800 landmarks with adjacent distance up to 111km on the
+equator . Figure 5 shows the total of 166 converged points.
+
+S1 S2 A B C D E F H G I the receiver inherits velocity VR = (Vx,Vy,Vz), uniquely de-
+termined by R. Relative to the earth rotation and satellite
+speeds, the receivers motion is negligible. Let  be the op-
+erator for inner product and ||x|| be the operator of 2-norm.
+Then,
+
+k = cos1(
+
+Vk VR
+
+||Vk||||VR|| )
+
+(5)
+
+is the angle between the two velocity vectors. So the relative
+velocity of Vk in the direction of VR is VR +Vk  cos(k). So,
+the k-th Doppler shift can be represented as
+||VR +Vk  cos(k)|| L1
+
+,
+
+(6)
+
+Dk =
+
+c
+
+Figure 5. All converged solutions for an example data
+trace, without landmark knowledge.
+
+3.2 Guessing Reference Locations
+
+The first step in eliminating shadow locations is to reduce
+the number of possible landmark guesses. Of course, if we
+know the past location of the sensor and can assume that it
+has not moved more than 150km between the samples, then
+we can use the past location as the landmark. However, in the
+bootstrap process, or when the time difference between read-
+ings is large enough to allow movement greater than 150km,
+we have to assume no prior knowledge of the location of the
+sensor.
+
+Following the acquisition process, we can obtain the set
+of visible satellites and the frequency bin (identifying the
+Doppler shift) for each satellite. Knowing the signals trans-
+mission frequency, the Doppler shifts tell us the relative ve-
+locity between the satellites and the receiver. If we know the
+absolute velocities of the satellites, which can be obtained
+from the ephemeris, then we can derive each angle between
+the satellite and the receiver, which defines a set of intersect-
+ing cones, as illustrated in Figure 3.2.
+
+where L1 is the GPS signal frequency and c is the speed of
+light. In this set of equations, (x,y,z) are unknowns, so we
+need three satellites to uniquely identify the intersection. In
+reality, we may have more satellites in view and the problem
+can be formulated as a constrained optimization problem to
+minimize the sum of squared angle errors, such as in angle
+of arrival (AOA) localization solutions [1].
+
+There are several uncertainties in our setting that make
+the problem more challenging. First of all, we do not have
+precise time stamps, so the satellite locations and their ve-
+locities may contain errors. Furthermore, the Doppler shifts
+we calculated during the acquisition process fall into bins
+that can be as wide as 500Hz, which in the worst case can
+cause 95m/s error in speed, or 12o error in latitude. In im-
+plementation, we start with the solution assuming the precise
+Doppler shifts and time stamps, and search the nearby grid
+point landmarks to seek for converged solutions.
+3.3 Solution Pruning
+
+Due to the landmark guessing errors, the landmarks alone
+cannot rule out all shadow locations. Because a light-ms is
+300km, the elevation of a shadow location is likely to be far
+away from the Earths surface. For example, Figure 7 shows
+the number of possible solutions when we limit the elevation
+to be within the [-500, 8000] meter range.
+
+Figure 6. Two satellites A and B at the time of signal
+reception, the tangents to their orbits, and the angles cal-
+culated from the Doppler shifts at the receiver.
+
+More specifically, as illustrated in Figure 3.2, let Sk =
+k ,V z
+(xk,yk,zk) be the position of satellite k, and Vk = (V x
+k )
+be its (absolute) velocity vectors in the Earth coordinate, the
+center of the Earth being the origin. Let R = (x,y,z) be the
+location of the receiver. Due to the rotation of the Earth,
+
+k ,V y
+
+Figure 7. All converged solutions for an example data
+trace, limited to the [-500, 8000] meter elevation range.
+
+Obviously, absolute elevation by itself does not yield a
+unique solution. However, the true elevation of the Earths
+
+Doppler uncertainty results in wider intersection region Receiver Location at cone intersection(s) on the Earths surface true location surface is known, and is available through web services from
+map providers. For example, the United States Geological
+Survey (USGS) maintains a service that returns the eleva-
+tion of the Earths surface at any given latitude/longitude co-
+ordinate. To see how this can be useful, we return to Fig-
+ure 3.1. Location D is computed when the NMS we use
+for S2 is one millisecond less than the true NMS. Assume
+the angle between S2 and the tangent to the surface of the
+Earth is , then the elevation difference between A and D
+is (cid:107)zD  zA(cid:107) = 300  sin(). Taking  = 15o, which is the
+minimum elevation angle that GPS receivers consider a good
+view of a satellite, then (cid:107)zD  zA(cid:107) = 77km. Adding more
+satellites will make this difference even larger. It is almost
+impossible to have two nearby locations (hundreds km apart)
+such that both elevations are correct. We validate empirically
+that using an elevation map can always yield the correct so-
+lution.
+3.4 Accuracy Considerations
+
+A key design consideration of CO-GPS is the tradeoff be-
+tween accuracy and energy expense. GPS signals are very
+weak when they reach the Earths surface, and they suffer
+from multipath errors and obstruction by objects. Typical
+GPS receivers use long signal durations and tracking loops
+to overcome the low signal quality and to improve location
+accuracy progressively. Notice that the longer the signal is,
+the more robust the correlation spikes. This is the right thing
+to do for standalone GPS, since they need to subsequently
+decode the packet content, which requires good signal qual-
+ity. However, sampling and storing large quantities of raw
+data brings energy and storage challenges to embedded sen-
+sor devices.
+
+In CO-GPS, the only things we acquire from the signal
+are the code phases and Doppler shifts. The timing and
+ephemeris data are all derived off line. Because we do not
+decode signals, we can use much shorter signal lengths. An
+additional advantage of this is that it increases the likelihood
+of detecting satellites that are only intermittently visible, and
+whose signals fade out over the course of a longer signal
+sample.
+
+The accuracy of time stamps is another concern. CTN can
+tolerate a certain amount of time stamp error, since it treats
+common time bias as another optimization variable. How-
+ever, when this time error is too big, the least-squares process
+may not converge, or may converge to a wrong value. From
+the energy-efficiency perspective, maintaining a highly accu-
+rate global clock prevents the device from sleeping for long
+periods of time. To address the clock synchronization chal-
+lenge, we can rely on clock radio [19] in different parts of
+the world. Although technical details vary, the mechanism
+is the same: a low power radio receiver can tune in to a low
+frequency band (60kHz in US) to receive atomic clock syn-
+chronization signals. The signals are not always available,
+depending on the receiver location, but is guaranteed to be
+present for a few hours every day in the entire continental
+US. Real-time clocks can be used to keep clock drift under a
+desired threshold between synchronizations. Obviously, the
+more accurate a real-time clock is, the longer it can sustain
+correct values between synchronization, and the less energy
+the device needs to spend on receiving the WWVB signals.
+
+In Section 4, we will evaluate the effects of signal length,
+sampling rate, idling periods, and time accuracy in more de-
+tail.
+3.5 Web Services
+
+The cloud portion of CO-GPS has two main responsibil-
+ities: to update and maintain the ephemeris database, and to
+compute receiver locations given GPS raw data. We imple-
+mented these services on a cloud computing platform, Win-
+dows Azure, to achieve high availability and scalability.
+3.5.1 Ephemeris Service
+
+least
+
+ephemeris data sources on the web:
+
+There are at
+three sources of GNSS satellite
+ NGS: The National Geodetic Survey of National
+Oceanic and Atmospheric Administration (NOAA)2
+publishes GPS satellite orbits in three types:
+
+ final (igs): The final orbits take into account all
+possible sources that may affect satellite trajec-
+tory. It usually takes NGS a few weeks to process
+and retrospect all inputs and to make igs available
+online.
+
+ rapid (igr): The rapid orbits are at least one day
+behind the current time. Most factors that affect
+satellite trajectories are taken into account, but not
+all.
+
+ Ultra-rapid (igu): The ultra-rapid orbits are pre-
+dicted from known satellite trajectories into the
+near future. NGSs ultra-rapid orbits are published
+four times a day.
+
+Ephemeris published from NGS are in 15 minute inter-
+vals, and contains the location and clock correction for
+each GPS satellite.
+
+ NGA: The National Geospatial-Intelligence Agency
+also publishes an independent GPS orbit data3. This
+data source, in addition to the satellite positions and
+clock correction at 5-minute epochs, also contains the
+velocity vector and the clock drift rate for each satellite.
+While it may take GNS 12-14 days to produce the final
+ephemeris, the NGA final ephemeris (called Precise)
+is usually available with a 2-day latency. In addition,
+NGA provides up to 7 days of predicted ephemeris,
+which contains the current ephemeris, but is less accu-
+rate.
+
+ JPL: While NGS and NGA services are free, NASA JPL
+provides a paid service called Global Differential GPS
+(GDGPS) system4. It contains real-time ephemeris (po-
+sition and clock correction only) updated every minute.
+Our current implementation uses a combination of NGA and
+NGS data in the following order. We use NGA Precise as
+much as possible for historical dates. When NGA Precise is
+not available, we use NGS Rapids to the most recent date.
+After that, we use NGS Ultra-Rapids for real-time and near
+real-time location queries. We implemented a monitor role
+in Azure that periodically fetches data files from NGA and
+
+2http://www.ngs.noaa.gov/orbits/
+3http://earth-info.nga.mil/GandG/sathtml/ephemeris.html
+4http://www.gdgps.net/
+
+NGS. Then we perform a polynomial interpolation among
+the 5 or 15 minute sampling points to obtain a set of param-
+eters [10]. Thus, we have a function that given a satellite
+and a time stamp returns its location and clock correction at
+that time. We further differentiate the polynomial to obtain
+satellite velocity at an arbitrary time.
+3.5.2 Location Service
+
+Putting everything together, the CO-GPS back-end web
+service must perform the following steps, as shown in Fig-
+ure 8.
+
+Figure 8. The flow of CO-GPS back-end web service.
+
+We implement GPS satellite acquisition, course-time nav-
+igation, and least square procedures on .NET using C# and
+sho5, and deploy the service on the Windows Azure cloud
+platform. A web role enqueues the location requests with
+GPS signal data and sensor configurations, a worker role de-
+queues and processes the requests, and a monitor role man-
+ages ephemeris updates. We aggressively use multi-threaded
+parallelism to achieve better scalability.
+
+The Doppler shifts and code phases for each satellite are
+determined as part of the process of acquisition. The Doppler
+shifts are used with satellite velocities to infer the initial
+landmarks, as described in section 3.2. Or, if the location
+of the device is known in the recent past, then that history is
+used as a landmark. Once the set of landmarks is obtained,
+we can use equation (3) to calculate the NMS and apply the
+CTN method in parallel to process each landmark and solve
+
+5http://research.microsoft.com/en-us/projects/sho/
+
+for its location. Finally, absolute elevation constraints and
+the USGS elevation database are checked, and any result that
+is outside the error bound is discarded.
+4 Evaluation
+
+We evaluate the quality and limitations of the CO-GPS
+
+approach using raw GPS samples.
+
+This evaluation uses about 100 sets of raw GPS data taken
+from six different locations in both the northern and southern
+hemispheres of Earth. We used a SiGe GN3S v3 sampler
+dongle6, which gives us the flexibility of varying the sample
+length for evaluation. Our data set contains the baseband
+GPS signal sampled between 10 to 60 seconds.
+
+To measure the server-side performance, we use a quad-
+core PC with Intel Xeon 3520 @ 2.66GHz and 6GB mem-
+ory. The acquisition process takes about 2.6 seconds to fin-
+ish. Variations in signal length have a linear effects on the
+execution time mainly due to computing correlations in the
+frequency domain. Once the code phases are obtained, CTN
+and least square processes take less than 300ms to calculate
+the actual location. So if in a bootstrapping process we need
+to test 10 landmark hypotheses, the total execution time on
+the server side is less than 6 seconds.
+
+For fair comparison, as the ground truth for these samples,
+we use a software-defined GPS package, called Soft-GNSS
+[4], to calculate the receivers positions from the traces. In all
+data traces, Soft-GNSS achieves Geometric Dilution of Pre-
+cision (GDOP) values below 6, which is considered at least
+good. The results produced by Soft-GNSS have expected
+errors less than 20 m.
+
+When considering the values presented here it is im-
+portant to note just how different the CO-GPS approach is
+from a standalone GPS implementation when the same sig-
+nal trace is used. In addition to regular GPS error sources,
+CO-GPS adds the following possible sources of error: (i)
+the position is calculated by using code phase from samples
+that are closer to each other than in regular GPS; therefore
+they are more likely to suffer from transient noise that spans
+over multiple samples, (ii) CO-GPS does not use the lock
+loops (PLL and DLL) that are implemented in the tracking
+steps in regular GPS; only the code phase and Doppler fre-
+quency estimated in the acquisition step are used, which may
+contribute to less accurate results, and (iii) the use of CTN
+technique adds additional potential error, especially when
+the number of satellites is low.
+4.1 Acquisition Quality
+
+Since the goal of CO-GPS is to achieve the best possi-
+ble energy efficiency in GPS sensing, we first evaluated how
+much data to use and the best duty-cycle strategy to employ
+to determine an appropriate trade-off between accuracy and
+low energy use. One of the key parameters that improves sin-
+gle location calculation is the number of satellites that can be
+acquired. So, we first vary the parameters to check the ac-
+quisition quality.
+
+A potential method to improve accuracy is to use multiple
+chunks within each GPS location fix. That is, the receiver
+wakes up multiple times within a short period and collects
+
+6available from Sparkfun Electronics http://www.sparkfun.com/
+
+products/10981
+
+Raw Signals Signal Conditioning Acquisition Ephemeris Ephemeris Agent + Code Phases Landmark Generation Doppler shifts Landmark grid points Least Square Pseudoranges Timestamp Elevation DB Posterior Checking Location outliers (x, y, z, t) Prior loc. chunks of raw samples. Then the backend service average
+among the location results from each chunk to obtain the fi-
+nal fix. As illustrated in Figure 9, the chunk and gap parame-
+ters define the duty cycling of the receiver when sensing one
+location. Table 1 shows the three scenarios we evaluated to
+determine the appropriate amount of data to use to estimate
+the receivers position. Each row is a different combination
+of the number of chunks, the chunk duration in milliseconds,
+and the time gap (or sleep period) between each chunk.
+
+Table 1. Scenarios of Evaluation
+
+# of chunks
+
+1
+
+{1, 2, 3, 4, 5}
+
+5
+
+1
+2
+3
+
+chunk length (ms)
+{2, 4, 6, 8, 10}
+
+2
+2
+
+gap length (ms)
+
+0
+0
+
+{0, 10, 50, 100}
+
+Figure 9. Duty cycling in experimental evaluation. After
+an idle period (called a gap), the receiver collects a chunk
+of raw data.
+
+We extract a set of chunks of at least 2 ms duration and
+average the position outcomes derived from them. When the
+chunk length is longer than 2 ms, we use the first 2 ms for
+acquisition and the rest for the tracking loop to refine the
+code phase and Doppler results.
+
+Figures 10 and 11 show the influence of these parameters
+on the number of visible satellites detected and in the re-
+sults in terms of absolute error, respectively. Since our goal
+is to evaluate acquisition results, when multiple chunks are
+used, we select the chunk of best quality (in terms of having
+the maximum number of satellites) for location calculation.
+We evaluate the effect of averaging locations from multiple
+chunks in the next set of experiments.
+
+Figure 10(a) shows that increasing the chunk length from
+2 ms to 10 ms does not yield an increase in the number of
+satellites in view, since the acquisition is only done once.
+In Figure 11(a) we also observe that longer chunks do not
+improve the error. Therefore, the tracking loop, for up to
+10ms long, does not provide any benefits to location accu-
+racy. This implies that we should duty-cycle the GPS cir-
+cuitry to save energy, by intercalating sleeping intervals be-
+tween each sensing interval.
+
+Figure 10(b) shows that the number of visible satellites
+detected can be improved if we take multiple chunks of data.
+Observe that the acquisition results using a contiguous 10 ms
+chunk of data are different from the results when we split
+this data into 5 chunks of 2 ms. The acquisition algorithm
+considers a satellite to be visible when it is stable along the
+entire signal, so it is more likely to recognize transient satel-
+lites in separate chunks of 2 ms than in a single 10 ms chunk.
+
+These transient satellites may help improve the position cal-
+culation. Thus, we can select only the chunk that yields the
+highest number of satellites in view and use this chunk to
+estimate the receivers position. In Figure 11(b) we can ob-
+serve that when only the best chunk is used among multi-
+ple chunks, the location accuracy only improved slightly. In
+fact, the average error barely improves, while the variance is
+lower with more chunks collected.
+
+Figure 10(c) shows that we are also able to increase the
+number of satellites in view when we separate the sampling
+intervals by intercalating some sleep time (the gap duration).
+We see that for this parameter, the number of satellites in
+view generally increases as gap length increases, but not
+monotonically. This is because the signal can change over
+time in ways that are not always directly related to the gap
+duration. For example, a moving receiver may be blocked
+briefly by trees, buildings, bridges, or tunnels. Atmospheric
+conditions may also change slightly, and for large gap inter-
+vals, the satellite and/or receiver movement can result in a
+different satellite arrangement relative to the receiver. Em-
+pirically, we found that 50 ms appears to be a reasonable gap
+value as the movement of the satellites and the receiver can
+be considered negligible, and the obstacles and shadowing
+are not likely to change significantly. We also observe in
+Figure 11(c) that the error slightly decreases accordingly.
+4.2 Overall Location Accuracy
+
+Figure 12 presents graphs of satellite visibility and error
+metrics. Figure 12(a) shows the number of visible satellites
+recognized when each location request contained 5 chunks
+of 2 ms with a 50 ms gap between them. To improve the
+location accuracy, we use each chunk independently and then
+average the result location to obtain the final location.
+
+For our data, the receiver often has between 6 and 8 satel-
+lites in view, with 7 being the most frequent count obtained
+(Figure 12(a)). We see that in general, the more satellites in
+view, the more accurate the individual location fixes are (Fig-
+ure 12(b)). As CO-GPS uses CTN, at least five satellites are
+required, and the accuracy is greatly improved when more
+satellites are available. Figure 12(c) compares the the er-
+ror histogram when we use the single chunk approach, (i.e.,
+when we process only the chunk that yields the largest num-
+ber of visible satellites and discard the other 4 chunks) ver-
+sus the error histogram from averaging results from multi-
+ple chunk. We observe that when we use multiple chunks,
+the results have a smaller variance and thus are more accu-
+rate.The significant improvements are because we are using
+more information to calculate the position while the samples
+are independent. Table 2 presents some statistics of the abso-
+lute error corresponding to the single and multiple chunk ap-
+proaches. Observe that the mean error is about 20% smaller
+when the multiple chunk approach is adopted.
+
+Figure 13 visualizes some outcomes of CO-GPSs loca-
+tion estimation for the 6 locations we evaluated. We plot a
+circle of radius 100 m around the ground truth, represented
+by a push pin, to give the sense of a block level accuracy
+(accurate to within a city block). As we can see, on average
+CO-GPS can achieve < 35m location accuracy with 10ms of
+data.
+
+chunk gap ... sampling idle (a) Chunk Length
+
+(b) # of Chunks
+
+(c) Gap Duration
+
+Figure 10. The number of acquired satellites in various experiment settings.
+
+(a) Chunk Length
+
+(b) # of Chunks
+
+(c) Gap duration
+
+Figure 11. Location error distribution in various experiment settings when single chunk is used for location calculation.
+In (b), we select the best chunk according to the number of satellites in view.
+
+4.3 Time Sensitivity
+
+Two pieces of information are required in order to obtain
+good results when CTN navigation is adopted:
+the initial
+position, and the time stamp corresponding to the moment
+that the GPS signal was collected. In order to fine-tune CO-
+GPSs time synchronization mechanism, we evaluated how
+the error changes as the time drift increases. This is a key
+parameter that influences how tight the time synchronization
+must be on a CO-GPS implementation.
+
+Figure 14 shows the error boxplots when the time drift
+increases from 0 up to 300 s. Observe that the error does
+not change significantly when the time drift varies from 0
+to 60 s. After that, the error increases sharply, eventually
+reaching 106 m. This is due to the fact that under bad ini-
+tial conditions, CTN navigation is not able to estimate the
+pseudorange millisecond part properly. Thus, as light travels
+about 3.105 m/ms, errors of the same order of magnitude are
+expected due to integer rollover.
+
+5 Platform Implementation
+
+Based on the CO-GPS principle and web service, we built
+a GPS sensor platform, code-named CLEO7. It is a reference
+design for low power embedded sensing nodes that can log
+time and the GPS signals received by a mobile object at a
+high sampling rate.
+
+a microcontroller
+
+This reference platform consists of a GPS receiver
+(TI MCU-
+(Maxim MAX2769),
+MSP430F5338), a WWVB receiver module for
+time
+synchronization, and a serial flash chip for storage and some
+glue logic. The 8Mbit flash enables storing up to 1000 GPS
+sample points. The goal of the design is to demonstrate the
+low energy consumption per GPS sample. In addition, the
+platform also has a solar cell, a thin-film Micro-Energy cell
+battery, and a Hi-Jack[13] inspired audio communication
+port. For the purpose of this paper, the energy evaluation is
+
+7CLEO: Cultivating the Long tail in Environmental Observations, for
+
+the potential applications of the platform in eScience.
+
+0%20%40%60%80%100%246810# of Satellites56780%20%40%60%80%100%12345# of Satellites567890%20%40%60%80%100%01050100# of Satellites56789Absolute Error (m)050100246810Absolute Error(m)05010012345Absolute Error (m)5010001050100(a) Statistics of the # of Satellites in view in 100
+traces
+
+(b) Individual location error statistic as a func-
+tion of satellites in view
+
+(c) Error distribution when results from multi-
+ple chunks are averaged to get a final location.
+
+Figure 12. Overall location accuracy distribution.
+
+Table 2. Error statistics
+
+Min.
+
+1st Qu. Median Mean
+
+3rd Qu. Max.
+
+Single Chunk
+Multiple Chunk
+
+0.96
+0.45
+
+19.00
+16.56
+
+32.45
+26.67
+
+43.16
+33.77
+
+56.79
+42.17
+
+349.70
+181.10
+
+on the GPS sensing part.
+5.1 GPS Sensing
+
+We selected the MAX2769 for the GPS receiver chip
+due to the relatively low power consumption (18mA in ac-
+tive mode), support for multiple GNSS standards (GPS,
+GLONASS, and Galileo), and the simple receiver design
+with fewer external components. MAX2769 includes a ra-
+dio front end, RF down converter, and an ADC that gen-
+erates a bit stream of the sampled down converted RF sig-
+nal. We used the pre-configured mode 2 (c.f. MAX2769
+datasheet[17]) of the receiver which uses a 2 bit ADC to gen-
+erate 3 output signals : I0, I1, and GPS data clock. Each of
+these generates data at 16.368 Mbits/s.
+
+Capturing the GPS data at this high data rate directly will
+require the microcontroller to operate at a very high fre-
+quency. For example, even a DMA based transfer requires 5
+clock cycles on the MSP430, requiring a (cid:39) 80MHz clock at
+the microcontroller. This is beyond the operating frequency
+of the MSP430. Microcontrollers operating with that high
+frequency will lead to huge power consumption in compar-
+ison. Hence, we first use a serial-to-parallel converter glue
+logic to reduce the microcontroller-side data transfer rate.
+
+Figure 16 shows the serial to parallel glue logic. Each of
+the two data signals, I0 and I1, is connected to an 8 bit serial-
+to-parallel converter IC (74LV595) clocked by the 16.368
+Mbits/s data clock. The data clock signal is divided by 8 us-
+ing a binary counter IC (74LV161) to generate a 2.046 MHz
+signal which is used as a DMA trigger input to the microcon-
+troller as well as a parallel load signal to the shift registers.
+Effectively, the glue logic converts the GPS signal to a 16bit
+parallel data stream and a GPS trigger signal that updates at
+2.046 MHz. We use DMA, operating at 12MHz, for captur-
+ing and buffering this data inside the MSP430.
+
+5.2 Time Synchronization using WWVB
+
+Correct time stamping is a fundamental requirement to
+make CO-GPS work. To achieve low-power, high-accuracy
+time synchronization, we borrowed the approach of using
+WWVB signals, which is previously exploited in [6]. A
+CME6005 WWVB module offers universal time signal de-
+coding from dedicated radio stations around the globe, such
+as WWVB (in US), DCF77 (in Europe), JJY (in Japan), BPC
+(in China) etc. Experimental evaluations in [6] have shown
+that at 2,400 km away from the WWVB station, the signal
+is available 47% of the time indoors and 75% of the time
+outdoors, while at 700 km away from the DCF77 station,
+the signal is available 97% of the time indoors. The time
+synchronization can achieve an accuracy of 3.9ms (indoor)
+or 4.3ms (outdoor). Furthermore, the power consumption of
+CME6005 is low, consuming less than 100A in active mode
+and 0.03A in shutdown mode.
+
+To further reduce energy consumption, CLEO uses a real-
+time clock (RTC) in the MCU to manage time between syn-
+chronizations with WWVB. A normal 32,768 Hz crystal for
+RTC has an accuracy of 20ppm, which may induce a maxi-
+mum of 1.728s drift over the course of a day. In the previ-
+ous section, we have validated that CO-GPS can tolerate up
+to 60s time drift without increasing the location calculation
+error. This means that CLEO only needs to perform time
+synchronization once a month, which greatly reduces the en-
+ergy consumption for receiving WWVB signals. Although
+the receiver itself only consumes 100A active power, the
+MCU needs to be active to decode the time synchronization
+messages. Assuming that the device needs to run continu-
+ously for 12 hours to successfully receive the WWVB signal,
+amortizing the cost over 30 days will result in only 30A av-
+erage power consumption. Further reduction of WWVB sig-
+
+# of SatellitesPercent of Total010203040567891011# of SatellitesAbsolute Error (m)5010056789ErrorPercent of Total01020304050100200300Multiple chunks100200300Single chunkFigure 14. Errors due to time drift (in seconds).
+
+Figure 15. CLEO hardware platform and description.
+
+form, which runs at 3V , we connect its power supply through
+two resistors ( 15 and 100k) and short circuit the larger
+resistor at system power up and during certain operating
+modes; we measure the voltage drop across these resistors to
+calculate the current. The measured current draw at different
+operating modes is shown in Table 3. The average current for
+GPS receiving is significantly higher than the average oper-
+ating current (27mA) due to the large in-rush current spike
+to charge the capacitors. There are opportunities to further
+optimize this factor.
+
+Figure 17 shows an active working cycle for sampling and
+storing 2ms of GPS signal. The process starts from an idle
+state.
+It turns on the GPS receiving module for 2ms, and
+spends 28.8ms to write them into the flash chip. The total
+energy consumption of the process is 3V [1.5mA28.8ms+
+42mA  2.2ms] = 0.407mJ. By comparison, an A-GPS on
+mobile phones takes about 1J for the first location fix. We
+achieve a gain of more than three orders of magnitude in
+device-side energy efficiency.
+
+Figure 13. Overall results from 6 locations. The shadow
+is 100m in diameter. We see that there are bias errors in
+some cases.
+
+nal searching is also possible by predicting the signal avail-
+able time and duty-cycling the listening time.
+5.3 Energy Consumption Evaluation
+
+We use several techniques to control the power consump-
+tion of the platform. First, we turn off the power to modules
+with high leakage currents and make use of different power
+modes. We completely turn off the GPS receiver and the
+glue logic by using the Enable pin of the dedicated voltage
+regulator. We use glue logic with low-leakage power off ca-
+pability to reduce the leakage current between the glue logic
+and the microcontroller. When not active, we operate the mi-
+crocontroller at the LP3 sleep mode, with only the real time
+clock active.
+
+Second, we use 3 different clock domains on the Micro-
+controller to reduce the average power consumption. Mi-
+crocontroller DMA module operates at 12MHz to support
+GPS data rate, as well as for high speed burst writes to flash.
+Since the microcontroller CPU is only responsible for setting
+up of data transfers between GPS and flash modules through
+the internal RAM, and for decoding low-frequency WWVB
+data, the CPU core uses a (cid:39) 2MHz internal low-accuracy
+clock. We use a low-power 32kHz real-time clock for main-
+taining system time.
+
+To measure the power consumption of the CLEO plat-
+
+Time driftAbsolute Error (m)10^010^210^410^600.5121530456090120180300Thin-film battery of 0.7mAh capacity GPS logger WWVB  Receiver Audio port Microcontroller Figure 16. Glue logic between the GPS receiver and the
+microcontroller.
+
+Figure 17. The current draw of a GPS sensing cycle
+
+Duration(ms)
+
+Current (mA)
+
+Mode
+System idle (RTC on)
+MCU only (@2MHz)
+Flash writing (GPS off)
+GPS receiving (average)
+WWVB (GPS off)
+Total (logging 2ms GPS data)
+Table 3. The power consumption of major components
+on CLEO
+
+0.01
+0.65
+1.5
+42
+1.9
+4.37
+
+< 12hrs/month
+
+28.8
+2.2
+
+
+
+
+31
+
+6 Related Work
+
+Location sensing is a basic service in sensor networks.
+In most outdoor environments and for stationary sensors, re-
+searchers usually assume the locations are set using GPS at
+deployment time. For mobile sensors, there are two classes
+of solutions: one is to use public infrastructure and the other
+is to use deployed infrastructure. Public infrastructure in-
+cludes GPS, WiFi access points8, and FM radio stations [5].
+When the system includes deployed nodes to assist localiz-
+ing mobile nodes, signals like RF [7], sound/ultrasound [22,
+3, 25], and magnetic coupling [15, 11] can be used as prop-
+agation media to provide distance or angle measurements.
+Our method falls into the first category of using publicly
+available infrastructure.
+
+Although our solution is the first
+
+to propose cloud-
+offloaded GPS for embedded sensing, it is based on a rich
+body of work in GPS [18], A-GPS [27], and time synchro-
+nization [19]. With their integration into mobile phones,
+GPS and A-GPS have increasingly become low cost, low
+power and highly accurate. Commercial services, such as
+from Skyhook, Google, Apple and Microsoft, are available
+and may use WiFi and other signatures to improve location
+sensing coverage and latency. However, most previous work
+focuses on how to assist the mobile device in obtaining its
+own location. LEAP [23] is a first attempt to move GPS loca-
+tion calculation to the cloud. In contrast to CO-GPS, LEAP
+relies on the local processing power on mobile phones to de-
+rive the code phases. In our embedded sensing applications,
+the device may not have the processing power or energy to
+compute code phases locally. So we allow the device to sim-
+ply store the raw data and later send it to the cloud for offline
+
+processing.
+
+Our approach of using Doppler shifts to estimate the
+rough location of the receiver is related to the approach used
+in mobile transmitter tracking systems such as Argos9, which
+is used in applications such as wildlife tracking and environ-
+mental monitoring. Argos uses multiple signals sent by a
+mobile transmitter to a single satellite over a given time in-
+terval. The satellite uses the varying Doppler shifts of these
+signals to infer the angles of arrival, which define cones with
+the satellite at their apex at each signal time. The intersec-
+tion of these cones gives the location of transmitter. In gen-
+eral, the accuracy of Argos is within a few kilometers [2].
+CO-GPS uses the same principle in the reverse way. We use
+multiple simultaneous signals sent by different satellites, and
+from these we determine the Doppler shifts, angles of arrival,
+and the cones that we intersect to guess the location of the
+GPS receiver.
+
+Time synchronization is another rich topic in sensing sys-
+tems. Most previous work focuses on synchronizing clocks
+within the system to achieve communication efficiency or
+activity coordination [8, 9, 16]. Since we process infrastruc-
+ture signals, we need to synchronize with the global clock.
+Our application of WWVB receiver is learned from [6]. In
+indoor environments,
+[24] proposes to synchronize sensor
+clocks through observations of power line interference.
+
+There are many options to choose from in communicat-
+ing between sensors and data uploading devices. Our design
+is inspired by Hijack [13]. Alternatively, one may consider
+using Bluetooth, USB, or flash storage cards (e.g. MicroSD
+cards) that can be read by a computer.
+7 Conclusion
+
+Motivated by the possibility of offloading GPS process-
+ing to the cloud, we propose a novel embedded GPS sensing
+approach called CO-GPS. By using a coarse-time navigation
+technique and leveraging information that is already avail-
+able on the web, such as satellite ephemeris and Earth eleva-
+tions, we show that 2ms of raw GPS signals is enough to ob-
+tain a location fix. By averaging multiple such short chunks
+over a short period of time, CO-GPS can achieve < 35m lo-
+cation accuracy using 10ms of raw data (40kB). Without the
+need to do satellite acquisition, tracking and decoding, the
+
+8e.g., http://www.skyhookwireless.com/
+
+9See http://www.argos-system.org/
+
+GPS Receiver Max 2769 Shift register 74LV595 Shift register 74LV595 Counter 74LV161 I0 I1 GPS Clock Data Load Load (  8 ) 2-bit  A/D Clock Clock DMA trigger Microcontroller MSP430F5338 Port 3 & 4  odd pins Port 3 & 4  even pins GPS receiver can be very simple and aggressively duty cy-
+cled. We built an experimental platform using WWVB time
+synchronization and a GPS front end. On this platform, sens-
+ing a GPS location takes more than 3 orders of magnitude
+less energy than GPS on mobile phones.
+
+The initial success of CO-GPS motivates us to extend the
+work further. On the sensor platform, we will explore other
+microcontrollers, especially those with FRAMs to further re-
+duce the energy required to store the data. We will also ex-
+ploit various compression techniques, especially those based
+on compressive sensing principles, to further reduce the stor-
+age requirements. On the web service side, we are exploring
+further optimizations to improve processing speed and loca-
+tion accuracy.
+
+References
+[1] I. Amundson, X. Koutsoukos, J. Sallai, and A. Ledeczi. Mobile sensor
+navigation using rapid rf-based angle of arrival localization. In Pro-
+ceedings of the 2011 17th IEEE Real-Time and Embedded Technology
+and Applications Symposium, (RTAS 11), pages 316325. Chicago,
+IL, April 11-14, 2011.
+
+[2] Argos Systems. Argos Users Manual. CLS group, 2011.
+[3] A. Arora, P. Dutta, S. Bapat, V. Kulathumani, H. Zhang, V. Naik,
+V. Mittal, H. Cao, M. Demirbas, M. Gouda, Y. Choi, T. Her-
+man, S. Kulkarni, U. Arumugam, M. Nesterenko, A. Vora, and
+M. Miyashita. A line in the sand: a wireless sensor network for
+target detection, classification, and tracking. Computer Networks,
+46(5):605634, Dec. 2004.
+
+[4] K. Borre, D. M. Akos, N. Bertelsen, P. Rinder, and S. H. Jensen. A
+Software-Defined GPS and Galileo Receiver: A Single-Frequency Ap-
+proach. Birkh auser, 2006.
+
+[5] Y. Chen, D. Lymberopoulos, J. Liu, and B. Priyantha. FM-based in-
+door localization. In Proceedings of The 10th International Confer-
+ence on Mobile Systems, Applications and Services, (MobiSys 12).
+Lake District, UK, June 25-29, 2012.
+
+[6] Y. Chen, Q. Wang, M. Chang, and A. Terzis. Ultra-low power time
+synchronization using passive radio receivers. In Proceedings of the
+10th International Conference on Information Processing in Sensor
+Networks, (IPSN11). Chicago, IL, April 12-14, 2011.
+
+[7] K. Chintalapudi, A. Padmanabha Iyer, and V. N. Padmanabhan. In-
+In Proceedings of the Sixteenth
+door localization without the pain.
+Annual International Conference on Mobile Computing and Network-
+ing, (MobiCom 10), pages 173184. Chicago, IL, Sept. 20-14, 2010.
+[8] J. Elson, L. Girod, and D. Estrin. Fine-grained network time synchro-
+nization using reference broadcasts. In Proceedings of the 5th Sympo-
+sium on Operating Systems Design and Implementation, (OSDI 02),
+pages 147163. Boston, MA, Dec. 9-11, 2002.
+
+[9] S. Ganeriwal, D. Ganesanl, M. Hansen, M. B. Srivastava, and D. Es-
+trin. Rate-adaptive time synchronization for long-lived sensor net-
+In Proceedings of the 2005 ACM SIGMETRICS Interna-
+works.
+tional Conference on Measurement and Modeling of Computer Sys-
+tems, (SIGMETRICS 05), pages 374375. Banff, Alberta, Canada,
+June 6-10, 2005.
+
+[10] M. Horemuz and J. V. Andersson. Polynomial interpolation of gps
+
+satellite coordinates. GPS Solut, 10:6772, 2006.
+
+[11] X. Jiang, C.-J. M. Liang, F. Zhao, K. Chen, J. Hsu, B. Zhang, and
+J. Liu. Demo: Creating interactive virtual zones in physical space
+with magnetic-induction. In Proceedings of the 9th ACM Conference
+on Embedded Networked Sensor Systems, (SenSys 11), pages 431
+432. Seattle, WA, Nov. 4-7, 2011.
+
+[12] E. D. Kaplan and C. J. Hegarty. Understanding GPS: Principles and
+
+Applications. Artech House, second edition, 2005.
+
+[13] Y.-S. Kuo, S. Verma, T. Schmid, and P. Dutta. Hijacking power and
+bandwidth from the mobile phones audio interface. In Proceedings
+of the First ACM Symposium on Computing for Development, (ACM
+
+DEV 10), pages 24:124:10. London, United Kingdom, Dec. 17-18,
+2010.
+
+[14] K. Lin, A. Kansal, D. Lymberopoulos, and F. Zhao. Energy-accuracy
+trade-off for continuous mobile device location. In Proceedings of the
+8th International Conference on Mobile Systems, Applications, and
+Services, (MobiSys 10), pages 285298. San Francisco, CA, June
+15-18, 2010.
+
+[15] A. Markham, N. Trigoni, S. A. Ellwood, and D. W. Macdonald.
+Revealing the hidden lives of underground animals using magneto-
+In Proceedings of the 8th ACM Conference on
+inductive tracking.
+Embedded Networked Sensor Systems, (SenSys 10), pages 281294.
+Zurich, Switzerland, Nov. 3-5 2010.
+
+[16] M. Mar oti, B. Kusy, G. Simon, and A. L edeczi. The flooding time
+In Proceedings of the 2nd International
+synchronization protocol.
+Conference on Embedded Networked Sensor Systems, (SenSys 04),
+pages 3949. Baltimore, MD, Nov. 3-5, 2004.
+
+[17] Maxim Integrated. Max2769 universal gps receiver.
+[18] P. Misra and P. Enge. Global Positioning System: Signals, Measure-
+
+ments, and Performance. Ganga-Jamuna Press, 2006.
+
+[19] National Institute of Standards and Technology. NIST time and fre-
+quency radio stations: WWW, WWVH, and WWVB. Books LLC, Ref-
+erence Series, 2011.
+
+[20] M. Olson, A. Liu, M. Faulkner, and K. M. Chandy. Rapid detection of
+rare geospatial events: earthquake warning applications. In Proceed-
+ings of the 5th ACM International Conference on Distributed Event-
+based System, (DEBS 11), pages 89100. New York, NY, July 11-15
+2011.
+
+[21] J. Paek, J. Kim, and R. Govindan. Energy-efficient rate-adaptive gps-
+based positioning for smartphones. In Proceedings of the 8th Inter-
+national Conference on Mobile Systems, Applications, and Services,
+(MobiSys 10), pages 299314. San Francisco, Ca, June 15-18 2010.
+[22] N. B. Priyantha, A. Chakraborty, and H. Balakrishnan. The cricket
+location-support system. In Proceedings of the 6th Annual Interna-
+tional Conference on Mobile Computing and Networking, (MobiCom
+00), pages 3243. Boston, MA, Aug. 6-11, 2000.
+
+[23] H. S. Ramos, T. Zhang, J. Liu, N. B. Priyantha, and A. Kansal. LEAP:
+a low energy assisted gps for trajectory-based services. In Proceed-
+ings of the 13th International Conference on Ubiquitous Computing,
+(UbiComp 11), pages 335344. Beijing, China, Sept. 17-21, 2011.
+
+[24] A. Rowe, V. Gupta, and R. R. Rajkumar. Low-power clock synchro-
+nization using electromagnetic energy radiating from ac power lines.
+In Proceedings of the 7th ACM Conference on Embedded Networked
+Sensor Systems, (SenSys 09), pages 211224. Berkeley, CA, Nov.
+4-6, 2009.
+
+[25] Z. Sun, A. Purohit, P. De Wagter, I. Brinster, C. Hamm, and P. Zhang.
+Poster: Pandaa: a physical arrangement detection technique for net-
+worked devices through ambient-sound awareness. In Proceedings of
+the ACM SIGCOMM 2011 Conference, (SIGCOMM 11), pages 442
+443. Toronto, Ontario, Canada, Aug. 15-19, 2011.
+
+[26] B. Thorstensen, T. Syversen, T.-A. Bjrnvold, and T. Walseth. Elec-
+tronic shepherd - a low-cost, low-bandwidth, wireless network sys-
+tem. In Proceedings of the 2nd International Conference on Mobile
+Systems, Applications, and Services, (MobiSys 04), pages 245255.
+Boston, MA, June 6-9, 2004.
+
+[27] F. van Diggelen. A-GPS: Assisted GPS, GNSS, and SBAS. Artech
+
+House, Boston/London, 2009.
+
+[28] P. Zhang, C. M. Sadler, S. A. Lyon, and M. Martonosi. Hardware de-
+sign experiences in zebranet. In Proceedings of the 2nd International
+Conference on Embedded Networked Sensor Systems, (SenSys 04),
+pages 227238. Baltimore, MD, Nov. 3-5, 2004.
+

@@ -1,0 +1,1948 @@
+Energy-Efficient Communication Protocol for Wireless Microsensor Networks
+
+Wendi Rabiner Heinzelman, Anantha Chandrakasan, and Hari Balakrishnan
+
+Massachusetts Institute of Technology
+
+Cambridge, MA 02139
+
+fwendi, anantha, harig@mit.edu
+
+Abstract
+
+Wireless distributed microsensor systems will enable the
+reliable monitoring of a variety of environments for both
+civil and military applications. In this paper, we look at
+communication protocols, which can have significant im-
+pact on the overall energy dissipation of these networks.
+Based on our findings that the conventional protocols of
+direct transmission, minimum-transmission-energy, multi-
+hop routing, and static clustering may not be optimal for
+sensor networks, we propose LEACH (Low-Energy Adap-
+tive Clustering Hierarchy), a clustering-based protocol that
+utilizes randomized rotation of local cluster base stations
+(cluster-heads) to evenly distribute the energy load among
+the sensors in the network. LEACH uses localized coordi-
+nation to enable scalability and robustness for dynamic net-
+works, and incorporates data fusion into the routing proto-
+col to reduce the amount of information that must be trans-
+mitted to the base station. Simulations show that LEACH
+can achieve as much as a factor of 8 reduction in energy
+dissipation compared with conventional routing protocols.
+In addition, LEACH is able to distribute energy dissipation
+evenly throughout the sensors, doubling the useful system
+lifetime for the networks we simulated.
+
+1. Introduction
+
+Recent advances in MEMS-based sensor technology,
+low-power analog and digital electronics, and low-power
+RF design have enabled the development of relatively in-
+expensive and low-power wireless microsensors [2, 3, 4].
+These sensors are not as reliable or as accurate as their ex-
+pensive macrosensor counterparts, but their size and cost
+enable applications to network hundreds or thousands of
+these microsensors in order to achieve high quality, fault-
+tolerant sensing networks. Reliable environment monitor-
+ing is important in a variety of commercial and military
+applications. For example, for a security system, acoustic,
+seismic, and video sensors can be used to form an ad hoc
+
+network to detect intrusions. Microsensors can also be used
+to monitor machines for fault detection and diagnosis.
+
+Microsensor networks can contain hundreds or thou-
+sands of sensing nodes. It is desirable to make these nodes
+as cheap and energy-efficient as possible and rely on their
+large numbers to obtain high quality results. Network pro-
+tocols must be designed to achieve fault tolerance in the
+presence of individual node failure while minimizing en-
+ergy consumption. In addition, since the limited wireless
+channel bandwidth must be shared among all the sensors
+in the network, routing protocols for these networks should
+be able to perform local collaboration to reduce bandwidth
+requirements.
+
+Eventually, the data being sensed by the nodes in the net-
+work must be transmitted to a control center or base station,
+where the end-user can access the data. There are many pos-
+sible models for these microsensor networks. In this work,
+we consider microsensor networks where:
+
+ The base station is fixed and located far from the sen-
+
+sors.
+
+ All nodes in the network are homogeneous and energy-
+
+constrained.
+
+Thus, communication between the sensor nodes and the
+base station is expensive, and there are no high-energy
+nodes through which communication can proceed. This is
+the framework for MITs -AMPS project, which focuses
+on innovative energy-optimized solutions at all levels of the
+system hierarchy, from the physical layer and communica-
+tion protocols up to the application layer and efficient DSP
+design for microsensor nodes.
+
+Sensor networks contain too much data for an end-user
+to process. Therefore, automated methods of combining or
+aggregating the data into a small set of meaningful informa-
+tion is required [7, 8]. In addition to helping avoid informa-
+tion overload, data aggregation, also known as data fusion,
+can combine several unreliable data measurements to pro-
+duce a more accurate signal by enhancing the common sig-
+nal and reducing the uncorrelated noise. The classification
+
+performed on the aggregated data might be performed by a
+human operator or automatically. Both the method of per-
+forming data aggregation and the classification algorithm
+are application-specific. For example, acoustic signals are
+often combined using a beamforming algorithm [5, 17] to
+reduce several signals into a single signal that contains the
+relevant information of all the individual signals. Large en-
+ergy gains can be achieved by performing the data fusion or
+classification algorithm locally, thereby requiring much less
+data to be transmitted to the base station.
+
+By analyzing the advantages and disadvantages of con-
+ventional routing protocols using our model of sensor net-
+works, we have developed LEACH (Low-Energy Adaptive
+Clustering Hierarchy), a clustering-based protocol that min-
+imizes energy dissipation in sensor networks. The key fea-
+tures of LEACH are:
+
+ Localized coordination and control for cluster set-up
+
+and operation.
+
+ Randomized rotation of the cluster base stations or
+
+cluster-heads and the corresponding clusters.
+
+ Local compression to reduce global communication.
+
+The use of clusters for transmitting data to the base sta-
+tion leverages the advantages of small transmit distances
+for most nodes, requiring only a few nodes to transmit
+far distances to the base station. However, LEACH out-
+performs classical clustering algorithms by using adaptive
+clusters and rotating cluster-heads, allowing the energy re-
+quirements of the system to be distributed among all the
+sensors. In addition, LEACH is able to perform local com-
+putation in each cluster to reduce the amount of data that
+must be transmitted to the base station. This achieves a large
+reduction in the energy dissipation, as computation is much
+cheaper than communication.
+
+2. First Order Radio Model
+
+k bit packet
+
+ETx(d)
+
+Transmit
+Electronics
+
+Eelec* k
+
+Tx Amplifier
+
+amp* k * d2
+
+d
+
+k bit packet
+
+ERx
+
+Receive
+
+Electronics
+
+Eelec* k
+
+Figure 1. First order radio model.
+
+Table 1. Radio characteristics.
+
+Operation
+Transmitter Electronics (ET x(cid:0)elec)
+Receiver Electronics (ERx(cid:0)elec)
+(ET x(cid:0)elec = ERx(cid:0)elec = Eelec)
+Transmit Amplifier (amp)
+
+Energy Dissipated
+
+50 nJ/bit
+
+100 pJ/bit/m
+
+radio expends:
+
+ET xk; d = ET x(cid:0)eleck + ET x(cid:0)ampk; d
+ET xk; d = Eelec  k + amp  k  d
+
+and to receive this message, the radio expends:
+
+ERxk = ERx(cid:0)eleck
+ERxk = Eelec  k
+
+(1)
+
+(2)
+
+Currently, there is a great deal of research in the area of
+low-energy radios. Different assumptions about the radio
+characteristics, including energy dissipation in the transmit
+and receive modes, will change the advantages of different
+protocols. In our work, we assume a simple model where
+the radio dissipates Eelec =  nJ/bit to run the transmit-
+ter or receiver circuitry and amp =  pJ/bit/m for the
+transmit amplifier to achieve an acceptable Eb
+(see Figure 1
+No
+and Table 1). These parameters are slightly better than the
+current state-of-the-art in radio design. We also assume an
+r energy loss due to channel transmission. Thus, to trans-
+mit a k-bit message a distance d using our radio model, the
+
+For example, the Bluetooth initiative [1] specifies 700 Kbps radios that
+
+operate at 2.7 V and 30 mA, or 115 nJ/bit.
+
+For these parameter values, receiving a message is not a low
+cost operation; the protocols should thus try to minimize not
+only the transmit distances but also the number of transmit
+and receive operations for each message.
+
+We make the assumption that the radio channel is sym-
+metric such that the energy required to transmit a message
+from node A to node B is the same as the energy required
+to transmit a message from node B to node A for a given
+SNR. For our experiments, we also assume that all sensors
+are sensing the environment at a fixed rate and thus always
+have data to send to the end-user. For future versions of our
+protocol, we will implement an event-driven simulation,
+where sensors only transmit data if some event occurs in the
+environment.
+
+e
+3. Energy Analysis of Routing Protocols
+
+There have been several network routing protocols pro-
+posed for wireless networks that can be examined in the
+context of wireless sensor networks. We examine two such
+protocols, namely direct communication with the base sta-
+tion and minimum-energy multi-hop routing using our sen-
+sor network and radio models. In addition, we discuss a
+conventional clustering approach to routing and the draw-
+backs of using such an approach when the nodes are all
+energy-constrained.
+
+Using a direct communication protocol, each sensor
+sends its data directly to the base station. If the base sta-
+tion is far away from the nodes, direct communication will
+require a large amount of transmit power from each node
+(since d in Equation 1 is large). This will quickly drain the
+battery of the nodes and reduce the system lifetime. How-
+ever, the only receptions in this protocol occur at the base
+station, so if either the base station is close to the nodes, or
+the energy required to receive data is large, this may be an
+acceptable (and possibly optimal) method of communica-
+tion.
+
+The second conventional approach we consider is a
+minimum-energy routing protocol. There are several
+power-aware routing protocols discussed in the literature [6,
+9, 10, 14, 15].
+In these protocols, nodes route data des-
+tined ultimately for the base station through intermediate
+nodes. Thus nodes act as routers for other nodes data in
+addition to sensing the environment. These protocols dif-
+fer in the way the routes are chosen. Some of these proto-
+cols [6, 10, 14], only consider the energy of the transmitter
+and neglect the energy dissipation of the receivers in de-
+termining the routes. In this case, the intermediate nodes
+are chosen such that the transmit amplifier energy (e.g.,
+ET x(cid:0)ampk; d = amp  k  d) is minimized; thus node
+A would transmit to node C through node B if and only if:
+
+ET x(cid:0)ampk; d = dAB + ET x(cid:0)ampk; d = dBC
+ ET x(cid:0)ampk; d = dAC
+
+(3)
+
+or
+
+BC  d
+
+AC
+
+AB + d
+d
+
+(4)
+However, for this minimum-transmission-energy (MTE)
+routing protocol, rather than just one (high-energy) trans-
+mit of the data, each data message must go through n (low-
+energy) transmits and n receives. Depending on the rela-
+tive costs of the transmit amplifier and the radio electronics,
+the total energy expended in the system might actually be
+greater using MTE routing than direct transmission to the
+base station.
+
+To illustrate this point, consider the linear network
+shown in Figure 2, where the distance between the nodes
+is r. If we consider the energy expended transmitting a sin-
+gle k-bit message from a node located a distance nr from
+
+n  nodes
+
+r
+
+Base
+Station
+
+Figure 2. Simple linear network.
+
+the base station using the direct communication approach
+and Equations 1 and 2, we have:
+
+Edirect = ET xk; d = n  r
+= Eelec  k + amp  k  nr
+= kEelec + ampnr
+
+(5)
+
+In MTE routing, each node sends a message to the closest
+node on the way to the base station. Thus the node located a
+distance nr from the base station would require n transmits
+a distance r and n (cid:0)  receives.
+
+EM T E = n  ET xk; d = r + n (cid:0)   ERxk
+= nEelec  k + amp  k  r + n (cid:0)   Eelec  k
+= kn (cid:0) Eelec + ampnr
+
+(6)
+
+Therefore, direct communication requires less energy than
+MTE routing if:
+
+Edirect  EM T E
+Eelec + ampnr  n (cid:0) Eelec + ampnr
+rn
+
+
+Eelec
+amp
+
+
+
+(7)
+
+Using Equations 1 - 6 and the random 100-node network
+shown in Figure 3, we simulated transmission of data from
+every node to the base station (located 100 m from the clos-
+est sensor node, at (x=0, y=-100)) using MATLAB. Figure 4
+shows the total energy expended in the system as the net-
+work diameter increases from 10 m  10 m to 100 m  100
+m and the energy expended in the radio electronics (i.e.,
+Eelec) increases from 10 nJ/bit to 100 nJ/bit, for the sce-
+nario where each node has a 2000-bit data packet to send to
+the base station. This shows that, as predicted by our anal-
+ysis above, when transmission energy is on the same order
+as receive energy, which occurs when transmission distance
+is short and/or the radio electronics energy is high, direct
+transmission is more energy-efficient on a global scale than
+MTE routing. Thus the most energy-efficient protocol to
+use depends on the network topology and radio parameters
+of the system.
+
+50
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+25
+
+0.55
+
+0.5
+
+0.45
+
+0.4
+
+0.35
+
+0.3
+
+0.25
+
+0.2
+1
+
+x 107
+
+20
+
+15
+
+10
+
+5
+
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+Figure 3. 100-node random network.
+
+MTE >
+
+Direct
+|v
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+40
+
+20
+
+100
+
+80
+
+60
+
+l
+
+)
+s
+e
+u
+o
+J
+(
+ 
+
+i
+
+m
+e
+t
+s
+y
+s
+ 
+n
+i
+ 
+d
+e
+t
+a
+p
+s
+s
+d
+ 
+y
+g
+r
+e
+n
+e
+ 
+l
+a
+t
+o
+T
+
+i
+
+Electronics energy (Joules/bit)
+
+0
+
+0
+
+Network diameter (m)
+
+Figure 4. Total energy dissipated in the 100-
+node random network using direct commu-
+nication and MTE routing (i.e., Edirect and
+EM T E). amp =  pJ/bit/m, and the mes-
+sages are 2000 bits.
+
+e
+v
+
+i
+l
+
+a
+
+ 
+l
+l
+i
+t
+s
+ 
+s
+r
+o
+s
+n
+e
+s
+ 
+f
+
+o
+
+ 
+r
+e
+b
+m
+u
+N
+
+100
+
+90
+
+80
+
+70
+
+60
+
+50
+
+40
+
+30
+
+20
+
+10
+
+0
+
+0
+
+                    
+Direct              
+                    
+MTE                 
+                    
+
+50
+
+100
+
+150
+
+200
+
+250
+
+300
+
+350
+
+400
+
+450
+
+500
+
+Time steps (rounds)
+
+Figure 5. System lifetime using direct trans-
+mission and MTE routing with 0.5 J/node.
+
+It is clear that in MTE routing, the nodes closest to the
+base station will be used to route a large number of data
+messages to the base station. Thus these nodes will die out
+quickly, causing the energy required to get the remaining
+data to the base station to increase and more nodes to die.
+This will create a cascading effect that will shorten system
+lifetime. In addition, as nodes close to the base station die,
+that area of the environment is no longer being monitored.
+To prove this point, we ran simulations using the random
+100-node network shown in Figure 3 and had each sensor
+send a 2000-bit data packet to the base station during each
+time step or round of the simulation. After the energy
+dissipated in a given node reached a set threshold, that node
+was considered dead for the remainder of the simulation.
+Figure 5 shows the number of sensors that remain alive after
+each round for direct transmission and MTE routing with
+each node initially given 0.5 J of energy. This plot shows
+that nodes die out quicker using MTE routing than direct
+transmission. Figure 6 shows that nodes closest to the base
+station are the ones to die out first for MTE routing, whereas
+nodes furthest from the base station are the ones to die out
+first for direct transmission. This is as expected, since the
+nodes close to the base station are the ones most used as
+routers for other sensors data in MTE routing, and the
+nodes furthest from the base station have the largest transmit
+energy in direct communication.
+
+A final conventional protocol for wireless networks is
+clustering, where nodes are organized into clusters that
+communicate with a local base station, and these local base
+stations transmit the data to the global base station, where it
+is accessed by the end-user. This greatly reduces the dis-
+tance nodes need to transmit their data, as typically the
+local base station is close to all the nodes in the cluster.
+
+i
+
+t
+
+e
+a
+n
+d
+r
+o
+o
+c
+
+Y
+
+50
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+Xcoordinate
+
+5
+
+10
+
+15
+
+20
+
+25
+
+50
+
+45
+
+40
+
+35
+
+e
+
+t
+
+i
+
+a
+n
+d
+r
+o
+o
+c
+
+Y
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+Xcoordinate
+
+5
+
+10
+
+15
+
+20
+
+25
+
+Figure 6. Sensors that remain alive (circles)
+and those that are dead (dots) after 180
+rounds with 0.5 J/node for (a) direct trans-
+mission and (b) MTE routing.
+
+Thus, clustering appears to be an energy-efficient commu-
+nication protocol. However, the local base station is as-
+sumed to be a high-energy node; if the base station is an
+energy-constrained node, it would die quickly, as it is be-
+ing heavily utilized. Thus, conventional clustering would
+perform poorly for our model of microsensor networks.
+The Near Term Digital Radio (NTDR) project [12, 16], an
+army-sponsored program, employs an adaptive clustering
+approach, similar to our work discussed here. In this work,
+cluster-heads change as nodes move in order to keep the
+network fully connected. However, the NTDR protocol is
+designed for long-range communication, on the order of 10s
+of kilometers, and consumes large amounts of power, on the
+order of 10s of Watts. Therefore, this protocol also does not
+fit our model of sensor networks.
+
+4. LEACH: Low-Energy Adaptive Clustering
+
+Hierarchy
+
+LEACH is a self-organizing, adaptive clustering protocol
+that uses randomization to distribute the energy load evenly
+among the sensors in the network. In LEACH, the nodes
+organize themselves into local clusters, with one node act-
+ing as the local base station or cluster-head. If the cluster-
+heads were chosen a priori and fixed throughout the system
+lifetime, as in conventional clustering algorithms, it is easy
+to see that the unlucky sensors chosen to be cluster-heads
+would die quickly, ending the useful lifetime of all nodes
+belonging to those clusters. Thus LEACH includes random-
+ized rotation of the high-energy cluster-head position such
+that it rotates among the various sensors in order to not drain
+the battery of a single sensor. In addition, LEACH performs
+local data fusion to compress the amount of data being
+sent from the clusters to the base station, further reducing
+energy dissipation and enhancing system lifetime.
+
+Sensors elect themselves to be local cluster-heads at
+any given time with a certain probability. These cluster-
+head nodes broadcast their status to the other sensors in
+the network. Each sensor node determines to which clus-
+ter it wants to belong by choosing the cluster-head that re-
+quires the minimum communication energy. Once all the
+nodes are organized into clusters, each cluster-head creates
+a schedule for the nodes in its cluster. This allows the radio
+components of each non-cluster-head node to be turned off
+at all times except during its transmit time, thus minimizing
+the energy dissipated in the individual sensors. Once the
+cluster-head has all the data from the nodes in its cluster, the
+cluster-head node aggregates the data and then transmits the
+compressed data to the base station. Since the base station
+is far away in the scenario we are examining, this is a high
+energy transmission. However, since there are only a few
+cluster-heads, this only affects a small number of nodes.
+
+As discussed previously, being a cluster-head drains the
+battery of that node. In order to spread this energy usage
+over multiple nodes, the cluster-head nodes are not fixed;
+rather, this position is self-elected at different time intervals.
+Thus a set C of nodes might elect themselves cluster-heads
+at time t, but at time t + d a new set C  of nodes elect
+themselves as cluster-heads, as shown in Figure 7. The de-
+cision to become a cluster-head depends on the amount of
+energy left at the node. In this way, nodes with more en-
+ergy remaining will perform the energy-intensive functions
+of the network. Each node makes its decision about whether
+to be a cluster-head independently of the other nodes in the
+
+Note that typically this will be the cluster-head closest to the sensor.
+However, if there is some obstacle impeding the communication between
+two physically close nodes (e.g., a building, a tree, etc.) such that commu-
+nication with another cluster-head, located further away, is easier, the sen-
+sor will choose the cluster-head that is spatially further away but closer
+in a communication sense.
+
+1.1
+
+1
+
+0.9
+
+n
+o
+
+i
+t
+
+0.8
+
+i
+
+a
+p
+s
+s
+d
+
+i
+
+ 
+y
+g
+r
+e
+n
+e
+d
+e
+z
+
+ 
+
+i
+l
+
+a
+m
+r
+o
+N
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+Direct Trans
+LEACH
+
+20
+
+15
+
+10
+
+5
+
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+0.1
+
+0
+
+10
+
+20
+
+30
+
+40
+
+Percent of nodes that are cluster heads
+
+50
+
+60
+
+70
+
+80
+
+90
+
+100
+
+50
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+25
+
+50
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+25
+
+Figure 8. Normalized total system energy dis-
+sipated versus the percent of nodes that are
+cluster-heads. Note that direct transmission
+is equivalent to 0 nodes being cluster-heads
+or all the nodes being cluster-heads.
+
+in the system to be large. If there are more than ^N cluster-
+heads, the distance nodes have to transmit to reach the near-
+est cluster-head does not reduce substantially, yet there are
+more cluster-heads that have to transmit data the long-haul
+distances to the base station, and there is less compression
+being performed locally. For our system parameters and
+topology, ^N = %.
+
+Figure 8 also shows that LEACH can achieve over a fac-
+tor of 7 reduction in energy dissipation compared to direct
+communication with the base station, when using the opti-
+mal number of cluster-heads. The main energy savings of
+the LEACH protocol is due to combining lossy compression
+with the data routing. There is clearly a trade-off between
+the quality of the output and the amount of compression
+achieved. In this case, some data from the individual sig-
+nals is lost, but this results in a substantial reduction of the
+overall energy dissipation of the system.
+
+We simulated LEACH (with 5% of the nodes being
+cluster-heads) using MATLAB with the random network
+shown in Figure 3. Figure 9 shows how these algorithms
+compare using Eelec =  nJ/bit as the diameter of the net-
+work is increased. This plot shows that LEACH achieves
+between 7x and 8x reduction in energy compared with di-
+rect communication and between 4x and 8x reduction in
+energy compared with MTE routing. Figure 10 shows the
+amount of energy dissipated using LEACH versus using di-
+rect communication and LEACH versus MTE routing as the
+network diameter is increased and the electronics energy
+varies. This figure shows the large energy savings achieved
+using LEACH for most of the parameter space.
+
+20
+
+15
+
+10
+
+5
+
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+Figure 7. Dynamic clusters: (a) cluster-head
+nodes = C at time t (b) cluster-head nodes
+= C  at time t + d. All nodes marked with a
+given symbol belong to the same cluster, and
+the cluster-head nodes are marked with a .
+
+network and thus no extra negotiation is required to deter-
+mine the cluster-heads.
+
+The system can determine, a priori, the optimal number
+of clusters to have in the system. This will depend on sev-
+eral parameters, such as the network topology and the rela-
+tive costs of computation versus communication. We sim-
+ulated the LEACH protocol for the random network shown
+in Figure 3 using the radio parameters in Table 1 and a com-
+putation cost of 5 nJ/bit/message to fuse 2000-bit messages
+while varying the percentage of total nodes that are cluster-
+heads. Figure 8 shows how the energy dissipation in the
+system varies as the percent of nodes that are cluster-heads
+is changed. Note that 0 cluster-heads and 100% cluster-
+heads is the same as direct communication. From this plot,
+we find that there exists an optimal percent of nodes ^N that
+should be cluster-heads. If there are fewer than ^N cluster-
+heads, some nodes in the network have to transmit their data
+very far to reach the cluster-head, causing the global energy
+
+1
+
+0.9
+
+0.8
+
+0.7
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+l
+
+)
+s
+e
+u
+o
+J
+(
+ 
+
+m
+e
+
+t
+s
+y
+s
+ 
+n
+
+i
+ 
+
+d
+e
+
+t
+
+i
+
+a
+p
+s
+s
+d
+
+i
+
+ 
+y
+g
+r
+e
+n
+e
+
+ 
+l
+
+t
+
+a
+o
+T
+
+Direct
+MTE
+LEACH
+
+l
+
+)
+s
+e
+u
+o
+J
+(
+ 
+
+m
+e
+
+t
+s
+y
+s
+ 
+
+n
+
+i
+ 
+
+t
+
+d
+e
+a
+p
+s
+s
+d
+
+i
+
+i
+
+ 
+y
+g
+r
+e
+n
+e
+
+ 
+l
+
+t
+
+a
+o
+T
+
+Direct >
+
+1
+
+0.8
+
+0.6
+
+0.4
+
+0.2
+
+0
+1
+
+0.8
+
+0.6
+
+x 107
+
+0.4
+
+0.2
+
+Electronics energy (Joules/bit)
+
+0
+
+0
+
+140
+
+160
+
+180
+
+200
+
+LEACH
+
+|v
+
+200
+
+50
+
+150
+
+100
+
+Network diameter (m)
+
+< MTE
+
+0
+
+0
+
+20
+
+40
+
+60
+
+80
+
+100
+
+120
+
+Network diameter (m)
+
+Figure 9. Total system energy dissipated us-
+ing direct communication, MTE routing and
+LEACH for the 100-node random network
+shown in Figure 3. Eelec =  nJ/bit, amp =
+ pJ/bit/m, and the messages are 2000 bits.
+
+In addition to reducing energy dissipation, LEACH suc-
+cessfully distributes energy-usage among the nodes in the
+network such that the nodes die randomly and at essentially
+the same rate. Figure 11 shows a comparison of system
+lifetime using LEACH versus direct communication, MTE
+routing, and a conventional static clustering protocol, where
+the cluster-heads and associated clusters are chosen initially
+and remain fixed and data fusion is performed at the cluster-
+heads, for the network shown in Figure 3. For this exper-
+iment, each node was initially given 0.5 J of energy. Fig-
+ure 11 shows that LEACH more than doubles the useful sys-
+tem lifetime compared with the alternative approaches. We
+ran similar experiments with different energy thresholds and
+found that no matter how much energy each node is given,
+it takes approximately 8 times longer for the first node to
+die and approximately 3 times longer for the last node to
+die in LEACH as it does in any of the other protocols. The
+data from these experiments is shown in Table 2. The ad-
+vantage of using dynamic clustering (LEACH) versus static
+clustering can be clearly seen in Figure 11. Using a static
+clustering algorithm, as soon as the cluster-head node dies,
+all nodes from that cluster effectively die since there is no
+way to get their data to the base station. While these simu-
+lations do not account for the setup time to configure the
+dynamic clusters (nor do they account for any necessary
+routing start-up costs or updates as nodes die), they give
+a good first order approximation of the lifetime extension
+we can achieve using LEACH.
+
+Another important advantage of LEACH, illustrated in
+Figure 12, is the fact that nodes die in essentially a ran-
+
+l
+
+)
+s
+e
+u
+o
+J
+(
+ 
+
+m
+e
+t
+s
+y
+s
+ 
+
+i
+
+i
+
+n
+i
+ 
+d
+e
+t
+a
+p
+s
+s
+d
+ 
+y
+g
+r
+e
+n
+e
+ 
+l
+a
+t
+o
+T
+
+0.6
+
+0.5
+
+0.4
+
+0.3
+
+0.2
+
+0.1
+
+0
+1
+
+LEACH
+
+|v
+
+0.8
+
+0.6
+
+x 107
+
+0.4
+
+0.2
+
+Electronics energy (Joules/bit)
+
+0
+
+0
+
+200
+
+50
+
+150
+
+100
+
+Network diameter (m)
+
+Figure 10. Total system energy dissipated
+using (a) direct communication and LEACH
+and (b) MTE routing and LEACH for the ran-
+dom network shown in Figure 3.
+amp =
+ pJ/bit/m, and the messages are 2000 bits.
+
+100
+
+90
+
+80
+
+70
+
+60
+
+50
+
+40
+
+30
+
+20
+
+10
+
+e
+v
+
+i
+l
+
+a
+
+ 
+l
+l
+i
+t
+s
+ 
+s
+r
+o
+s
+n
+e
+s
+ 
+f
+
+o
+
+ 
+r
+e
+b
+m
+u
+N
+
+                    
+Direct              
+                    
+MTE                 
+                    
+Static Clus         
+                    
+LEACH               
+                    
+
+0
+
+0
+
+200
+
+400
+
+600
+800
+Time steps (rounds)
+
+1000
+
+1200
+
+1400
+
+Figure 11. System lifetime using direct trans-
+mission, MTE routing, static clustering, and
+LEACH with 0.5 J/node.
+
+Table 2. Lifetimes using different amounts of
+initial energy for the sensors.
+
+Energy
+(J/node)
+
+0.25
+
+Protocol
+
+Direct
+MTE
+
+Static Clustering
+
+LEACH
+Direct
+MTE
+
+Static Clustering
+
+LEACH
+Direct
+MTE
+
+Static Clustering
+
+LEACH
+
+0.5
+
+1
+
+Round first Round last
+node dies
+node dies
+
+55
+5
+41
+394
+109
+8
+80
+932
+217
+15
+106
+1848
+
+117
+221
+67
+665
+234
+429
+110
+1312
+468
+843
+240
+2608
+
+dom fashion. If Figure 12 is compared with Figure 6, we
+see that the order in which nodes die using LEACH is much
+more desirable than the order they die using direct commu-
+nication or MTE routing. With random death, there is no
+one section of the environment that is not being sensed as
+nodes die, as occurs in the other protocols.
+
+5. LEACH Algorithm Details
+
+The operation of LEACH is broken up into rounds,
+where each round begins with a set-up phase, when the clus-
+ters are organized, followed by a steady-state phase, when
+data transfers to the base station occur. In order to mini-
+mize overhead, the steady-state phase is long compared to
+the set-up phase.
+
+5.1 Advertisement Phase
+
+Initially, when clusters are being created, each node de-
+cides whether or not to become a cluster-head for the current
+round. This decision is based on the suggested percentage
+of cluster heads for the network (determined a priori) and
+the number of times the node has been a cluster-head so
+far. This decision is made by the node n choosing a random
+number between 0 and 1. If the number is less than a thresh-
+old T n, the node becomes a cluster-head for the current
+round. The threshold is set as:
+
+T n =
+
+P
+
+(cid:0)P rmod 
+
+
+P 
+
+if n  G
+otherwise
+
+where P = the desired percentage of cluster heads (e.g.,
+P = :), r = the current round, and G is the set of nodes
+
+i
+
+t
+
+e
+a
+n
+d
+r
+o
+o
+c
+
+Y
+
+50
+
+45
+
+40
+
+35
+
+30
+
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+25
+
+20
+
+15
+
+10
+
+5
+
+0
+
+5
+
+10
+
+15
+
+20
+
+25
+
+Xcoordinate
+
+Figure 12. Sensors that remain alive (circles)
+and those that are dead (dots) after 1200
+rounds with 0.5 J/node for LEACH. Note that
+this shows the network 1020 rounds further
+along than Figure 6.
+
+that have not been cluster-heads in the last 
+P rounds. Us-
+ing this threshold, each node will be a cluster-head at some
+point within 
+P rounds. During round 0 (r = ), each node
+has a probability P of becoming a cluster-head. The nodes
+that are cluster-heads in round 0 cannot be cluster-heads for
+the next 
+P rounds. Thus the probability that the remaining
+nodes are cluster-heads must be increased, since there are
+fewer nodes that are eligible to become cluster-heads. Af-
+ter 
+(cid:0)  rounds, T =  for any nodes that have not yet
+P
+been cluster-heads, and after 
+P rounds, all nodes are once
+again eligible to become cluster-heads. Future versions of
+this work will include an energy-based threshold to account
+for non-uniform energy nodes. In this case, we are assum-
+ing that all nodes begin with the same amount of energy
+and being a cluster-head removes approximately the same
+amount of energy for each node.
+
+Each node that has elected itself a cluster-head for the
+current round broadcasts an advertisement message to the
+rest of the nodes. For this cluster-head-advertisement
+phase, the cluster-heads use a CSMA MAC protocol, and all
+cluster-heads transmit their advertisement using the same
+transmit energy. The non-cluster-head nodes must keep
+their receivers on during this phase of set-up to hear the ad-
+vertisements of all the cluster-head nodes. After this phase
+is complete, each non-cluster-head node decides the cluster
+to which it will belong for this round. This decision is based
+on the received signal strength of the advertisement. As-
+suming symmetric propagation channels, the cluster-head
+advertisement heard with the largest signal strength is the
+cluster-head to whom the minimum amount of transmitted
+
+energy is needed for communication. In the case of ties, a
+random cluster-head is chosen.
+
+5.2 Cluster Set-Up Phase
+
+After each node has decided to which cluster it belongs,
+it must inform the cluster-head node that it will be a member
+of the cluster. Each node transmits this information back to
+the cluster-head again using a CSMA MAC protocol. Dur-
+ing this phase, all cluster-head nodes must keep their re-
+ceivers on.
+
+5.3 Schedule Creation
+
+The cluster-head node receives all the messages for
+nodes that would like to be included in the cluster. Based
+on the number of nodes in the cluster, the cluster-head node
+creates a TDMA schedule telling each node when it can
+transmit. This schedule is broadcast back to the nodes in
+the cluster.
+
+5.4 Data Transmission
+
+Once the clusters are created and the TDMA schedule
+is fixed, data transmission can begin. Assuming nodes al-
+ways have data to send, they send it during their allocated
+transmission time to the cluster head. This transmission
+uses a minimal amount of energy (chosen based on the
+received strength of the cluster-head advertisement). The
+radio of each non-cluster-head node can be turned off un-
+til the nodes allocated transmission time, thus minimizing
+energy dissipation in these nodes. The cluster-head node
+must keep its receiver on to receive all the data from the
+nodes in the cluster. When all the data has been received,
+the cluster head node performs signal processing functions
+to compress the data into a single signal. For example, if
+the data are audio or seismic signals, the cluster-head node
+can beamform the individual signals to generate a compos-
+ite signal. This composite signal is sent to the base station.
+Since the base station is far away, this is a high-energy trans-
+mission.
+
+This is the steady-state operation of LEACH networks.
+After a certain time, which is determined a priori, the next
+round begins with each node determining if it should be a
+cluster-head for this round and advertising this information,
+as described in Section 5.1.
+
+5.5. Multiple Clusters
+
+The preceding discussion describes how the individual
+clusters communicate among nodes in that cluster. How-
+ever, radio is inherently a broadcast medium. As such,
+transmission in one cluster will affect (and hence degrade)
+
+B
+
+A
+
+C
+
+Figure 13. Radio interference. Node As trans-
+mission to node B corrupts any transmission
+to node C.
+
+communication in a nearby cluster. For example, Fig-
+ure 13 shows the range of communication for a radio. Node
+As transmission, while intended for Node B, corrupts any
+transmission to Node C. To reduce this type of interference,
+each cluster communicates using different CDMA codes.
+Thus, when a node decides to become a cluster-head, it
+chooses randomly from a list of spreading codes. It informs
+all the nodes in the cluster to transmit using this spreading
+code. The cluster-head then filters all received energy using
+the given spreading code. Thus neighboring clusters radio
+signals will be filtered out and not corrupt the transmission
+of nodes in the cluster.
+
+Efficient channel assignment is a difficult problem, even
+when there is a central control center that can perform the
+necessary algorithms. Using CDMA codes, while not nec-
+essarily the most bandwidth efficient solution, does solves
+the problem of multiple-access in a distributed manner.
+
+5.6. Hierarchical Clustering
+
+The version of LEACH described in this paper can be
+extended to form hierarchical clusters. In this scenario, the
+cluster-head nodes would communicate with super-cluster-
+head nodes and so on until the top layer of the hierarchy,
+at which point the data would be sent to the base station.
+For larger networks, this hierarchy could save a tremendous
+amount of energy. In future studies, we will explore the de-
+tails of implementing this protocol without using any sup-
+port from the base station, and determine, via simulation,
+exactly how much energy can be saved.
+
+In fact, the authors in [13] assert that it is NP-complete.
+
+6. Conclusions
+
+References
+
+In this paper, we described LEACH, a clustering-based
+routing protocol that minimizes global energy usage by dis-
+tributing the load to all the nodes at different points in time.
+LEACH outperforms static clustering algorithms by requir-
+ing nodes to volunteer to be high-energy cluster-heads and
+adapting the corresponding clusters based on the nodes that
+choose to be cluster-heads at a given time. At different
+times, each node has the burden of acquiring data from the
+nodes in the cluster, fusing the data to obtain an aggregate
+signal, and transmitting this aggregate signal to the base sta-
+tion. LEACH is completely distributed, requiring no control
+information from the base station, and the nodes do not re-
+quire knowledge of the global network in order for LEACH
+to operate.
+
+Distributing the energy among the nodes in the network
+is effective in reducing energy dissipation from a global per-
+spective and enhancing system lifetime. Specifically, our
+simulations show that:
+
+ LEACH reduces communication energy by as much as
+8x compared with direct transmission and minimum-
+transmission-energy routing.
+
+ The first node death in LEACH occurs over 8 times
+later than the first node death in direct transmission,
+minimum-transmission-energy routing, and a static
+clustering protocol, and the last node death in LEACH
+occurs over 3 times later than the last node death in the
+other protocols.
+
+In order to verify our assumptions about LEACH, we
+are currently extending the network simulator ns [11] to
+simulate LEACH, direct communication, and minimum-
+transmission-energy routing. This will verify our assump-
+tions and give us a more accurate picture of the advantages
+and disadvantages of the different protocols. Based on our
+MATLAB simulations described above, we are confident
+that LEACH will outperform conventional communication
+protocols, in terms of energy dissipation, ease of configura-
+tion, and system lifetime/quality of the network. Providing
+such a low-energy, ad hoc, distributed protocol will help
+pave the way for future microsensor networks.
+
+Acknowledgments
+
+The authors would like to thank the anonymous review-
+ers for the helpful comments and suggestions. W. Heinzel-
+man is supported by a Kodak Fellowship. This work was
+funded in part by DARPA.
+
+[1] Bluetooth Project. http://www.bluetooth.com, 1999.
+[2] Chandrakasan, Amirtharajah, Cho, Goodman, Konduri, Ku-
+lik, Rabiner, and Wang. Design Considerations for Dis-
+tributed Microsensor Systems.
+In IEEE 1999 Custom In-
+tegrated Circuits Conference (CICC), pages 279286, May
+1999.
+
+[3] Clare, Pottie, and Agre. Self-Organizing Distributed Sen-
+sor Networks. In SPIE Conference on Unattended Ground
+Sensor Technologies and Applications, pages 229237, Apr.
+1999.
+
+[4] M. Dong, K. Yung, and W. Kaiser. Low Power Signal
+Processing Architectures for Network Microsensors.
+In
+Proceedings 1997 International Symposium on Low Power
+Electronics and Design, pages 173177, Aug. 1997.
+
+[5] D. Dudgeon and R. Mersereau. Multidimensional Digital
+
+Signal Processing, chapter 6. Prentice-Hall, Inc., 1984.
+
+[6] M. Ettus. System Capacity, Latency, and Power Consump-
+tion in Multihop-routed SS-CDMA Wireless Networks. In
+Radio and Wireless Conference (RAWCON 98), pages 55
+58, Aug. 1998.
+
+[7] D. Hall. Mathematical Techniques in Multisensor Data Fu-
+
+sion. Artech House, Boston, MA, 1992.
+
+[8] L. Klein. Sensor and Data Fusion Concepts and Applica-
+
+tions. SPIE Optical Engr Press, WA, 1993.
+
+[9] X. Lin and I. Stojmenovic. Power-Aware Routing in Ad Hoc
+Wireless Networks. In SITE, University of Ottawa, TR-98-
+11, Dec. 1998.
+
+[10] T. Meng and R. Volkan. Distributed Network Protocols
+for Wireless Communication. In Proc. IEEEE ISCAS, May
+1998.
+
+[11] UCB/LBNL/VINT Network Simulator - ns (Version 2).
+
+http://www-mash.cs.berkeley.edu/ns/, 1998.
+
+[12] R. Ruppe, S. Griswald, P. Walsh, and R. Martin. Near Term
+In Proceedings MILCOM
+
+Digital Radio (NTDR) System.
+97, pages 12821287, Nov. 1997.
+
+[13] K. Scott and N. Bambos. Routing and Channel Assignment
+for Low Power Transmission in PCS. In 5th IEEE Int. Conf.
+on Universal Personal Communications, volume 2, pages
+498502, Sept. 1996.
+
+[14] T. Shepard. A Channel Access Scheme for Large Dense
+Packet Radio Networks. In Proc. ACM SIGCOMM, pages
+219230, Aug. 1996.
+
+[15] S. Singh, M. Woo, and C. Raghavendra. Power-Aware Rout-
+ing in Mobile Ad Hoc Networks.
+In Proceedings of the
+Fourth Annual ACM/IEEE International Conference on Mo-
+bile Computing and Networking (MobiCom 98), Oct. 1998.
+[16] L. Williams and L. Emergy. Near Term Digital Radio- a First
+Look. In Proceedings of the 1996 Tactical Communications
+Conference, pages 423425, Apr. 1996.
+
+[17] K. Yao, R. Hudson, C. Reed, D. Chen, and F. Lorenzelli.
+Blind Beamforming on a Randomly Distributed Sensor Ar-
+ray System. Proceedings of SiPS, Oct. 1998.
+

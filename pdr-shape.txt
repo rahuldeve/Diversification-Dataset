@@ -1,0 +1,1288 @@
+Property-Directed Shape Analysis
+
+S. Itzhaky1, N. Bjrner2, T. Reps3,4, M. Sagiv1, and A. Thakur3
+
+1 Tel Aviv University, Tel Aviv, Israel
+
+2 Microsoft Research, USA
+
+3 University of WisconsinMadison, USA
+
+4 GrammaTech, Inc., USA
+
+Abstract. This paper addresses the problem of automatically generating quan-
+tified invariants for programs that manipulate singly and doubly linked-list data
+structures. Our algorithm is property-directedi.e., its choices are driven by the
+properties to be proven. The algorithm is able to establish that a correct pro-
+gram has no memory-safety violationse.g., null-pointer dereferences, double
+freesand that data-structure invariants are preserved. For programs with errors,
+the algorithm produces concrete counterexamples.
+
+More broadly, the paper describes how to integrate IC3 with full predicate ab-
+straction. The analysis method is complete in the following sense: if an inductive
+invariant that proves that the program satisfies a given property is expressible as a
+Boolean combination of a given set of predicates, then the analysis will find such
+an invariant. To the best of our knowledge, this method represents the first shape-
+analysis algorithm that is capable of (i) reporting concrete counterexamples, or
+alternatively (ii) establishing that the predicates in use are not capable of proving
+the property in question.
+
+1 Introduction
+
+The goal of our work is to automatically generate quantified invariants for programs that
+manipulate singly-linked and doubly-linked list data structures. For a correct program,
+the invariant generated ensures that the program has no memory-safety violations, such
+as null-pointer dereferences, and that data-structure invariants are preserved. For a pro-
+gram in which it is possible to have a memory-safety violation or for a data-structure
+invariant to be violated, the algorithm produces a concrete counterexample. Although
+in this paper we mainly discuss memory-safety properties and data-structure invariants,
+the technique can be easily extended to other correctness properties (see 5).
+
+To the best of our knowledge, our method represents the first shape-analysis algo-
+rithm that is capable of (i) reporting concrete counterexamples, or alternatively (ii) es-
+tablishing that the abstraction in use is not capable of proving the property in question.
+This result is achieved by combining several existing ideas in a new way:
+
+ The algorithm uses a predicate-abstraction domain [12] in which quantified pred-
+icates express properties of singly and doubly linked lists. In contrast to most re-
+cent work, which uses restricted forms of predicate abstractionsuch as Cartesian
+abstraction [1]our algorithm uses full predicate abstraction (i.e., the abstraction
+uses arbitrary Boolean combinations of predicates).
+
+ The abstraction predicates and language semantics are expressed in recently devel-
+oped reachability logics, AFR and EAR, respectively, which are decidable using a
+reduction to SAT [17].
+
+ The algorithm is property-directedi.e., its choices are driven by the memory-
+safety properties to be proven. In particular, the algorithm is based on IC3 [3],
+which we here refer to as property-directed reachability (PDR).
+
+PDR integrates well with full predicate abstraction: in effect, the analysis obtains
+the same precision as the best abstract transformer for full predicate abstraction, without
+ever constructing the transformers explicitly. In particular, we cast PDR as a framework
+that is parameterized on
+
+ the logic L in which the semantics of program statements are expressed, and
+ the finite set of predicates that define the abstract domain A in which invariants
+can be expressed. An element of A is an arbitrary Boolean combination of the
+predicates.
+
+Furthermore, our PDR framework is relatively complete with respect to the given ab-
+straction. That is, the analysis is guaranteed to terminate and either (i) verifies the given
+property, (ii) generates a concrete counterexample to the given property, or (iii) reports
+that the abstract domain is not expressive enough to establish the proof. Outcome (ii)
+is possible because the frame structure maintained during PDR can be used to build
+a trace formula; if the formula is satisfiable, the model can be presented to the user as
+a concrete counterexample. Moreover, if the analysis fails to prove the property or find
+a concrete counterexample (outcome (iii)), then there is no way to express an inductive
+invariant that establishes the property in question using a Boolean combination of the
+abstraction predicates. Note that outcome (iii) is a much stronger guarantee than what
+other approaches provide in such cases when they neither succeed nor give a concrete
+counterexample.
+
+Key to instantiating the PDR framework for shape analysis was a recent develop-
+ment of the AFR and EAR logics for expressing properties of linked lists [17]. AFR is
+used to define abstraction predicates, and EAR is used to express the language seman-
+tics. AFR is a decidable, alternation-free fragment of first-order logic with transitive
+closure (FOTC). When applied to list-manipulation programs, atomic formulas of AFR
+can denote reachability relations between memory locations pointed to by pointer vari-
+ables, where reachability corresponds to repeated dereferences of next or prev fields.
+One advantage of AFR is that it does not require any special-purpose reasoning ma-
+chinery: an AFR formula can be converted to a formula in effectively propositional
+logic, which can be reduced to SAT solving. That is, in contrast to much previous work
+on shape analysis, our method makes use of a general purpose SMT solver, Z3 [5]
+(rather than specialized tools developed for reasoning about linked data structures, e.g.,
+[24, 6, 2, 11]).
+
+The main restriction in AFR is that it allows the use of a relation symbol f  that
+denotes the transitive closure of a function symbol f , but only limited use of f itself.
+Although this restriction can be somewhat awkward, it is mainly a concern for the
+analysis designer (and the details have already been worked out in [17]). As a language
+
+2
+
+Description
+equality
+x ->f = y
+an f path from x to y
+unshared f linked-list segment between x and y
+x points to an allocated element
+any f -path from h leads to an allocated element
+
+Name
+x = y
+x hf iy
+x hf iy
+f .ls [x , y]
+alloc(x )
+f .stable(h)
+f /b.rev [x , y] reversed f /b linked-list segment between x and y
+f .sorted [x , y] sorted f list segment between x and y
+
+Mnemonic
+
+St
+St
+R
+S
+
+Table 1. Predicates for expressing various properties of linked lists whose elements hold data val-
+ues. x and y denote program variables that point to list elements or null. f and b are parameters
+that denote pointer fields. (The mnemonics are referred to in Table 6.)
+
+for expressing invariants, AFR provides a fairly natural abstraction, which means that
+analysis results should be understandable by non-experts (see 2).5
+
+Our work represents the first algorithm for shape analysis that either (i) succeeds,
+(ii) returns a concrete counterexample, or (iii) returns an abstract trace showing that
+the abstraction in use is not capable of proving the property in question. The specific
+contributions of our work include
+
+ A framework, based on the PDR algorithm, for finding an inductive invariant in
+a certain logic fragment (abstract domain) that allows one to prove that a given
+pre-/post-condition holds or find a concrete counter-example to the property, or, in
+the case of a negative result, the information that there is no inductive invariant
+expressible in the abstract domain (3).
+
+ An instantiation of the framework for finding invariants of programs that manip-
+ulate singly-linked or doubly-linked lists. This instantiation uses AFR to define a
+simple predicate-abstraction domain, and is the first application of PDR to establish
+quantified invariants of programs that manipulate linked lists (4).
+
+ An empirical evaluation showing the efficacy of the PDR framework for a set of
+
+linked-list programs (5).
+
+2 A Motivating Example
+To illustrate the analysis, we use the procedure insert, shown in Fig. 1, that inserts
+a new element pointed to by e into the non-empty, singly-linked list pointed to by h.
+insert is annotated with a pre-condition and a post-condition.
+
+Table 1 shows a set of predicates for expressing properties of linked lists whose ele-
+ments hold data values. The predicates above the horizontal line in Table 1 are inspired
+by earlier work on shape analysis [13] and separation logic [23].
+
+Given an input procedure, optionally annotated with a pre-condition Pre and post-
+condition Post (expressed as formulas over the same vocabulary of predicates); the goal
+of the analysis is to compute an invariant for the head of each loop 6 expressed as a CNF
+formula over the predicates given in Table 1 (and their negations).
+
+5 By a non-expert, we mean someone who has no knowledge of either the analysis algorithm,
+
+or the abstraction techniques used inside the algorithm.
+
+6 The current implementation supports procedures with only a single loop; however, this restric-
+
+tion is not an essential limitation of our technique.
+
+3
+
+void insert(List e, List h, List x) {
+
+Requires: h 6= null  hhn +ix  x hn inull  e 6= null  ehninull  hhn ie
+Ensures: h 6= null  hhn ie  ehnix  x hn inull
+p = h;
+q = null;
+while (p != x && p != null) {
+
+q = p;
+p = p->n;
+
+}
+q->n = e;
+e->n = p;
+
+}
+
+Fig. 1. A procedure to insert the element pointed to by e into the non-empty, singly-linked list
+pointed by h.
+
+The task is not trivial because (i) a loop invariant may be more complex than a pro-
+grams pre-condition or post-condition, and (ii) it is infeasible to enumerate all the po-
+tential invariants expressible as CNF formulas over the predicates shown in Table 1. For
+instance, there are 6 variables in insert (including null), and hence 2666 clauses
+can be created from the 36 possible instantiations of each of the 6 binary predicates in
+Table 1. Therefore, the number of candidate invariants that can be formulated with these
+predicates is more than 22666. It would be infeasible to investigate them all explicitly.
+Our analysis algorithm is based on property-directed reachability [3]. It starts with
+the trivial invariant true, which is repeatedly refined until it becomes inductive.7 On
+each iteration, a concrete counterexample to inductiveness is used to refine the invariant
+by excluding predicates that are implied by that counterexample.
+
+When applied to the procedure in Fig. 1, our analysis algorithm terminated in about
+
+24 seconds, and inferred the following 13-clause loop invariant:
+
+q 6= e
+
+ (hhn ix  p = x  hhn iq)
+
+ (ehnie)  (qhn ip  qhnip)
+ (ehninull)  (x = null  phn ix )
+ hhn ie  (p = null  hhn iq)
+
+ (p = x  qhnip)
+ (hhn ip  p = null)
+ (q 6= x  p 6= null)
+ (p = q  qhnip)
+
+(1)
+
+ (hhn iq  hhn ix  hhniq  qhn ix )
+
+This loop invariant also guarantees that the code is memory safe. It is also possible
+to apply the analysis to infer sufficient conditions for memory safety using true post-
+conditions.
+
+Our analysis is also capable of finding concrete counterexamples when the proce-
+dure violates the specification. For example, when the conjunct x 6= h is added to
+the precondition in Fig. 1 and e 6= null is removed, the algorithm returns the coun-
+terexample trace shown in Fig. 2. Not surprisingly, e is null in the first state at the
+loop head (Fig. 1(a)). The loop body executes once, at which point we reach the loop
+
+7 An invariant I is inductive at the entry to a loop if whenever the code of the loop body is
+executed on an arbitrary state that satisfies both I and the loop condition, the result is a state
+that satisfies I .
+
+4
+
+null e q h
+
+p
+
+x
+
+v0
+
+v1
+
+v2
+
+v3
+
+v4
+
+v5
+
+v6
+
+v7
+
+null e q h
+
+p
+
+x
+
+v0
+
+v1
+
+v2
+
+v3
+
+v4
+
+v5
+
+v6
+
+v7
+
+(a)
+
+(b)
+
+Fig. 2. A two-state counterexample trace obtained from the algorithm when it is applied to a
+version of Fig. 1 in which the conjunct x 6= h was added to the precondition and e 6= null was
+removed. (a) First state at the loop head; (b) second state at the loop head, at which point the loop
+exits, and a null-dereference violation subsequently occurs.
+
+Algorithm 1: PDRA(Init, , Bad)
+
+1 R[1] := false
+2 R[0] := true
+3 N := 0
+4 while true do
+5
+
+if there exists 0  i < N
+
+such that R[i ] = R[i + 1]
+
+then
+
+return valid
+
+(r , A) := CheckA(Bad, R[N ])
+if r = unsat then
+
+N := N + 1
+R[N ] := true
+
+else
+
+reduceA(N , A)
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+Algorithm 2: reduceA(j , A)
+
+1 (r , A1) := CheckA(Init, A)
+2 if r = sat then
+3
+
+ := Model(Init  N j  (Bad)(N j ))
+if  is None then error abstraction failure
+else error concrete counterexample()
+
+5
+6 while true do
+(r , A2) :=
+7
+
+4
+
+8
+
+9
+
+CheckA((Init)  (R[j  1]  ), (A))
+
+if r = unsat then break
+else reduceA(j  1, A2)
+
+10
+11 for i = 0 . . . j do
+12
+
+R[i ] := R[i ]  (A1  A2)
+
+head in the state shown in Fig. 1(b). The loop then exits, and there is a null-dereference
+violation on e in the statement e->next = p.
+
+3 Property-Directed Reachability
+
+In this section, we present an adaptation of the IC3 algorithm that uses predicate ab-
+straction. In this paper, by predicate abstraction we mean the technique that performs
+verification using a given fixed set of abstraction predicates [9], and not techniques
+that incorporate automatic refinement of the abstraction predicates; e.g. CEGAR. The
+PDR algorithm shown in Alg. 1 is parameterized by a given finite set of predicates P
+expressed in a logic L. The requirements on the logic L are:
+
+R1 L is decidable (for satisfiability).
+R2 The transition relation for each statement of the programming language can be
+
+expressed as a two-vocabulary L formula.
+
+Then for a particular program, we are given:
+
+ A finite set of predicates P = {pi  L}, 1  i  n.
+
+5
+
+ The transition relation of the system as a two-vocabulary formula   L.
+ The initial condition of the system, Init  L.
+ The formula specifying the set of bad states, Bad  L.
+
+Let A be the full predicate abstraction domain over the predicates P. That is, each
+element A  A is an arbitrary Boolean combination of the predicates P. A  A is
+inductive with respect to Init and  if and only if Init  A and A    (A). ()
+renames the vocabulary of constant symbols and relation symbols occurring in  from
+{c, . . . , r , . . .} to {c , . . . , r , . . .}.  is () stripped of primes.
+
+If the logic L is propositional logic, then Alg. 1 is an instance of IC3 [3]. Our
+presentation is a simplification of more advanced variants [3, 7, 14]. For instance, the
+presentation omits inductive generalization, although our implementation does imple-
+ment inductive generalization (see 5). Furthermore, this simplified presentation brings
+out the fact that the PDR algorithm is really an analysis framework that is parameterized
+on the set of abstraction predicates P.
+
+The algorithm employs an unbounded array R, where each frame R[i]  A over-
+approximates the set of concrete states after executing the loop at most i times. The
+algorithm maintains an integer N , called the frame counter, such that the following
+invariants hold for all 0  i < N :
+
+1. Init is a subset of all R[i], i.e., Init  R[i].
+2. The safety requirements are satisfied, i.e., R[i]  Bad.
+3. Each of the R[i + 1] includes the states in R[i], i.e., R[i]  R[i + 1].
+4. The successors of R[i] are included in R[i + 1], i.e., for all ,  if  |= R[i] and
+
+h, i |= , then  |= R[i + 1].
+
+We illustrate the workings of the algorithm using a simple example, after which we
+
+explain the algorithm in detail.
+
+Example 1. Consider the program while (x != y) x = x.n; with precondi-
+tion Init def= y 6= null  x hn +iy. We wish to prove absence of null-dereference; that
+is, Bad def= x 6= y  x = null.
+
+Table 2 shows a trace of PDR running with this input; each line represents a SAT
+query carried out by PDRA (line 7) or by reduceA (line 8). At each stage, if the result
+(r) is unsat, then either we unfold one more loop iteration (N := N + 1) or we
+learn a new clause to add to R[j ] of the previous step, as marked by the  symbol.
+If the result is sat, the resulting model is used to further refine an earlier clause by
+recursively calling reduceA.
+
+On the first row, we start with R[0] = true, so definitely R[0]  Bad is satisfiable,
+for example with a model where x = y = null. The algorithm checks if this model repre-
+sents a reachable state at iteration 0 (see the second row), and indeed it is notthe result
+is unsat and the unsat-core is y = null (Inity = null is not satisfiable). Therefore, we
+infer the negation, y 6= null, and add that to R[0]. The algorithm progresses in the same
+mannere.g., after two more lines, R[0] = (y 6= null x 6= null), and so on. Eventually,
+the loop terminates when R[i] = R[i + 1] for some i; in this example, the algorithm
+terminates because R[1] = R[2]. The resulting invariant is R[2]  (y 6= null  x hn iy),
+a slight generalization of Pre in this case.
+
+
+6
+
+j Formula
+
+0 R[0]  Bad
+
+Model
+
+A := A(Model )
+
+(null, 1) 1 7 null A := x = null  x 6= y  x hn iy  yhn ix
+
+1 ((Init)  (R[1]  ))  (A) unsat
+unsat
+(null, 1) 1 7 null A := x = null  x 6= y  x hn iy  yhn ix
+(1, 1) 1 7 null A := x = y 6= null  x hn iy  yhn ix
+
+0 R[0]  Bad
+1 R[1]  Bad
+0 ((Init)  (R[0]  ))  (A)
+
+1 ((Init)  (R[1]  ))  (A) unsat
+
+Inferred
+
+x 6= null
+
+
+
+x 6= y
+
+
+
+1 R[1]  Bad
+0 ((Init)  (R[0]  ))  (A)
+
+(null, 1) 1 7 null A := x = null  x 6= y  x hn iy  yhn ix
+(1, 2) 1, 2 7 null A := x 6= y  x , y 6= null  x hn iy  yhn ix x hn iy
+
+1 ((Init)  (R[1]  ))  (A) unsat
+
+1 R[1]  Bad
+0 ((Init)  (R[0]  ))  (A)
+1 R[1]  Bad
+2 R[2]  Bad
+1 ((Init)  (R[1]  ))  (A)
+
+R[1] = R[2]
+
+(null, 1) 1 7 null A := x = null  x 6= y  x hn iy  yhn ix
+unsat
+unsat
+(null, 1) 1 7 null A := x = null  x 6= y  x hn iy  yhn ix
+unsat
+valid
+
+
+x hn iy
+
+
+x hn iy
+
+
+Table 2. Example run with Init def= y 6= null  x hn +iy, Bad def= x 6= y  x = null, and
+ def= (x  = n(x )). The output invariant is I := x hn iy.
+
+Some terminology used in the PDR algorithm:
+
+ Model() returns a model  satisfying  if it exists, and None if it doesnt.
+ The abstraction of a model , denoted by A(), is the cube of predicates from P
+
+that hold in : A() = V{p |  |= p, p  P} V{q |  |= q, q  P}.
+
+ Let   L is a formula in the unprimed vocabulary, A  A is a value in the
+
+unprimed or primed vocabulary. CheckA(, A) returns a pair (r , A1) such that
+
+ if   A is satisfiable, then r = sat and A1 is the abstraction of a concrete state
+in the unprimed vocabulary. That is, if the given A is in the unprimed vocabu-
+lary, then A() for some  |=   A; else if A is in the primed vocabulary,
+then A1 = A() for some (, ) |=   A.
+
+ if   A is unsatisfiable, then r = unsat, and A1 is a predicate such that
+A  A1 and   A1 is unsatisfiable. The vocabulary of A1 is the same as that
+of A. If A is in the primed vocabulary (as in line 8 of Alg. 2), CheckA drops
+the primes from A1 before returning the value.
+
+A valid choice for A1 in the unsatisfiable case would be A1 = A (and indeed the
+algorithm would still be correct), but ideally A1 should be the weakest such pred-
+icate. For instance, CheckA(false, A) should return (unsat, true). In practice,
+when   A is unsatisfiable, the A1 returned is an unsat core of   A constructed
+exclusively from conjuncts of A. Such an unsat core is a Boolean combination of
+predicates in P, and thus is an element of A.
+
+We now give a more detailed explanation of Alg. 1. Each R[i], i  0 is initialized
+to true (lines 2 and 10), and R[1] is false. N is initialized to 0 (line 3). At line 5,
+the algorithm checks whether R[i] = R[i + 1] for some 0  i < N . If true, then an
+inductive invariant proving unreachability of Bad has been found, and the algorithm
+returns valid (line 6).
+
+At line 7, the algorithm checks whether R[N ]  Bad is satisfiable. If it is unsatis-
+fiable, it means that R[N ] excludes the states described by Bad, and the frame counter
+
+7
+
+N is incremented (line 9). Otherwise, A  A represents an abstract state that satis-
+fies R[N ]  Bad. PDR then attempts to reduce R[N ] to try and exclude this abstract
+counterexample by calling reduceA(N , A) (line 12).
+
+The reduce algorithm (Alg. 2) takes as input an integer j , 0  j  N , and an
+abstract state A  A such that there is a path starting from A of length N j that reaches
+Bad. Alg. 2 tries to strengthen R[j ] so as to exclude A. At line 1, reduce first checks
+whether Init  A is satisfiable. If it is satisfiable, then there is an abstract trace of length
+N j from Init to Bad, using the transition relation . The call to Model at line 3 checks
+whether there exists a concrete model corresponding to the abstract counterexample.
+k denotes k unfoldings of the transition relation ; 0 is true. (Bad) k denotes k
+applications of the renaming operation () to Bad. If no such concrete model is found,
+then the abstraction was not precise enough to prove the required property (line 4);
+otherwise, a concrete counterexample to the property is returned (line 5).
+
+Now consider the case when Init  A is unsatisfiable on line 1. A1  A returned by
+
+the call to CheckA is such that Init  A1 is unsatisfiable; that is, Init  A1.
+
+The while-loop on lines 610 checks whether the (N  j )-length path to Bad can
+be extended backward to an (N  j + 1)-length path. In particular, it checks whether
+R[j  1]    (A) is satisfiable. If it is satisfiable, then the algorithm calls reduce
+recursively on j  1 and A2 (line 10). If no such backward extension is possible, the
+algorithm exits the while loop (line 9). Note that if j = 0, CheckA(R[j  1]  , A)
+returns (unsat, true), because R[1] is set to false.
+
+The conjunction of (A1  A2) to R[i], 0  i  j , in the loop on lines 1112
+eliminates abstract counterexample A while preserving the required invariants on R.
+In particular, the invariant Init  R[i] is maintained because Init  A1, and hence
+Init  (R[i](A1 A2)). Furthermore, A2 is the abstract state from which there is a
+(spurious) path of length N  j to Bad. By the properties of CheckA, A1 and A2 are
+each disjoint from A, and hence (A1  A2) is also disjoint from A. Thus, conjoining
+(A1  A2) to R[i], 0  i  j eliminates the spurious abstract counterexample A.
+Lastly, the invariant R[i]  R[i + 1] is preserved because (A1  A2) is conjoined
+to all R[i], 0  i  j , and not just R[j ].
+
+Formally, the output of PDRA(Init, , Bad) is captured by the following theorem:
+
+Theorem 1. Given (i) the set of abstraction predicates P = {pi  L}, 1  i  n
+where L is a decidable logic, and the full predicate abstraction domain A over P,
+(ii) the initial condition Init  L, (iii) a transition relation  expressed as a two-
+vocabulary formula in L, and (iv) a formula Bad  L specifying the set of bad states,
+PDRA(Init, , Bad) terminates, and reports either
+
+1. valid if there exists A  A s.t. (i) Init  A, (ii) A is inductive, and (iii) A  Bad,
+2. a concrete counterexample trace, which reaches a state satisfying Bad, or
+3. an abstract trace, if the inductive invariant required to prove the property cannot
+
+
+be expressed as an element of A.
+
+The proof of Theorem 1 in Appendix A is based on the observation that, when
+abstraction failure is reported by reduceA(j , A), the set of models i |= R[i] (j 
+i < N ) represents an abstract error trace.
+
+8
+
+Inductive Generalization. Each R[i] is a conjunction of clauses 1      m . If we
+detect that some j comprising a subset of literals of j , it holds that R[i]    j |=
+(j ), then j is inductive relative to R[i]. In this case, it is safe to conjoin j to R[k ]
+for k  i + 1. Spurious counter-examples can also be purged if they are inductively
+blocked. The advantages of this method are explained thoroughly by Bradley [3].
+
+4 Property-Directed Reachability for Linked-List Programs
+In this section, we describe how PDRA(Init, , Bad) described in Alg. 1 can be in-
+stantiated for verifying linked-list programs. The key insight is the use of the recently
+developed reachability logics for expressing properties of linked lists [17].
+
+4.1 Reachability Logics
+
+We use two related logics for expressing properties of linked data structures:
+
+ AFR is a decidable fragment of first-order logic with transitive closure (FOTC),
+which is an alternation-free quantified logic. This logic is used to express the ab-
+straction predicates P, and pre- and post-conditions. It is closed under negation,
+and decidable for both satisfiability and validity.
+
+ EAR allows there to be universal quantifiers inside of existential ones. It is used to
+define the transition formulas of statements that allocate new nodes and dereference
+pointers. This logic is not closed under negation, and is only decidable for satisfia-
+bility. We count on the fact that transition formulas are only used in a positive form
+in the satisfiability queries in Alg. 1.
+
+Although AFR is used as the language for defining the predicates in P, the wlp rules go
+slightly outside of AFR, producing EAR formulas (see Table 5 below).
+
+Definition 1. (EAR) A term, t, is a variable or constant symbol. An atomic formula
+is one of the following: (i) t1 = t2; (ii) r (t1, t2, . . . , ta) where r is a relation sym-
+bol of arity a (iii) A reachability constraint t1hf it2, where f is a function symbol. A
+quantifier-free formula (QFR) is a boolean combination of atomic formulas. A univer-
+sal formula begins with zero or more universal quantifiers followed by a quantifier-free
+formula. An alternation-free formula (AFR) is a boolean combination of universal for-
+mulas. EAR consists of formulas with quantifier-prefix .
+
+In particular, QFR  AFR  EAR.
+
+
+
+Technically, EAR forbids any use of an individual function symbol f ; however,
+when f defines an acyclic linkage chainas in acyclic singly linked and doubly linked
+listsf can be defined in terms of f  by using universal quantification to express that
+an element is the closest in the chain to another element. This idea is formalized by
+showing that for all  and , f () =   Ef (, ) where Ef is defined as follows:
+
+Ef (, ) def= hf +i   : hf +i  hf i,
+
+(2)
+
+where hf +i def= hf i   6= . However, because of the quantifier in Eqn. (2),
+the right-hand side of Eqn. (2) can only be used in a context that does not introduce a
+quantifier alternation (so that the formula remains in a decidable fragment of FOTC).
+
+9
+
+Name
+x hf iy
+f .ls [x , y]
+f .stable(h)
+
+Formula
+Ef (x , y)
+,  : x hf i  hf iy  hf i  (hf ix  x hf i)
+ : hhf i  alloc()
+
+f /b.rev [x , y] ,  : (cid:18)  6= null   6= null
+f .sorted [x , y] ,  : (cid:18)  6= null   6= null
+
+ x hf i  hf iy  x hf i  hf iy(cid:19)  (cid:0)hf i  hb i(cid:1)
+ x hf i  hf i  hf iy(cid:19)  dle(, )
+
+Table 3. AFR formulas for the derived predicates shown in Table 1. f and b denote pointer fields.
+dle is an uninterpreted predicate that denotes a total order on the data values. The intention is
+that dle(, ) holds whenever ->d  ->d, where d is the data field. We assume that the
+semantics of dle are enforced by an appropriate total-order background theory.
+
+A Predicate Abstraction Domain that uses AFR. The abstraction predicates used
+for verifying properties of linked list programs were introduced informally in Table 1.
+Table 3 gives the corresponding formal definition of the predicates as AFR formulas.
+Note that all four predicates defined in Table 3 are quantified. (The quantified formula
+for Ef is given in Eqn. (2).) In essence, we use a template-based approach for obtaining
+quantified invariants: the discovered invariants have a quantifier-free structure, but the
+atomic formulas can be quantified AFR formulas.
+
+We now show that the EAR logic satisfies requirements R1 and R2 for the PDR
+
+algorithm stated in 3.
+
+Decidability of EAR. To satisfy requirement R1 stated in 3, we have to show that
+EAR is decidable for satisfiability.
+
+EAR is decidable for satisfiability because any formula in this logic can be trans-
+lated into the effectively propositional decidable logic of  formulas described by
+Piskac et al. [21]. EAR includes relations of the form f  (the reflexive transitive closure
+of a function symbol f ), but only allows limited use of f itself.
+
+Every EAR formula can be translated into an  formula using the following
+steps [17]: (i) add a new uninterpreted relation Rf , which is intended to represent reflex-
+ive transitive reachability via f ; (ii) add the consistency rule linOrd shown in Table 4,
+which asserts that Rf is a partial order, i.e., reflexive, transitive, acyclic, and linear;8
+and (iii) replace all occurrences of t1hf it2 by Rf (t1, t2). (By means of this translation
+step, acyclicity is built into the logic.)
+
+Proposition 1 (Simulation of EAR). Consider EAR formula  over vocabulary V =
+def= [Rf (t1, t2)/t1hf it2]. Then  is a first-order formula over vo-
+hC, F , Ri. Let 
+cabulary V  = hC, , R  {Rf : f  Fi, and linOrd   is satisfiable if and only if the
+original formula  is satisfiable.
+
+This proposition is the dual of [16, Proposition 3, Appendix A.1] for validity of 
+formulas.
+8 Note that the order is a partial order and not a total order, because not every pair of elements
+
+must be ordered.
+
+10
+
+ : Rf (, )
+
+ , ,  : Rf (, )  Rf (, )  Rf (, )
+ ,  : Rf (, )  Rf (, )   = 
+ , ,  : Rf (, )  Rf (, )  (Rf (, )  Rf (, ))
+
+reflexivity
+transitivity
+acyclicity
+linearity
+
+Table 4. A universal formula, linOrd, which asserts that all points reachable from a given point
+are linearly ordered.
+
+wlp(C , Q )
+  Q
+Q [y/x ]
+y 6= null   : (Ef (y, )  Q [/x ])
+
+Command C
+assume 
+x = y
+x = y->f
+x->f = null x 6= null  Q [hf i  (hf ix  hf ix )/hf i]
+x->f = y
+x = malloc()  : alloc()  Q [(alloc()  ( =    = x ))/alloc())]
+free(x)
+
+x 6= null  Q [hf i  (hf ix  yhf i)/hf i]
+
+alloc(x )  Q [(alloc()   6= x )/alloc())]
+
+Table 5. Rules for wlp for atomic commands. alloc stands for a memory location that has been al-
+located and not subsequently freed. Ef (y, ) is the universal formula defined in Eqn. (2). Q[y/x ]
+denotes Q with all occurrences of atomic formula x replaced by y.
+
+Axiomatic specification of concrete semantics in EAR. To satisfy requirement R2
+stated in 3, we have to show that the transition relation for each statement Cmd of
+the programming language can be expressed as a two-vocabulary formula   EAR.
+Let wlp(Cmd, Q ) be the weakest liberal precondition of command Cmd with respect
+Q  EAR. Then, the transition formula for command Cmd is wlp(Cmd, Id), where Id is
+a two-vocabulary formula that specifies that the input and the output states are identical,
+i.e.,
+
+Id def= ^cC
+
+c = c   ^f F
+
+,  : hf i  hf i.
+
+To show that the concrete semantics of linked list programs can be expressed in
+EAR, we have to prove that EAR is closed under wlp; that is, for all commands Cmd
+and Q  EAR, wlp(Cmd, Q )  EAR.
+
+Table 5 shows rules for computing wlp for atomic commands. Note that pointer-
+related rules in Table 5 each include a memory-safety condition to detect null-
+dereferences. For instance, the rule for x->f = y includes the conjunct x 6=
+null; if, in addition, we wish to detect accesses to unallocated memory, the rule
+would be extended with the conjunct alloc(x ).
+
+The following lemma establishes the soundness and completeness of the wlp rules.
+
+Lemma 1. Consider a command C of the form defined in Table 5 and postcondition
+Q. Then,  |= wlp(C , Q ) if and only if the execution of C on  can yield a state 
+such that  |= Q.
+
+This lemma is the dual of [16, Prop. 1, App. A.1] for validity of  formulas.
+
+11
+
+Benchmark
+
+Memory-safety
+
++ data-structure integrity
+
+Additional properties
+
+A Time N # calls to Z3 # clauses A Time N # calls to Z3 # clauses
+
+create
+delete
+deleteAll
+filter
+insert
+prev
+last
+reverse
+sorted insert
+sorted merge
+make doubly-linked
+
+1.37 3
+14.55 4
+St 6.77 3
+2.37 3
+26.38 5
+0.21 2
+0.33 2
+5.35 5
+S 41.07 3
+26.69 4
+18.91 3
+
+28
+61
+72
+27
+220
+3
+3
+128
+48
+87
+44
+
+3
+6
+6
+4
+16
+0
+0
+4
+7
+10
+5
+
+St
+
+8.19 4
+9.32 3
+37.35 7
+55.53 5
+25.25 4
+11.64 4
+7.49 3
+146.42 6
+S
+51.46 4
+S 256.41 5
+R 1086.61 5
+
+96
+67
+308
+94
+155
+118
+41
+723
+134
+140
+112
+
+7
+7
+12
+5
+13
+6
+4
+11
+10
+14
+8
+
+Table 6. Experimental results. Column A signifies the set of predicates used (blank = only the
+top part of Table 1; S = with the addition of the sorted predicate family; R = with the addition
+of the rev family; St = with the addition of the stable family, where alloc conjuncts are added
+in wlp rules). Running time is measured in seconds. N denotes the highest index for a generated
+element R[i ]. The number of clauses refers to the inferred loop invariant.
+
+Weakest liberal preconditions of compound commands C1; C2 (sequencing) and
+
+C1|C2 (nondeterministic choice) are defined in the standard way, i.e.,
+
+wlp(C1; C2, Q)
+
+def
+= wlp(C1, wlp(C2, Q))
+
+wlp(C1|C2, Q)
+
+def
+= wlp(C1, Q)  wlp(C2, Q)
+
+Consider a program with a single loop while Cond do Cmd. Alg. 1 can be
+used to prove whether or not a precondition Pre  AFR before the loop implies that a
+postcondition Post  AFR holds after the loop, if the loop terminates: we supply Alg. 1
+with Init def= Pre,  def= Cond  wlp(Cmd, Id) and Bad def= Cond  Post. Furthermore,
+memory safety can be enforced on the loop body by setting Bad def= (Cond  Post) 
+(Cond  wlp(Cmd, true)).
+
+5 Experiments
+
+To evaluate the usefulness of the analysis algorithm, we applied it to a collection of
+sequential procedures that manipulate singly and doubly-linked lists (see Table 6). For
+each program, we report the predicates used, the time (in seconds), the number of PDR
+frames, the number of calls to Z3, and the size of the resulting inductive invariant, in
+terms of the number of clauses. All experiments were run on a 1.7GHz Intel Core i5
+machine with 4GB of RAM, running OS X 10.7.5. We used version 4.3.2 of Z3 [5],
+compiled for a 64-bit Intel architecture (using gcc 4.2 and LLVM).
+
+For each of the benchmarks, we verified that
+
+the program avoids null-
+dereferences, as well as that it preserves the data-structure invariant that the inputs
+and outputs are acyclic linked-lists. In addition, for some of the benchmarks we were
+also able to verify some additional correctness properties. While full functional cor-
+rectness, or even partial correctness, is hard to achieve using predicate abstraction, we
+were able to use simple formulas to verify several interesting properties that go beyond
+
+12
+
+Benchmark
+create
+
+delete
+deleteAll
+filter
+
+insert
+
+last
+prev
+reverse
+sorted insert
+make doubly-linked
+
+Property checked
+Some memory location pointed to by x (a global variable) that was allocated
+prior to the call, is not reachable from the list head, h.
+The argument x is no longer reachable from h.
+An arbitrary non-null element x of the list becomes non-allocated.
+Two arbitrary elements x and y that satisfy the filtering criterion and have an
+n-path between them, maintain that path.
+The new element e is reachable from h and is the direct predecessor of the
+argument x.
+The function returns the last element of the list.
+The function returns the element just before x, if one exists.
+If x comes before y in the input, then x should come after y in the output.
+The list rooted at h remains sorted.
+The resulting p is the inverse of n within the list rooted at h.
+
+Table 7. Some correctness properties that can be verified by the analysis procedure. For each of
+the programs, we have defined suitable Pre snf Post formulas in AFR.
+
+Benchmark Bug description
+insert
+filter
+
+Precondition is too weak (omitted e 6= null)
+Potential null dereference
+Typo: list head used instead of list iterator
+Corrupted data structure: a cycle is created
+
+reverse
+
+Automatic bug finding
+
+Time N # calls to Z3 c.e. size
+
+4.46 1
+6.30 1
+103.10 3
+0.96 1
+
+17
+21
+79
+9
+
+8
+3
+4
+2
+
+Table 8. Results of experiments with buggy programs. Running time is measured in seconds. N
+denotes the highest index for a generated element R[i ]. C.e. size denotes the largest number of
+individuals in a model in the counterexample trace.
+
+memory-safety properties and data-structure invariants. Table 7 describes the proper-
+ties we checked for the various examples. As seen from columns 3, 4, 8, and 9 of the
+entries for delete and insert in Table 6, trying to prove stronger properties can
+sometimes result in fewer iterations being needed, resulting in a shorter running time.
+In the remainder of the examples, handling additional properties beyond memory-safety
+properties and data-structure invariants required more processing effort, which can be
+attributed mainly to the larger set of symbols (and hence predicates) in the computation.
+Bug Finding. We also ran our analysis on programs containing deliberate bugs, to
+demonstrate the utility of this approach to bug finding. In all of the cases, the method
+was able to detect the bug and generate a concrete trace in which the safety or cor-
+rectness properties are violated. The output in that case is a series of concrete states
+0..N where each i contains the set of heap locations, pointer references, and pro-
+gram variables at step i. The experiments and their results are shown in Table 8. We
+found both the length of the trace and the size of the heap structures to be very small.
+Their small size makes the traces useful to present to a human programmer, which can
+help in locating and fixing the bug.
+Observations. It is worth noting that for programs where the proof of safety is trivial
+because every access is guarded by an appropriate conditional check, such as in prev
+and lastthe algorithm terminates almost immediately with the correct invariant
+
+13
+
+true. This behavior is due to the property-directedness of the approach, in contrast
+with abstract interpretation, which always tries to find the least fixed point, regardless
+of the desired property.
+
+We experimented with different refinements of inductive-generalization (3). Our
+algorithm could in many cases succeed without it, but without the most basic version
+that just pushes each clause (without removing literals), we observed runs with up to
+N = 40 iterations. On the other hand, the more advanced versions of inductive general-
+ization did not help us: trying to remove literals resulted in a large number of expensive
+(and useless) solver calls; and blocking spurious counter-examples using inductive gen-
+eralization also turned out to be quite expensive in our setting.
+
+We also noticed that the analysis procedure is sensitive to the number of abstraction
+predicates used. In particular, using predicates whose definitions involve quantifiers
+can affect the running time considerably. When the predicate families f .sorted [x , y]
+and f /b.rev [x , y] are added to A, running times can increase substantially (about 20-
+60 times). This effect occurred even in the case of sorted merge, where we did not
+attempt to prove an additional correctness property beyond safety and integrityand
+indeed there were no occurrences of the added predicates in the loop invariant obtained.
+As can be seen from Table 6, the PDR algorithm per se is well-behaved, in the sense
+that the number of calls to Z3 increased only modestly with the additional predicates.
+However, each call to Z3 took a lot more time.
+
+6 Related Work
+
+The literature on program analysis is vast, and the subject of shape analysis alone has
+an extensive literature. Thus, in this section we are only able to touch on a few pieces
+of prior work that relate to the ideas used in this paper.
+Predicate abstraction. Houdini [8] is the first algorithm of which we are aware that
+aims to identify a loop invariant, given a set of predicates as candidate ingredients.
+However, Houdini only infers conjunctive invariants from a given set of predicates.
+Santini [28, 27] is a recent algorithm for discovering invariants expressed in terms of
+a set of candidate predicates. Like our algorithm, Santini is based on full predicate
+abstraction (i.e., it uses arbitrary Boolean combinations of a set of predicates), and
+thus is strictly more powerful than Houdini. Santini could make use of the predicates
+and abstract domain described in this paper; however, unlike our algorithm, Santini
+would not be able to report counterexamples when verification fails. Other work infers
+quantified invariants [26, 15] but does not support the reporting of counterexamples.
+Templates are used in many tools to define the abstract domains used to represent sets
+of states, by fixing the form of the constraints permitted. Template Constraint Matrices
+[25] are based on inequalities in linear real arithmetic (i.e., polyhedra), but leave the
+linear coefficients as symbolic inputs to the analysis. The values of the coefficients are
+derived in the course of running the analysis. In comparison, a coefficient in our use of
+EAR corresponds to one of the finitely many constants that appear in the program, and
+we instantiated our templates prior to using PDR.
+
+As mentioned in 1, PDR meshes well with full predicate abstraction: in effect, the
+analysis obtains the benefit of the precision of the abstract transformers for full pred-
+icate abstraction, without ever constructing the abstract transformers explicitly. PDR
+
+14
+
+also allows a predicate-abstraction-based tool to create concrete counterexamples when
+verification fails.
+Abstractions based on linked-list segments. In this paper, our abstract domain is
+based on formulas expressed in AFR, which has very limited capabilities to express
+properties of stretches of data structures that are not pointed to by a program variable.
+This feature is similar to the self-imposed limitations on expressibility used in a num-
+ber of past approaches, including (a) canonical abstraction [24]; (b) a prior method for
+applying predicate abstraction to linked lists [20]; (c) an abstraction method based on
+must-paths between nodes that are either pointed to by variables or are list-merge
+points [18]; and (d) domains based on separation logics list-segment primitive [6, 2]
+(i.e., ls[x , y] asserts the existence of a possibly empty list segment running from the
+node pointed to by x to the node pointed to by y). Decision procedures have been used
+in previous work to compute the best transformer for individual statements that manip-
+ulate linked lists [29, 22].
+STRAND and elastic quantified data automata. Recently, Garg et al. developed
+methods for obtaining quantified invariants for programs that manipulate linked lists
+via an abstract domain of quantified data automata [10, 11]. To create an abstract do-
+main with the right properties, they use a weakened form of automatonso-called elas-
+tic quantified data automatathat is unable to observe the details of stretches of data
+structures that are not pointed to by a program variable. (Thus, an elastic automaton
+has some of the characteristics of the work based on linked-list segments described
+above.) An elastic automaton can be converted to a formula in the decidable fragment
+of STRAND over lists [19].
+Other work on IC3/PDR. Our work represents the first application of PDR to programs
+that manipulate dynamically allocated storage. We chose to use PDR because it has been
+shown to work extremely well in other domains, such as hardware verification [3, 7].
+Subsequently, it was generalized to software model checking for program models that
+use linear real arithmetic [14] and linear rational arithmetic [4]. Cimatti and Griggio [4]
+employ a quantifier-elimination procedure for linear rational arithmetic, based on an
+approximate pre-image operation. Our use of a predicate-abstraction domain allows us
+to obtain an approximate pre-image as the unsat core of a single call to an SMT solver
+(line 8 of Alg. 2).
+
+7 Conclusion
+
+Compared to past work on shape analysis, our approach (i) is based on full predicate
+abstraction, (ii) makes use of standard theorem proving techniques, (iii) is capable of
+reporting concrete counterexamples, and (iv) is based on property-directed reachability.
+The experimental evaluation in 5 illustrates these four advantages of our approach.
+The algorithm is able to establish memory-safety and preservation of data-structure
+invariants for all of the examples, using only the simple predicates given in Table 1.
+This result is surprising because earlier work on shape analysis that employed the same
+predicates [13] failed to prove these properties. One reason is that [13] only uses positive
+and negative combinations of these predicates, whereas our algorithm uses arbitrary
+Boolean combinations of predicates.
+
+15
+
+References
+
+1. T. Ball, A. Podelski, and S. Rajamani. Boolean and Cartesian abstraction for model checking
+
+C programs. In TACAS, 2001.
+
+2. J. Berdine, C. Calcagno, B. Cook, D. Distefano, P. OHearn, T. Wies, and H. Yang. Shape
+
+analysis for composite data structures. In CAV, 2007.
+
+3. A. Bradley. SAT-based model checking without unrolling. In VMCAI, 2011.
+4. A. Cimatti and A. Griggio. Software model checking via IC3. In CAV, 2012.
+5. L. de Moura and N. Bjrner. Z3: An efficient SMT solver. In TACAS, 2008.
+6. D. Distefano, P. OHearn, and H. Yang. A local shape analysis based on separation logic. In
+
+TACAS, 2006.
+
+7. N. E en, A. Mishchenko, and R. Brayton. Efficient implementation of property directed reach-
+
+ability. In FMCAD, 2011.
+
+8. C. Flanagan and K. R. M. Leino. Houdini, an annotation assistant for Esc/Java. In FME,
+
+2001.
+
+9. C. Flanagan and S. Qadeer. Predicate abstraction for software verification. In POPL, 2002.
+10. P. Garg, C. L oding, P. Madhusudan, and D. Neider. Learning universally quantified invariants
+
+of linear data structures. In CAV, 2013.
+
+11. P. Garg, P. Madhusudan, and G. Parlato. Quantified data automata on skinny trees: An ab-
+
+stract domain for lists. In SAS, 2013.
+
+12. S. Graf and H. Sa di. Construction of abstract state graphs with PVS. In CAV, 1997.
+13. L. Hendren. Parallelizing Programs with Recursive Data Structures. PhD thesis, Cornell
+
+Univ., Ithaca, NY, Jan 1990.
+
+14. K. Hoder and N. Bjrner. Generalized property directed reachability. In SAT, 2012.
+15. K. Hoder, L. Kov acs, and A. Voronkov. Invariant generation in vampire. In P. A. Abdulla
+and K. R. M. Leino, editors, TACAS, volume 6605 of Lecture Notes in Computer Science,
+pages 6064. Springer, 2011.
+
+16. S. Itzhaky, A. Banerjee, N. Immerman, A. Nanevski, and M. Sagiv. Effectively-propositional
+reasoning about reachability in linked data structures. Technical report, IMDEA, Madrid,
+Spain, 2011. Available at software.imdea.org/ab/Publications/cav2013tr.pdf.
+
+17. S. Itzhaky, A. Banerjee, N. Immerman, A. Nanevski, and M. Sagiv. Effectively-propositional
+
+reasoning about reachability in linked data structures. In CAV, 2013.
+
+18. T. Lev-Ami, N. Immerman, and M. Sagiv. Abstraction for shape analysis with fast and
+
+precise transformers. In CAV, 2006.
+
+19. P. Madhusudan and X. Qiu. Efficient decision procedures for heaps using STRAND. In SAS,
+
+2011.
+
+20. R. Manevich, E. Yahav, G. Ramalingam, and M. Sagiv. Predicate abstraction and canonical
+
+abstraction for singly-linked lists. In VMCAI, 2005.
+
+21. R. Piskac, L. de Moura, and N. Bjrner. Deciding effectively propositional logic using DPLL
+
+and substitution sets. J. Autom. Reasoning, 44(4):401424, 2010.
+
+22. A. Podelski and T. Wies. Counterexample-guided focus. In POPL, 2010.
+23. J. Reynolds. Separation logic: A logic for shared mutable data structures. In LICS, 2002.
+24. M. Sagiv, T. Reps, and R. Wilhelm. Parametric shape analysis via 3-valued logic. TOPLAS,
+
+24(3):217298, 2002.
+
+25. S. Sankaranarayanan, H. B. Sipma, and Z. Manna. Scalable analysis of linear systems using
+mathematical programming. In R. Cousot, editor, VMCAI, volume 3385 of Lecture Notes in
+Computer Science, pages 2541. Springer, 2005.
+
+26. S. Srivastava and S. Gulwani. Program verification using templates over predicate abstrac-
+
+tion. In PLDI, pages 223234, 2009.
+
+16
+
+27. A. Thakur, A. Lal, J. Lim, and T. Reps. PostHat and all that: Attaining most-precise inductive
+
+invariants. TR-1790, Comp. Sci. Dept., Univ. of Wisconsin, Madison, WI, Apr. 2013.
+
+28. A. Thakur, A. Lal, J. Lim, and T. Reps. PostHat and all that: Automating abstract interpreta-
+
+tion. Electr. Notes Theor. Comp. Sci., 2013.
+
+29. G. Yorsh, T. Reps, and M. Sagiv. Symbolically computing most-precise abstract operations
+
+for shape analysis. In TACAS, 2004.
+
+A Proofs
+
+Theorem 1 Given (i) the set of abstraction predicates P = {pi  L}, 1  i  n
+where L is a decidable logic, and the full predicate abstraction domain A over P,
+(ii) the initial condition Init  L, (iii) a transition relation  expressed as a two-
+vocabulary formula in L, and (iv) a formula Bad  L specifying the set of bad states,
+PDRA(Init, , Bad) terminates, and reports either
+1. valid if there exists A  A s.t. (i) Init  A, (ii) A is inductive, and (iii) A  Bad,
+2. a concrete counterexample trace, which reaches a state satisfying Bad, or
+3. an abstract trace, if the inductive invariant required to prove the property cannot
+
+be expressed as an element of A.
+
+Proof. The first two cases are trivial: if PDRA terminates returning some R[j ], j < N ,
+then Init  R[j ] by virtue of Init  R[0] and R[i]  R[i + 1] for every i < N , and
+R[j ]  Bad or the check at line line 7 would have failed. Also, R[j  1]  R[j ] so
+R[j ] is inductive.
+
+If PDRA returns a set of concrete states, then they have to be a concrete counterex-
+
+ample trace, as they are a model of Init  N j  (Bad) (N j ) (line 3 of reduceA).
+
+For the third case, we show that if the check on the first line of reduce is sat,
+|= Init,
+
+then there exists a chain of concrete states, j
+N |= Bad, and for any j  i < N there exist two concrete states ,  satisfying:
+
+j +1    N , such that j
+
+   (A(i ))
+   (A(i+1))
+ h, i |= 
+
+The key point is that, because the given abstraction can never distinguish any two states
+in (A(i )), the chain j
+j +1    N cannot be excluded by the abstract domain
+A, no matter what Boolean combination of the predicates of P is used. Moreover, the
+chain A(j ) A(j +1)    A(N ) is an abstract trace that leads from an initial
+state to an error state.
+
+Notice that the chain above may not be a concrete trace, there can be breaks
+
+between adjacent i s, within the same abstract element.
+
+Construction of (i )i=j ...N : Follow the chain of recursive calls to reduce with
+index values N down to j . The parameter A is always a cube of the form A(); take
+one  |= A for each call, forming a series that we denote by j , j +1, etc. We show
+that this series satisfies the above properties: At each call except the innermost, reduce
+made a recursive call at line 7, which means that R[j  1]    (A) was satisfiable;
+the returned cube A2 becomes A(j 1). Let h, i |= R[j  1]    (A), then
+ |= A2 = A(j 1);  |= A = A(j ); and h, i |=  as required.
+
+
+17
+

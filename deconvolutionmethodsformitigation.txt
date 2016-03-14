@@ -1,0 +1,1270 @@
+1254
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 14, NO. 9, SEPTEMBER 2005
+
+Deconvolution Methods for Mitigation of Transverse
+
+Blurring in Optical Coherence Tomography
+
+Tyler S. Ralston, Associate Member, IEEE, Daniel L. Marks, Farzad Kamalabadi, Member, IEEE, and
+
+Stephen A. Boppart, Member, IEEE
+
+AbstractImaging resolution in optical coherence tomography
+(OCT) is a key determinant for acquiring clinically useful optical
+biopsies of tissues. In contrast to light or confocal microscopy,
+the axial and transverse resolutions in OCT are independent
+and each can be analyzed individually. A method for mitigating
+transverse blurring and the apparent loss of transverse resolution
+in OCT by means of Gaussian beam deconvolution is presented.
+Such a method provides better representation of a specimen by
+using known physical parameters of a lens. To implement this
+method, deconvolution algorithms based on a focal-dependent
+kernel are investigated. First, the direct inverse problem is in-
+vestigated using two types of regularization, truncated singular
+value decomposition, and Tikhonov. Second, an iterative expec-
+tation maximization algorithm, the RichardsonLucy algorithm,
+with a beam-width-dependent iteration scheme is developed. A
+dynamically iterative RichardsonLucy algorithm can reduce
+transverse blurring by providing an improvement in the trans-
+verse point-spread-function for sparse scattering samples in
+regions up to two times larger than the confocal region of the lens.
+These deblurring improvements inside and outside of the confocal
+region, which are validated experimentally, are possible without
+introducing new optical imaging hardware or acquiring multiple
+images of the same specimen. Implementation of this method in
+sparse scattering specimens, such as engineered tissues, has the
+potential to improve cellular detection and categorization.
+
+Index TermsDeconvolution,
+
+focusing, Gaussian beam,
+
+RichardsonLucy, transverse resolution.
+
+I. INTRODUCTION
+
+T HE ABILITY to visualize cellular features in tissue is both
+
+clinically important for disease diagnosis and scientifically
+important for understanding fundamental biological processes.
+A central component to the pathological examination of cel-
+lular features is the visualization of the nucleus, including its
+
+Manuscript received December 19, 2004; revised May 20, 2005. This work
+was supported in part by the National Institutes of Health (1 R01 EB00108-1,
+S.A.B.) and in part by the Beckman Institute for Advanced Science and Tech-
+nology (T.S.R.). The animals used in this research were handled and cared for
+under the approved protocols of the Institutional Animal Care and Use Com-
+mittee at the University of Illinois Urbana-Champaign. The associate editor co-
+ordinating the review of this manuscript and approving it for publication was
+Dr. Gaudenz Danuser.
+
+T. S. Ralston and D. L. Marks are with the Beckman Institute for Advanced
+Science and Technology and the Department of Electrical and Computer Engi-
+neering, University of Illinois at Urbana-Champaign, Urbana, IL 61801 USA
+(e-mail: tralston@uiuc.edu; dmarks@uiuc.edu).
+
+F. Kamalabadi is with the Department of Electrical and Computer Engi-
+neering and the Coordinated Science Laboratory, University of Illinois at
+Urbana-Champaign, Urbana, IL 61801 USA (e-mail: farzadk@uiuc.edu).
+
+S. A. Boppart is with the Beckman Institute for Advanced Science and
+Technology, Department of Electrical and Computer Engineering, Depart-
+ment of Bioengineering, and College of Medicine, University of Illinois at
+Urbana-Champaign, Urbana, IL 61801 USA (e-mail: boppart@uiuc.edu).
+
+Digital Object Identifier 10.1109/TIP.2005.852469
+
+shape, contours, inclusions, optical staining and light-scattering
+properties, and its size, especially in relation to the cytoplasm
+within the cell [1]. Various stages of dysplasia and neoplasia are
+based primarily on the nuclear-to-cytoplasmic (N/C) ratio, and
+determining this ratio for regions in tissue can have a significant
+life-determining impact on the diagnosis, the prognosis, and the
+treatment regimen. The gold-standard for the microscopic in-
+vestigation of pathology is the use of stained histological sec-
+tions from resected tissues, observed most commonly with light
+microscopy. The use of selective stains on micron-thin tissue
+sections enables pathologists to highlight and visualize nuclear
+features with ease.
+
+In many medical and surgical scenarios, it may be more
+advantageous to visualize cellular features in vivo, without the
+need to invasively sample, process, section, and stain tissue
+specimens to make a diagnosis. In addition, the increasing
+interest in tissue engineering has prompted the need to more
+fully visualize and understand the complex process of tissue de-
+velopment under controlled conditions and in three dimensions,
+including the need to understand how cells function, proliferate,
+and organize into biocompatible tissues [2]. Advanced optical
+imaging techniques have been developed to improve our ability
+to visualize cellular features, including confocal, multiphoton
+microscopy, and optical coherence tomography (OCT).
+
+OCT is an emerging, real-time, near-infrared imaging and mi-
+croscopy technique capable of micrometer-scale resolutions in
+biological specimens [3][5]. OCT is based on the detection of
+backscattered light from tissue and is analogous to ultrasound
+imaging except near-infrared light is detected rather than sound.
+OCT can perform in vivo imaging deep within highly scattering
+tissues due to its ability to coherently reject multiply-scattered
+photons, and can image tissue without the addition of exogenous
+contrast agents. While OCT can generate cellular-level resolu-
+tion images, the technique does not currently have the advan-
+tage of using selective stains or contrast agents to label and im-
+prove visualization of cell nuclei as in histopathology. Visual-
+ization of cell nuclei using OCT is based on the optical scat-
+tering properties of the cell and its local environment [6]. There-
+fore, techniques that can be developed to improve the visualiza-
+tion of cells and nuclei will not only advance the use of OCT
+for medical and surgical diagnostic applications [7], but also en-
+able OCT to visualize complex cellular processes deep within
+three-dimensional (3-D) engineered tissue constructs [8].
+
+The ability to visualize cells and cellular features with OCT
+depends primarily on achieving high imaging resolution and
+preserving narrow point-spread-functions in the axial and trans-
+verse directions. Axial resolution is dependent on the optical
+
+1057-7149/$20.00  2005 IEEE
+
+RALSTON et al.: DECONVOLUTION METHODS FOR MITIGATION OF TRANSVERSE BLURRING
+
+1255
+
+Fig. 1.
+(a) Michelson interferometer setup for use in OCT. P is the reference
+path, P is the sample path, BS is the beam splitter, and h is the distance traveled
+by the reference mirror. (b) Interferogram of an impulse response for an OCT
+system with a low coherence source having a Gaussian spectrum and coherence
+length L .
+
+coherence in an OCT system and inversely proportional to the
+spectral bandwidth of the optical source. Conceptually, optical
+coherence is related to the wave field interactions. At optical
+frequencies, first-order field quantities fluctuate too rapidly to
+be detected directly. A direct detection method can only result
+in collecting data for mean power quantities over time periods
+far greater than the length of the period for a field. Therefore,
+by assuming ergodicity in the mean, mean square, or correla-
+tion function of the fields, the corresponding time-averages con-
+verge to the named ensemble averages. To facilitate these mea-
+surements, typically a Michelson interferometer is employed
+in an OCT system [Fig. 1(a)]. As the mirror in the reference
+arm moves, the light coming into the detector varies between
+states of constructive interference and destructive interference.
+A plot of the intensity versus difference in reference and sample
+path lengths is called an interferogram; it is the cross-correlation
+signal. Fig. 1(b) is a portion of an interferogram displaying the
+point-spread function (PSF) for a single perfect reflector, such as
+a mirror. The interferogram is a real signal; thus, it has positive
+and negative frequencies. The interferogram can be used to gen-
+erate a complex analytic signal that contains only positive fre-
+quencies. This is useful in OCT for generating phase and magni-
+tude information which are used to generate Doppler OCT and
+structural OCT images, respectively [9][11]. The complex ana-
+lytic signal is most relevant when deciding the feasibility of each
+algorithm presented in the following sections. Namely, some
+algorithms have positivity constraints [12], [13], which do not
+apply to OCT refractive index reconstruction, but still may be
+useful when imaging point-like scatterers.
+
+The coherence length
+
+is a measure of the full-width at
+half-maximum (FWHM) of the interferogram envelope, which
+is inversely proportional to the spectral bandwidth of the optical
+source. Thus, the coherence length directly determines the axial
+resolution in OCT images and for a Gaussian spectrum, the free-
+space axial resolution is given by
+
+Fig. 2. Geometry of a Gaussian beam for low and high NA lenses. These
+geometries are contrasted with the assumption of a collimated axial OCT scan.
+b is the confocal parameter, w is the beam radius at the focus, and L is the
+coherence length of the source.
+
+OCT images are typically formed by assembling adjacent
+axial scans to generate a two-dimensional, cross-sectional
+image [4], [5]. Ideally, the beam is perfectly collimated at every
+point in the sample. However, in the Gaussian optics model,
+the geometry of the beam profile after passing through a lens
+exhibits an hourglass shape as illustrated in Fig. 2. This profile
+assumes a Gaussian beam with a direction of propagation
+incident normal to the lens. The limitation of the Gaussian
+beam model compared to the physical reality is that usually
+when light enters the sample, the index of refraction varies, thus
+distorting the profile. Therefore, the transverse resolution is not
+constant, but has a dependence on the depth and the focal region
+of the lens. Lenses with a higher numerical aperture (NA) are
+able to focus a beam to a smaller spot size but produce a more
+pronounced hourglass shape. Hence, high NA lenses are typi-
+cally used for optical sectioning in planes parallel (en face) to
+the surface of the specimen such as in confocal or multiphoton
+microscopy [14]. Lenses with a lower NA are typically used
+for OCT, where a relatively uniform transverse resolution over
+the entire axial (depth) scan is preferred. Typically in OCT, the
+confocal parameter (distance about the focus where the beam
+width is relatively uniform) is chosen to closely match the
+depth of imaging penetration in a particular tissue type.
+
+The transverse resolution
+
+is characterized by the beam
+profile incident on the sample and the confocal parameter . The
+transverse resolution is determined by the diameter of the spot
+or the width of the incident beam on the sample where
+size
+the edges are determined by a decrease in intensity by a factor
+of
+
+and is approximated by
+
+is the focal length of the lens,
+
+where
+incident on the objective lens, and
+The confocal parameter can be defined as
+
+is the beam diameter
+is the central wavelength.
+
+(2)
+
+(1)
+
+(3)
+
+is the central wavelength and
+
+where
+is the FWHM of
+the power spectrum. The equation implies that either a shorter
+wavelength or a wider bandwidth of the power spectrum
+is
+needed to achieve a higher axial resolution.
+
+Equation (3) indicates that the size of the confocal region
+decreases as the square of the transverse resolution increases.
+Transverse resolution is significantly reduced and features are
+blurred outside of the confocal region. In OCT, the focusing
+
+1256
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 14, NO. 9, SEPTEMBER 2005
+
+Gaussian beam profile remains fixed, while varying the refer-
+ence arm pathlength scans the depth at which backscattered
+signal is detected. In OCT images, if a high NA objective is
+used and the depth scan length exceeds the dimension of the
+confocal region, then the widening of the transverse PSF will
+be evident in the image and features located outside of the
+confocal region will appear blurred. Our motivation for this
+research is to digitally reduce the transverse blurring outside
+of the confocal region by using deconvolution techniques. The
+solution will be to first determine how OCT measurements
+depend on the object when blurred with a Gaussian beam, and
+then find a suitable estimate of the original object.
+
+A diversity of deconvolution algorithms has been devel-
+oped for estimating a genuine signal based on idealizations of
+physical properties. For instance, the astronomy community
+has developed several algorithms, which have proven to be im-
+portant for extracting relevant information [15]. Furthermore,
+optical microscopy has benefited from use of these restoration
+techniques, which solve problems such as out-of-focus flare in
+fluorescence imaging [16]. Several deconvolution algorithms
+have been implemented in OCT to correct for axial blurring
+[17][19]. The deconvolution employed in these papers is
+based on the blurring induced by the incident electric field
+convolved with the impulse response of an object. The primary
+deconvolution techniques that have been used are the con-
+strained iterative restoration algorithm and the minimum-norm
+least-squares-error linear solution. These algorithms are de-
+signed for a single axial scan only and do not incorporate
+information as defined by the Gaussian optics model. Exper-
+imental setups have utilized additional optical hardware such
+as adaptive optics or axicon lenses to increase the transverse
+resolution over large depths in the specimen [20], [21]. Dy-
+namic focusing techniques have been implemented for OCT
+and optical coherence microscopy to generate images with
+high transverse resolutions over relatively large depths, which
+can be useful for en face imaging [4], [22]. Although these
+methods are feasible, each requires specific hardware modi-
+fications that can be expensive or difficult to control in the
+OCT system setup. One algorithm for generating OCT images
+with high transverse resolution over large apparent depth scans
+involves composite (C-mode) imaging [23], and is analogous
+to one used in ultrasound imaging. This algorithm involves
+the acquisition of multiple OCT images, with the beam focus
+placed at incrementally increasing depths within the specimen.
+From each image, data located within the short confocal region
+is segmented out and subsequently assembled to produce a
+single composite image. A significant advantage of the trans-
+verse deconvolution algorithm presented here is the reduction
+of the transverse blurring and the apparent improvement in
+transverse resolution inside and outside of the confocal region
+without the addition of new optical hardware or the need to
+acquire multiple images of the same specimen.
+
+The main objective of this paper is to investigate a set of al-
+gorithms for reducing the transverse blurring within an OCT
+image by deconvolving the Gaussian beam blurring caused by a
+lens. The next section demonstrates a general approach to mod-
+eling the physical parameters that characterize the lens. Then, a
+number of solutions to remove the effect of the Gaussian beam
+
+blur are discussed. Furthermore, simulations for each of these
+solutions are used to assess algorithm performance. Finally, the
+algorithms are applied to experimentally acquired OCT images
+to further characterize the Gaussian beam problem.
+
+A more uniform PSF throughout an image can impact the way
+an object is categorized. For example, a biological specimen
+with pre-cancerous cellular changes may go unnoticed if it lies
+in an imaging region where the blurring occurs [24], [25], and
+a varying PSF could result in a misdiagnosis [26]. Finally, there
+is the potential for reducing data acquisition time since a higher
+percentage of the OCT image may be more clinically useful.
+
+II. PHYSICAL MODEL
+
+To analyze the transverse PSF in OCT, it is necessary to
+create an accurate mathematical model of the transverse beam
+dynamics in the OCT system. Specifically, the Gaussian beam
+profile of the lens characterizes the depth-dependent transverse
+resolution. A Gaussian beam
+can be represented by the following equation:
+
+with a 3-D vector position
+
+where the Guoy phase shift is
+
+the radius of curvature of the wavefront is given by
+
+the depth dependent beam waist size is given by
+
+the radius in Cartesian coordinates is given by
+
+(4)
+
+(5)
+
+(6)
+
+(7)
+
+(8)
+
+and the optical source wavenumber (neglecting dispersion) is
+given by
+
+(9)
+
+is the group velocity (envelope speed),
+
+is the center wavenumber,
+
+is the frequency of the light,
+are the transverse coordinates, and
+
+where
+is a con-
+is the center
+stant amplitude,
+is the waist ra-
+frequency,
+is the axial
+and
+dius,
+coordinate where
+at the boundary of the confocal re-
+gion [27]. The phase-front emitted from a scattering object in
+the Gaussian beam has a curvature dependent on the phase term
+. The phase-fronts are approximately planar at
+
+RALSTON et al.: DECONVOLUTION METHODS FOR MITIGATION OF TRANSVERSE BLURRING
+
+1257
+
+the beam waist, but become increasingly parabolic at distances
+away from the waist (outside of the confocal region). At dis-
+tances even farther from the beam waist, the Gaussian phase-
+front has approximately spherical constant-time surfaces. In this
+work, all of the phase-fronts are approximated as planar since
+the areas near the confocal region are of primary interest. Fig. 3
+shows the curved phase-fronts in gray and the planar phase-
+fronts as dashed lines. Rewriting the Gaussian beam equation
+for planar phase-fronts gives
+
+(10)
+
+The first Born approximation is usually sufficient to accu-
+rately reconstruct an OCT image. Fig. 3 also diagrams the first
+Born approximation as applied to the Gaussian beam decon-
+and
+volution problem. The Greens function is given by
+represents the reflection due to a change in index in the object
+. The Gaussian beam profile is given by
+being imaged,
+is the distance from the center of the lens.
+Thus, a first Born (single scattering) approximation of the elec-
+tric field scattered by the object is given by
+
+, where
+
+where
+
+denotes 3-D spatial convolution and
+
+(11)
+
+(12)
+
+A single axial scan of OCT data can be written as the projec-
+tion of reflected light returning into the lens from the Gaussian
+is the amplitude of the collected electric field
+beam.
+scaled relative to the incident field that has been scattered by
+the object
+
+(13)
+
+and
+
+are also functions of
+
+Notice that
+. When the
+spherical waves from the Gaussian beam are scattered off of the
+object, they are matched to the mode re-entering the fiber. Thus,
+sphere. The
+field collected by the fiber is approximated in the paraxial zone
+by
+
+is approximated by a delta function on the
+
+(14)
+
+Note that the square operation in (14) is on the complex
+Gaussian beam profile, and not its squared magnitude. Next, by
+integrating over the frequencies present in the bandwidth of the
+is the power spectral density, we can generate
+laser, where
+a formula for the axial scan data as a function of time and space
+
+(15)
+
+Fig. 3. Gaussian beam wavefronts (solid gray) from nonlinear exponential
+quantities and an approximation (dashed) with the quantities removed, ~r is the
+vector from the center of the lens to a scatterer, G(~r) is the Gaussian envelope,
+(~r) is the Greens function, and (~r) is the index of refraction change in the
+imaged medium. Vertical arrows represent the incident and reflected light path
+for the first Born approximation (single backscatter).
+
+Equation (15) can be rewritten using (14) and (10) to get
+
+(16)
+
+where
+produces coherence gating, the quantity
+in square brackets represents a separable Gaussian convolution
+, and
+kernel having a depth-dependent standard deviation
+the remaining terms represent a depth-dependent magnitude and
+phase. The coherence gating, the magnitude, and the phase in
+(16) are only depth dependent and, thus, not dependent on the
+transverse coordinates. Therefore, the convolution integral of
+electric fields can be treated as a convolution integral of inten-
+sities, which can be considered separately [17]. The separable
+Gaussian kernel allows us to estimate a -blurred version of the
+object for an axial scan,
+. Namely, the bracketed quan-
+tity in (16), which contains the convolution integral of the trans-
+verse coordinates, can be rewritten as
+
+(17)
+
+where the new bracketed term is a -blurred version of the object
+. Thus, by applying a deconvo-
+and can be denoted by
+lution algorithm to each of the approximated Gaussian kernels
+
+1258
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 14, NO. 9, SEPTEMBER 2005
+
+direction, the object can be reconstructed with blurring
+
+in the
+in only the
+
+direction.
+
+Equation (17) applies to any index of refraction distribution,
+. To this point, the forward problem has been de-
+scribed where the fringe data retrieved is complex analytic. In
+some cases, for use with a positivity-constrained algorithm or
+with an intermediary demodulation circuit, signal analysis of
+the magnitude data is desired. Also, for objects consisting of
+sparse point-like scatterers, such as would be the case for cells
+distributed in a 3-D engineered tissue matrix, the points will be
+sufficiently angularly or axially separated so that the point re-
+sponses will not overlap in the interferogram. Thus, the magni-
+tude of the interferogram can then be approximated by summing
+the magnitudes of the interferograms of the constituent points
+separately, rather than the full complex signals. In this case, we
+approximate (17) as a convolution of magnitudes
+
+(18)
+
+Similarly, deconvolving each of the magnitude Gaussian kernels
+in the
+direction, the object can be reconstructed with blur-
+ring in only the
+direction. The -blurred image represents the
+cross-sectional OCT image, which is scanned along the
+directions. Since the Gaussian kernel is separable, the deconvo-
+lution could also be computed for the -blurred image, along the
+directions. This physical model of the Gaussian beam
+
+and
+
+and
+
+can now be used in context with our proposed algorithms.
+
+III. METHODOLOGY
+
+, where
+
+The physical model is a linear system that takes the general
+is a depth-de-
+form
+pendent linear operator. For simplicity, the forward problem will
+is a row of
+be defined for each depth as
+is the row-wise refractive index of
+,
+the OCT signal
+is the depth , dependent Gaussian
+the object
+beam blurring operator, and is noise generated by electronic or
+shot noise contributions. Note,
+is the convolution matrix asso-
+-tap Gaussian filter, where
+ciated with each depth-dependent
+from (17), and the singular value de-
+
+, where
+
+,
+
+composition (SVD) is given by
+
+...
+...
+...
+...
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+...
+
+where
+
+and
+
+are a set of orthonormal vectors and
+
+column vectors, respectively, for the diagonal matrix
+
+and
+of
+
+singular values
+
+.
+
+For the underdetermined case, an optimal criterion consid-
+ered is the minimum norm solution, which will minimize the
+variance
+
+(20)
+
+This solution is precisely the pseudoinverse [28].
+
+Since this design models noise, there will be a need for a regu-
+larized solution; otherwise, the solution will be overly sensitive
+to changes in the OCT signal due to noise. Next, the truncated
+SVD (TSVD) is used to provide a regularized solution
+
+(21)
+
+is determined by a regularization parameter,
+
+where
+, which
+are retained
+is a corresponding threshold such that all
+[29]. This method is chosen because it reduces the emphasis on
+smaller singular values in the minimum norm solution, which
+are more correlated to the noise. Tikhonov regularization is also
+employed
+
+(22)
+
+where
+is a regularization parameter, which can be estimated to
+is the
+be half the noise variance for a reasonable solution when
+identity matrix [30]. There exist methods for a robust data de-
+, but prior numerical experiments justify our choice of
+pendent
+as being the identity matrix [31]. Tikhonov regularization of-
+fers a method for compromising between the size of the residual
+norm and the side constraint
+
+. Thus
+
+(23)
+
+An
+
+known
+
+deconvolution
+converges
+to
+
+scheme,
+as
+iterative
+the maximum likeli-
+RichardsonLucy,
+hood solution for Poisson statistical data, which is appropriate
+in some cases for modeling optical data that has shot noise, a
+result of counting statistics [32]. Each pixel in the reconstructed
+image is updated on every iteration. The algorithm is
+implemented in the following manner:
+
+(24)
+
+where
+is the PSF, in this case, the Gaussian blurring kernel
+[12], [13]. This method forces the restored image to be positive
+for each iteration. Thus, the use of complex analytic data as re-
+trieved from OCT may not be fully utilized. However, since a
+magnitude image is a subsampled version of the subresolution
+
+(19)
+
+RALSTON et al.: DECONVOLUTION METHODS FOR MITIGATION OF TRANSVERSE BLURRING
+
+1259
+
+complex analytic signal, the complex information may be ne-
+glected in the case of transverse blurring for the reconstructed
+image as shown in (18).
+
+The RichardsonLucy algorithm has been shown to monoton-
+ically reduce the Csiszars I-divergence for successive iterations
+between the measured blurred image and a blurred version of
+the estimated image [33]. Unfortunately, once the I-divergence
+between iterations is minimized, the effect of additional itera-
+tions only serves to introduce error. For this reason, we would
+like to have an algorithm that adapts to the amount of defocus in
+the image. Thus, an iteration number having a dependence di-
+rectly related to the standard deviation of the Gaussian blurring
+kernel is appropriate. The dynamic iteration method was devel-
+oped empirically in simulations and applied accordingly for the
+real data.
+
+Performing convolution as a zero-padded cyclic convolution
+in the Fourier domain decreases the computational expense
+of these algorithms. The RichardsonLucy algorithm often
+requires multiple iterations, thus increasing the computational
+expense compared to the regularization algorithms.
+
+IV. SIMULATIONS
+
+The simulations of the OCT system follow a method devel-
+oped by Marks, et al. [18]. In this OCT model, filtering the inter-
+ferogram with an appropriate laser spectrum simulates the axial
+resolution.
+
+To create simulation fringes similar to OCT for a set of
+point (delta) scatterers, (reflections from subresolution-sized
+particles), four parameters must be taken into account.
+
+1) The point scatterers have random phase (to model
+random positions of particles situated within a coherence
+volume).
+
+2) The system has bandwidth support limited by the laser
+
+spectrum (bandwidth of 100 nm, centered at 820 nm).
+
+3) The lens creates a Gaussian beam depth-dependent trans-
+
+verse blur (focal length of
+
+mm, spot size of
+
+m, confocal parameter of
+
+m, and diameter of
+
+beam on the lens of
+
+mm).
+
+dB).
+
+4) The system has Gaussian white noise (SNR
+After creating point scatterers, the first parameter above is
+easily simulated by multiplying each of the scatterers by a
+random phase value. Next, the band-limited support on the
+signal defines the axial resolution of the system. Therefore, the
+column data is band limited by taking the fast Fourier transform
+nm)
+(FFT), multiplying by an appropriate filter (
+, and then taking the inverse
+with cut offs at
+FFT (IFFT). The effects of these two parameters can be seen
+in Fig. 4(a) and represent our deblurred and denoised image
+where delta scatterers are oversampled in the axial direction.
+
+and
+
+Next, to simulate the Gaussian beam blurring, which would
+be caused by a lens as described in (16), a matrix is created
+where each row is a depth-dependent PSF. Thus, each row of
+the image is convolved with the corresponding Gaussian kernel
+whose standard deviation is given in (7). Finally, to generate a
+noisy version
+
+of the simulation image
+
+(25)
+
+Fig. 4. Simulated OCT image of oversampled point scatterers. (a) Before (left)
+a Gaussian beam blur and (right, bottom) zoom on scatterers, when parameters
+1 and 2 are satisfied. (b) After (left) a Gaussian beam blur and (right, bottom)
+zoom on scatterers, with SNR = 35 dB, and when parameters 3 and 4 are
+satisfied.
+
+where
+is a vector of independent identically distributed noise
+samples. The signal-to-noise ratio (SNR) is determined by the
+variance of the image,
+
+, over the variance of the noise
+
+SNR dB
+
+(26)
+
+, was determined for a
+The standard deviation of the noise,
+SNR value of 35 dB, which is less than the typical dynamic
+range for data contained within an OCT image. The method-
+ology for this testing is to characterize the resilience of the al-
+gorithm. Testing algorithms with a low SNR serves to evaluate
+the algorithm performance and determine useful regularization
+parameters. The resulting image after addition of Gaussian blur-
+ring and white noise is seen in Fig. 4(b). All simulated fig-
+ures have the same scatterers at the same positions for direct
+comparison.
+
+The pseudoinverse with TSVD regularization was used to
+generate the minimum norm solution using both the magnitude
+
+1260
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 14, NO. 9, SEPTEMBER 2005
+
+Fig. 5. TSVD,  = 0:01, SNR = 35 dB, using (a) magnitude signal (ringing
+artifacts) and (b) complex analytic signal (minimal ringing).
+
+Fig. 6. Tikhonov regularization,  = 0:02, SNR = 35 dB, using
+(a) magnitude signal (some ringing artifacts) and (b) complex analytic signal
+(minimal ringing).
+
+and complex analytic fringe data. Several values for the regular-
+optimally bal-
+ization parameter were explored, but
+anced the noise with the reconstruction (verified with the Picard
+condition) [34]. Fig. 5(a) shows the reconstruction based on only
+the magnitude data. Reconstruction artifacts such as ringing are
+quite apparent in this image, whereas the reconstruction with the
+complex analytic signal has minimal ringing artifacts, as seen
+in Fig. 5(b). The artifacts are an effect of low-pass filtering in
+the transverse direction. The high-frequency data is lost when
+calculating the magnitude of the complex data, thus producing
+sidelobes of the individual scatterers in the spatial domain. The
+resulting sidelobes appear as ringing artifacts around each point
+scatterer.
+
+-curve, the plot of the seminorm
+
+TheminimumnormsolutionwithTikhonovregularizationwas
+acquired using both the magnitude and complex analytic fringe
+versus the
+data. The
+, is a means of displaying the influence of
+residual norm
+aregularizationandaidsinchoosinganappropriateregularization
+[34]. Several values for the regularization parameter
+parameter,
+optimally balanced the seminorm
+were explored, but
+. Fig. 6(a) shows the
+with the residual norm when
+
+reconstruction based on only the magnitude data. Reconstruction
+artifacts such as ringing are somewhat apparent in this image,
+whereas the reconstruction with the complex analytic signal
+has minimal ringing artifacts, as seen in Fig. 6(b).
+
+the image with increasing number of
+
+The RichardsonLucy algorithm was implemented, and
+comparisons demonstrate the improvement of blurry regions
+of
+iterations. The
+RichardsonLucy algorithm makes use of only the magnitude
+fringe data since it has a positivity constraint for each iteration.
+Fig. 7(a) shows the magnitude data reconstruction for one
+iteration of the RichardsonLucy algorithm. Comparatively,
+since Gaussian beam blurring is a physical parameter, a
+number of iterations can be associated with each focal depth
+in the lens. Fig. 7(b) shows the magnitude for a dynamically
+iterative reconstruction where the number of iterations is depth
+dependent. Specifically, the iterations increase proportional to
+the size of the Gaussian blurring kernel from 1 to 21. This
+method was chosen by monitoring the convergence of the
+.
+absolute difference images at each iteration
+Other authors have addressed the optimality criterion for
+
+RALSTON et al.: DECONVOLUTION METHODS FOR MITIGATION OF TRANSVERSE BLURRING
+
+1261
+
+TABLE I
+
+MEAN-SQUARE ERROR OF RECONSTRUCTION
+
+USING EACH DECONVOLUTION METHOD
+
+Fig. 7. RichardsonLucy reconstruction using magnitude data, SNR = 35 dB,
+for (a) one iteration and for (b) depth-dynamic iterations (1 to 21 linearly spaced
+from focus to image edge).
+
+Fig. 8. Application of the dynamic RichardsonLucy algorithm on a tissue
+phantom. (a) Original and (b) RichardsonLucy corrected image.
+
+selecting parameters for algorithms like the RichardsonLucy,
+which lead to image convergence [35]. Since RichardsonLucy
+sharpens more for each iteration, the parameters are chosen
+according to a minimum acceptable PSF width, specified by
+the resolution.
+
+For each of these algorithms, Table I lists and compares the
+
+mean-square error
+
+(27)
+
+and
+
+where
+are the image dimensions. The dynamic
+RichardsonLucy algorithm reconstructs the image with the
+minimum mean-square error of all the tested algorithms. These
+results provide quantitative justification for employing the
+dynamically iterative algorithm on real data.
+
+V. EXPERIMENTAL DATA
+
+A tissue phantom was designed to test the PSF of our
+experimental setup. To design an appropriate tissue phantom,
+
+it
+is desirable to include individual scatterers on the size
+order of cellular structures and near our resolution limit.
+A solution of 4.0 g of polydimethylsiloxane (PDMS) was
+mixed with 7 mg of Magnetite Fe O , each having an
+average diameter of 1.9 m. These microparticles act as point
+scatterers in OCT, thus providing a physical embodiment of our
+simulated experiment. Furthermore, these microparticles are
+used to simulate individual cells/nuclei in engineered tissues
+[8]. Images were taken at an axial scan rate of 25 Hz, with
+a lens having a 20-mm focal length and a 6-mm diameter, a
+system bandwidth of 100-nm FWHM, a center wavelength
+of 800 nm, and 15.6 mW of power incident on the sample.
+The width of the unfocused beam incident on the lens is
+1.3 mm, which dictates a NA of 0.065 in free space. The
+calculated axial resolution is 3 m, the transverse resolution
+was 15 m, and the confocal region was 430 m. Since the
+RichardsonLucy algorithm provides the best results in the
+simulations, Fig. 8 shows the original and RichardsonLucy
+corrected images. The final deblurred region can be estimated
+by measuring the distance of the resolved points outside of
+the confocal region. The criteria for determining a resolved
+
+1262
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 14, NO. 9, SEPTEMBER 2005
+
+the nuclei appear more distinct in the deconvolved image
+[Fig. 9(b)].
+
+VI. CONCLUSION
+
+In this paper, we have demonstrated several deconvolu-
+tion methods for mitigating the transverse blurring in OCT.
+From the simulations, both the regularized solutions and the
+RichardsonLucy algorithm solution produce comparable
+results, although there is a drawback to the regularized solution
+when using the acquired data, which seems to be a result of
+phase instability among acquired adjacent axial scans. The
+RichardsonLucy algorithm appears to be more robust to these
+errors since the unstable phase fronts among axial scans do
+not greatly modify the magnitude image. Ideally, phase stable
+measurements are important for continued work with the
+regularized solution. Furthermore, a complete solution to the
+inverse scattering problem is likely the next step for improving
+performance of the regularized solution. This is because a
+complete regularized solution would assume a strict model,
+whereas the dynamic RichardsonLucy algorithm assumes an
+approximated model.
+
+Some of the limitations of the RichardsonLucy algorithm are
+a result of our inability to incorporate speckle noise, dispersion,
+multiply-scattered light, and limited bandwidths into the algo-
+rithm. Yet, it offers the lowest mean-squared-error compared
+to the other deconvolution methods evaluated. This is because
+the algorithm tends to concentrate energies near boundaries,
+which provides a good approximation to cellular boundaries
+and subcellular features, and tends to be more robust against
+errors from the defocused blur. The RichardsonLucy algorithm
+deblurs the intensity of an image, therefore concentrating the
+power near the strong scatterers. These strong scatterers often
+correspond to the cell nuclei and membranes. Therefore, the
+implementation of a dynamically iterative RichardsonLucy
+algorithm performs well for distinguishing physical features of
+the specimen at the cellular level. In particular, the transverse
+deblurring effect of this algorithm can extend the apparent
+confocal region of the image, providing less transverse blurring
+in the OCT image over extended distances, without the need
+for implementing new optical hardware or the acquisition,
+segmentation, and assembly of multiple OCT images from the
+same specimen. The improvements afforded by a dynamically
+applied RichardsonLucy algorithm are most pronounced when
+imaging specimens at the cellular level and at the resolution
+limits afforded by current OCT systems.
+
+ACKNOWLEDGMENT
+
+The authors would like to thank A. Oldenburg, R. Stack, and
+W. Luo from the Beckman Institute for Advanced Science and
+Technology for their technical contributions to this research, as
+well as C. Xu for his careful review of this manuscript.
+
+REFERENCES
+
+[1] V. Kumar, N. Fausto, and A. Abul, Robbins & Cotran Pathologic Basis
+
+of Disease, 7th ed. Philadelphia, PA: Saunders, 2004.
+
+Fig. 9. Application of
+the dynamic RichardsonLucy algorithm to in
+vivo cellular data. OCT images of the mesenchymal cells of the Xenopus
+laevis, represented (a) without deconvolution and (b) with the dynamic
+RichardsonLucy algorithm. Comparison of cellular feature within the dashed
+box outside the confocal region shows more distinct cell boundaries and
+features in (b).
+
+point is that the energy compaction of particles outside of the
+confocal region in the new image is equivalent to the energy
+compaction of particles on the edge of the confocal region in
+the original image. Based on this image data, the deblurred
+region extended over 500 m above and below the confocal
+region, or a total distance of approximately 1.43 mm.
+
+A second experiment was conducted by acquiring OCT image
+data from an in vivo Xenopus laevis (African frog) tadpole, a
+common developmental biology animal model and one used
+routinely for demonstrating OCT imaging performance [6].
+Imaging along the dorsal surface of the tadpole, details of
+mesenchymal cells were imaged with a 20-mm focal length
+lens at an axial scan rate of 40 Hz. The image has the
+same corresponding axial and transverse resolutions, and,
+therefore,the same confocal parameter, as the previous image
+(Fig. 8). Fig. 9 illustrates the original and corrected images.
+The original image exhibits a widening transverse PSF out
+of the confocal region due to the effect of the Gaussian beam,
+which spreads the energy of a cellular boundary or feature
+across several pixels, thus blurring and misrepresenting the
+cellular structure. By comparing cellular regions outside of
+the confocal region in the two images [boxed regions in
+Fig. 9(a) and (b)], the boundaries of the cell membranes and
+
+RALSTON et al.: DECONVOLUTION METHODS FOR MITIGATION OF TRANSVERSE BLURRING
+
+1263
+
+[2] J. P. Vacanti and R. Langer, Tissue engineering: the design and fabrica-
+tion of living replacement devices for surgical reconstruction and trans-
+plantation, Lancet, vol. 354, pp. SI32SI34, 1999.
+
+[3] D. Huang, E. A. Swanson, C. P. Lin, J. S. Schuman, W. G. Stinson,
+W. Chang, M. R. Hee, T. Flotte, K. Gregory, C. A. Puliafito, and J.
+G. Fujimoto, Optical coherence tomography, Science, vol. 254, pp.
+11781181, 1991.
+
+[4] J. M. Schmitt, Optical coherence tomography (OCT): a review, IEEE
+J. Sel. Topics Quantum Electron., vol. 5, no. 4, pp. 12051215, Jul./Aug.
+1999.
+
+[5] B. E. Bouma and J. G. Tearney, The Handbook of Optical Coherence
+
+[25] S. A. Boppart, W. Luo, D. L. Marks, and K. W. Singletary, Optical
+coherence tomography: feasibility for basic research and image-guided
+surgery of breast cancer, Breast Cancer Res. Treat., vol. 84, pp. 8597,
+2004.
+
+[26] L. K. Jensen, L. Thrane, P. E. Andersen, A. Tycho, F. Pedersen, S. An-
+dersson-Engels, N. Bendsoe, S. Svanberg, and K. Svanberg, Optical
+coherence tomography in clinical examinations of nonpigmented skin
+malignancies, in Proc. SPIE Optical Coherence Tomography and Co-
+herence Techniques, vol. 5140, 2003, pp. 160167.
+
+[27] B. E. A. Saleh and M. C. Teich, Fundamentals of Photonics. New
+
+York: Wiley, 1991.
+
+Tomography. New York: Marcel-Dekker, 2001.
+
+[28] R. E. Blahut, Theory of Remote Image Formation. Cambridge, U.K.:
+
+[6] S. A. Boppart, B. E. Bouma, C. Pitris, G. J. Tearney, J. F. Southern,
+M. E. Brezinski, and J. G. Fujimoto, In vivo cellular optical coherence
+tomography imaging, Nature Med., vol. 4, pp. 861864, 1998.
+
+[7] S. A. Boppart, M. E. Brezinski, C. Pitris, and J. G. Fujimoto, Optical
+coherence tomography for neurosurgical imaging of human intracortical
+melanoma, Neurosurgery, vol. 43, pp. 834841, 1998.
+
+[8] W. Tan, A. Sendemir-Urkmez, L. J. Fahrner, R. Jamison, D. Leckband,
+and S. A. Boppart, Structural and functional optical imaging of three-
+dimensional engineered tissue development, Tissue Eng., vol. 10, pp.
+17471756, 2004.
+
+[9] Z. Chen, Y. Zhao, S. M. Srinivas, J. S. Nelson, N. Prakash, and R. D.
+Frostig, Optical Doppler tomography, IEEE J. Sel. Topics Quantum
+Electron., vol. 5, no. 4, pp. 11341141, Jul./Aug. 1999.
+
+[10] A. V. Zvyagin, J. B. Fitzgerald, K. K. M. B. D. Silva, and D. D. Sampson,
+Real-time detection for Doppler optical coherence tomography, Opt.
+Lett., vol. 25, pp. 16451647, 2000.
+
+[11] Y. Zhao, Z. Chen, C. Saxer, S. Xiang, J. F. de Boer, and J. S. Nelson,
+Phase-resolved optical coherence tomography and optical Doppler to-
+mography for imaging blood flow in human skin with fast scanning
+speed and high velocity sensitivity, Opt. Lett., vol. 25, pp. 114116,
+2000.
+
+[12] L. B. Lucy, An iterative technique for rectification of observed distri-
+
+butions, Astron. J., vol. 79, pp. 745765, 1974.
+
+[13] W. H. Richardson, Bayesian-based iterative method of image restora-
+
+tion, J. Opt. Soc. Amer., vol. 62, pp. 5559, 1972.
+
+[14] J. A. Izatt, M. R. Hee, G. M. Owen, E. A. Swanson, and J. G. Fujimoto,
+Optical coherence microscopy in scattering media, Opt. Lett., vol. 19,
+pp. 590592, 1994.
+
+[15] J. L. Starck and E. Pantin, Deconvolution in astronomy: a review, Pub.
+
+Astron. Soc. Pacific, pp. 10511069, 2002.
+
+[16] P. Shaw, Deconvolution in 3-D optical microscopy, Histochem. J., vol.
+
+26, pp. 687694, 1994.
+
+[17] M. D. Kulkarni, C. W. Thomas, and J. A. Izatt, Image enhancement
+in optical coherence tomography using deconvolution, Electron. Lett.,
+vol. 33, pp. 13651367, 1997.
+
+[18] D. L. Marks, A. L. Oldenburg, J. J. Reynolds, and S. A. Boppart, Digital
+algorithm for dispersion correction in optical coherence tomography for
+homogeneous and stratified media, Appl. Opt., vol. 42, pp. 204217,
+2003.
+
+[19] T. Blu, H. Bay, and M. Unser, A new high-resolution processing
+method for
+the deconvolution of optical coherence tomography
+signals, presented at the IEEE Int. Symp. Biomedical Imaging, Wash-
+ington, DC, 2002.
+
+[20] B. Hermann, E. J. Fernandez, A. Unterhuber, H. Sattmann, A. F. Fercher,
+W. Drexler, P. M. Prieto, and P. Artal, Adaptive-optics ultrahigh-resolu-
+tion optical coherence tomography, Opt. Lett., vol. 29, pp. 21422144,
+2004.
+
+[21] Z. Ding, H. Ren, Y. Zhao, J. S. Nelson, and Z. Chen, High-resolution
+optical coherence tomography over a large depth range with an axicon
+lens, Opt. Lett., vol. 27, pp. 243245, 2002.
+
+[22] Y. Wang, Y. Zhao, J. S. Nelson, and Z. Chen, Ultrahigh-resolution op-
+tical coherence tomography by broadband continuum generation from a
+photonic crystal fiber, Opt. Lett., vol. 28, pp. 182184, 2003.
+
+[23] W. Drexler, U. Morgner, F. X. Kartner, C. Pitris, S. A. Boppart, X. D.
+Li, E. P. Ippen, and J. G. Fujimoto, In vivo ultrahigh-resolution optical
+coherence tomography, Opt. Lett., vol. 24, pp. 12211223, 1999.
+
+[24] M. E. Brezinski, G. J. Tearney, S. A. Boppart, E. A. Swanson, J. F.
+Southern, and J. G. Fujimoto, Optical biopsy with optical coherence
+tomography: feasibility for surgical diagnostics, J. Surg. Res., vol. 71,
+pp. 3240, 1997.
+
+Cambridge Univ. Press, 2004.
+
+[29] Y. Bresler, S. Basu, and C. Couvreur, Hilbert Spaces and Least Squares
+
+Methods for Signal Processing, to be published.
+
+[30] D. P. OLeary, Near-optimal parameters for Tikhonov and other reg-
+ularization methods, SIAM J. Sci. Comput., vol. 23, pp. 11611171,
+2001.
+
+[31] C. R. Vogel, Computational Methods for Inverse Problems. New York:
+
+SIAM, 2002.
+
+[32] L. A. Shepp and Y. Vardi, Maximum likelihood reconstruction for
+emission tomography, IEEE Trans. Med. Imag., vol. MI-1, no. 2, pp.
+113122, Oct. 1982.
+
+[33] D. L. Snyder, T. J. Schultz, and J. A. OSullivan, Deblurring subject to
+nonnegativity constraints, IEEE Trans. Signal Process., vol. 40, no. 5,
+pp. 11431150, May 1992.
+
+[34] P. C. Hansen, Numerical tools for analysis and solution of Fredholm in-
+tegral equations of the first kind, Inv. Probl., vol. 8, pp. 849872, 1992.
+[35] I. Csiszar, Why least squares and maximum entropy?, Ann. Stat., vol.
+
+19, pp. 20322066, 1991.
+
+Tyler S. Ralston (A98) was born in Dayton, OH, in
+1977. He received the B.S. degree in electrical and
+computer engineering from the University of Dayton,
+Dayton, in 2000, and the M.S. degree in electrical and
+computer engineering from the University of Illinois
+at Urbana-Champaign (UIUC) in 2004. He is cur-
+rently pursuing the Ph.D. degree at UIUC.
+
+Prior to his masters studies, he was with the
+medical products sector at Battelle Memorial In-
+stitute, Columbus, OH. He holds a fellowship at
+the Beckman Institute for Advanced Science and
+Technology, UIUC. His research interests include both signal processing and
+inverse problems for optical biomedical imaging.
+
+Mr. Ralston has previously served on the board for the student chapter of
+IEEE and is currently president of the student chapter of the OSA at UIUC. He
+earned a Key Contributor award for production of a medical instrument while
+with the medical products sector at Battelle Memorial Institute.
+
+Daniel L. Marks was born in Chicago, IL, in 1973.
+He received the B.S., M.S., and Ph.D. degrees in elec-
+trical engineering from the University of Illinois at
+Urbana-Champaign (UIUC) in 1995, 1998, and 2001,
+respectively.
+
+He is currently a Visiting Research Scientist with
+the Biophotonics Group, Beckman Institute, UIUC.
+His main research interest is the design and imple-
+mentation of optical sensing systems, encompassing
+both the physical apparatus and the mathematics of
+inference methods. This work includes optical coher-
+
+ence tomography, 3-D optical tomography, and nonlinear spectroscopy.
+
+Dr. Marks was awarded a National Science Foundation Graduate Fellowship.
+
+1264
+
+IEEE TRANSACTIONS ON IMAGE PROCESSING, VOL. 14, NO. 9, SEPTEMBER 2005
+
+Farzad Kamalabadi (M02) received the B.S. de-
+gree in computer systems engineering from the Uni-
+versity of Massachusetts, Amherst, in 1991, and the
+M.S. and Ph.D. degrees in electrical engineering from
+Boston University, Boston, MA, in 1994 and 2000,
+respectively.
+
+Since 2000, he has been an Assistant Professor
+with the Department of Electrical and Computer En-
+gineering, University of Illinois, Urbana-Champaign.
+He was a Visiting Fellow with SRI International
+in Fall 2002 and a National Aeronautics and Space
+Administration (NASA) Faculty Fellow with the Jet Propulsion Laboratory,
+California Institute of Technology, Pasadena, in Summer 2003. He has served
+in various organizational capacities, including Session Organizer and Chair
+for the International Union of Radio Science special sessions on Ionospheric
+Imaging in 2003 and 2004. His research interests include multidimensional and
+statistical signal processing; inverse problems in image formation, sensor array
+processing, and tomography; and the development of optical and radio sensing
+and imaging techniques and their applications to space physics, astronomy, and
+medicine.
+
+Dr. Kamalabadi received a National Science Foundation (NSF) Fellowship in
+1994, a Best Student Paper Award in 1997, a NASA fellowship in 1998, and an
+NSF Faculty Early Career Development (CAREER) Award in 2002.
+
+Stephen A. Boppart (M90) was born in Harvard,
+IL, in 1968. He received the B.S. degree in electrical
+engineering with a minor in bioengineering and
+the M.S. degree in electrical engineering from the
+University of Illinois at Urbana-Champaign (UIUC)
+in 1990 and 1991, respectively, the Ph.D. degree
+in medical and electrical engineering from the
+Massachusetts Institute of Technology, Cambridge,
+in 1998, and the M.D. degree from Harvard Medical
+School, Cambridge, in 2000.
+
+Prior to his doctoral studies, he conducted research
+on laser-tissue interactions at the Air Force Laser Laboratory, Brooks Air Force
+Base, TX. Currently, he is an Assistant Professor of electrical engineering and a
+Research Physician of Internal Medicine at UIUC. He also holds appointments
+at the Beckman Institute for Advanced Science and Technology, in the Depart-
+ment of Bioengineering, the Center for Nanoscale Science and Technology, the
+Institute of Genomic Biology, the Neuroscience Program, and the College of
+Medicine at the University of Illinois. He has authored over 90 papers and book
+chapters, over 225 invited and contributed presentations, and holds over ten
+patents in the area of optical biomedical imaging. His current research interests
+include novel optical molecular imaging technologies and their applications in
+cancer detection and tissue engineering.
+
+Prof. Boppart is a member of the IEEE Engineering in Medicine and Biology
+Society, OSA, SPIE, AAAS, the Society for Molecular Imaging, the American
+Association for Cancer Research, the American College of Physicians, and the
+American Medical Association. In 2002, he was recognized as one of the Top
+100 Innovators in the World by MITs Technology Review magazine.
+

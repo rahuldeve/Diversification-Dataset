@@ -1,0 +1,511 @@
+Part III
+
+Storage Management
+
+Chapter 11: File System Implementation
+
+1
+
+Layered 
+File System
+
+2
+
+Overview: 1/4
+
+(cid:137)A file system has on-disk and in-memory
+
+information.
+
+(cid:137)A disk may contain the following for 
+
+implementing a file system on it:
+(cid:153)A boot control block per volume
+(cid:153)A partition control block per volume
+(cid:153)A directory structure per file system
+(cid:153)A file control block per file
+
+(cid:137)In-memory information include
+
+(cid:153)An in-memory partition table
+(cid:153)An in-memory directory structure
+(cid:153)The system-wide open-file table
+(cid:153)The per-process open-file table
+
+3
+
+Overview: 2/4
+
+(cid:137)A FCB, file control 
+block, contains the 
+details of a file.
+
+(cid:137)In Unix, a FCB is 
+
+called an i-node.
+
+a typical file control block FCB
+
+file permission
+
+file date 
+
+file owner, group, ACL
+
+file size
+
+file data blocks
+
+4
+
+Overview: 3/4
+
+3: read the directory
+
+disk memory
+
+4: update FCB and directory
+
+kernel memory
+
+user program
+
+open(filename)
+
+directory structure
+
+directory structure
+
+1: create a new file
+
+5: a file descriptor/file handle
+
+is returned
+
+FCB
+
+5
+
+2: allocate a new FCB
+
+Overview: 4/4
+
+index
+
+user program
+
+kernel memory
+
+disk memory
+
+per-process
+open-file table
+
+read(index)
+
+system-wide
+open-file table
+
+Data blocks
+
+FCB
+
+6
+
+Directory Implementation
+(cid:137)A File directory is usually implemented as a  
+linked-list or a tree (e.g., B-tree), a hash table 
+with chaining, or the combination of both.
+
+(cid:137)The problem with the linked-list approach is 
+the poor performance in searching for a file.  
+Directory search is a very frequently 
+performed operation.  
+
+(cid:137)The hash table approach speeds up search; 
+however, we must deal with the problem of 
+collisions.  Thus, chaining is necessary.
+
+7
+
+Directory Entries: 1/2
+
+(cid:137)A directory is just a file!
+(cid:137)A directory entry may be very simple like the 
+
+one used by MS-DOS.  Or, it may be quite 
+complex like the Unix i-node.
+
+extended MS-DOS directory entry used in Windows 98
+
+8
+
+Directory Entries: 2/2
+
+Unix directory entry
+
+find /usr/ast/mbox
+
+9
+
+File Allocation Methods
+
+(cid:137)There are three typical file space allocation 
+
+methods:
+(cid:153)Contiguous Allocation
+(cid:153)Linked Allocation
+(cid:153)Indexed Allocation
+
+10
+
+Contiguous Allocation: 1/3
+(cid:137)With the contiguous allocation method, a user 
+
+must indicate the file size before creating the file.
+(cid:137)Then, the operating system searches the disk to 
+
+find contiguous disk blocks for the file.
+
+(cid:137)The directory entry is easy.  It contains the initial 
+
+disk address of this file and the number of disk 
+blocks.
+
+(cid:137)Therefore, if the initial address is b and the 
+
+number of blocks is n, the file will occupy blocks b, 
+b+1, b+2, ..., b+n-1.
+
+11
+
+Contiguous Allocation: 2/3
+
+directory
+
+Since blocks are allocated
+contiguously, external
+fragmentation may occur.
+Thus, compaction may be 
+needed.
+
+12
+
+Contiguous Allocation: 3/3
+
+(cid:137)Contiguous allocation is easy to implement.
+(cid:137)Its disadvantages are
+
+(cid:153)It can be considered as a form of dynamic 
+
+memory allocation, and external fragmentation 
+may occur and compaction may be needed.
+
+(cid:153)It is difficult to estimate the file size.  The size of 
+
+a file may grow at run time and may be larger 
+than the specified number of allocated blocks.  
+In this case, the OS must move the blocks in 
+order to provide mode space.  In some systems, 
+this is simply an error.
+
+13
+
+Linked Allocation: 1/3
+(cid:137)With the linked allocation approach, disk 
+blocks of a file are chained together with a 
+linked-list.
+
+(cid:137)The directory entry of a file contains a pointer 
+to the first block and a pointer to the last block.
+(cid:137)To create a file, we create a new directory entry 
+
+and the pointers are initialized to nil.
+
+(cid:137)When a write occurs, a new disk block is 
+allocated and chained to the end of the list.
+
+14
+
+Linked Allocation: 2/3
+
+directory
+
+28 Last Block
+
+(cid:137)File blocks are chained into a 
+
+linked-list.
+
+(cid:137)The directory entry has pointers 
+
+to the first and last file blocks.
+
+(cid:137)Append is difficult to do without 
+
+the last pointer.
+
+15
+
+Linked Allocation: 3/3
+
+(cid:137)Advantages:
+
+(cid:153)File size does not have to be specified.
+(cid:153)No external fragmentation.
+
+(cid:137)Disadvantages:
+
+(cid:153)It does sequential access efficiently and is not 
+
+for direct access
+
+(cid:153)Each block contains a pointer, wasting space
+(cid:153)Blocks scatter everywhere and a large number 
+
+of disk seeks may be necessary
+
+(cid:153)Reliability: what if a pointer is lost or damaged?
+
+16
+
+FAT
+
+0
+
+217
+
+618
+
+directory
+
+test
+
+339
+
+end-of-file
+
+217
+
+618
+
+339
+
+no. of blocks-1
+
+File Allocation Table (FAT)
+
+(cid:137) This is a variation of the 
+
+linked allocation by 
+pulling all pointers into a 
+table, the file allocation 
+table (FAT).
+
+(cid:137) Large no. of disk seeks.
+(cid:137) Can do direct access.
+(cid:137) FAT needs space.
+(cid:137) The left diagram shows 
+
+file test has its first 
+block at 217, followed by 
+618, 339 (end of file).
+
+(cid:137) What if FAT is damaged?  
+
+We all know it well!
+
+17
+
+Indexed Allocation: 1/4
+
+(cid:137)Each file has an index block that is an array of 
+
+disk block addresses.
+
+(cid:137)The i-th entry in the index block points to the i-th 
+
+block of the file.
+
+(cid:137)A files directory entry contains a pointer to its 
+
+index.  Hence, the index block of an indexed 
+allocation plays the same role as the page table.
+(cid:137)Index allocation supports both sequential and 
+direct access without external fragmentation.
+
+18
+
+Indexed Allocation: 2/4
+
+directory
+
+index block
+
+19
+
+Indexed Allocation: 3/4
+
+(cid:137)The indexed allocation suffers from wasted space.  
+The index block may not be fully used (i.e., internal 
+fragmentation).
+
+(cid:137)The number of entries of an index table determines 
+the size of a file.  To overcome this problem, we can
+(cid:153)Have multiple index blocks and chain them into 
+
+a linked-list
+
+(cid:153)Have multiple index blocks, but make them a 
+
+tree just like the indexed access method
+
+(cid:153)A combination of both
+
+20
+
+Indexed Allocation: 4/4
+
+i-node
+
+s
+k
+c
+o
+
+l
+
+b
+
+ 
+t
+c
+e
+r
+i
+
+d
+
+ 
+
+0
+1
+
+256 entries per index table.
+What is the maximum size of a file?
+
+21
+
+Free Space Management
+(cid:137)How do we keep track free blocks on a disk?
+(cid:137)A free-list is maintained.  When a new block is 
+
+requested, we search this list to find one.
+
+(cid:137)The following are commonly used techniques:
+
+(cid:153)Bit Vector
+(cid:153)Linked List
+(cid:153)Linked List + Grouping
+(cid:153)Linked List+Address+Count
+
+22
+
+Bit Vector
+
+(cid:137)Each block is represented by a bit in a table. Thus, 
+
+if there are n disk blocks, the table has n bits.
+
+(cid:137)If a block is free, its corresponding bit is 1.
+(cid:137)When a block is needed, the table is searched.  If a 1 
+
+bit is found in position k, block k is free.
+
+(cid:137)If the disk capacity is small, the whole bit vector can 
+
+be stored in memory.  For a large disk, this bit 
+vector will consume too much memory.
+
+(cid:137)We could group a few blocks into a cluster and 
+
+allocate clusters.  This saves space and may cause 
+internal fragmentation.
+
+(cid:137)Another possibility is the use of a summary table.
+
+23
+
+Linked List
+
+(cid:137)Like the linked allocation method, free blocks can 
+
+be chained into a linked list.
+
+(cid:137)When a free block is needed, the first in the chain is 
+
+allocated.
+
+(cid:137)However, this method has the same disadvantages 
+
+of the linked allocation method.
+
+(cid:137)We may use a FAT for the disk and chain the free 
+block pointers together.  Note that the FAT may be 
+very large and consume space if it is stored in 
+memory.
+
+24
+
+Grouping
+
+(cid:137)The first free block contains the addresses of n
+
+other free blocks.
+
+(cid:137)For each group, the first n-1 blocks are actually 
+
+free and the last (i.e., n-th) block contains the 
+addresses of the next group.
+
+(cid:137)In this way, we can quickly locate free blocks.
+
+3
+8 50
+(3 & 8 are free)
+
+8
+
+3
+
+20
+
+6
+
+12
+
+(6 & 12 are free)
+
+50
+6 12 20
+
+25
+
+Address + Counting
+
+(cid:137)We can make the list short with the following trick:
+
+(cid:153)Blocks are often allocated and freed in groups
+(cid:153)We can store the address of the first free block 
+and the number of the following n free blocks.
+
+free block list
+
+5
+
+3
+
+disk
+
+26
+

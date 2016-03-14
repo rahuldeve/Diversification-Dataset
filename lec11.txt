@@ -1,0 +1,1078 @@
+Dynamic Storage Allocation
+
+CS 414: Operating Systems
+
+Fall 2005
+
+Presented By: Vibha Prasad
+
+Memory Allocation
+
+ Static Allocation (fixed in size) 
+
+ Sometimes we create data structures that are fixed and 
+
+dont need to grow or shrink.
+
+ Dynamic Allocation (change in size)   
+
+ At other times, we want to increase and decrease the 
+size of our data structures to accommodate changing 
+needs.
+
+ Often, real world problems mean that we dont 
+
+know how much space to declare, as the number 
+needed will change over time.
+
+Static Allocation
+
+Dynamic Allocation
+
+ Done at compile time.
+
+ Done at run time.
+
+ Global variables: variables declared ahead of 
+
+time, such as fixed arrays.
+
+ Lifetime = entire runtime of program
+
+ Advantage: efficient execution time. 
+
+ Disadvantage?  
+
+ If we declare more static data space than we need, we 
+
+waste space.
+
+ If we declare less static space than we need, we are out of 
+
+luck.
+
+ Data structures can grow and shrink to fit changing data 
+
+requirements.    
+
+ We can allocate (create) additional storage whenever we need them. 
+ We can de-allocate (free/delete) dynamic space whenever we are 
+
+done with them.
+
+ Advantage: we can always have exactly the amount of space 
+
+required - no more, no less.
+
+ For example, with references to connect them, we can use 
+dynamic data structures to create a chain of data structures 
+called a linked list.
+
+Dynamic Allocation
+
+Memory Management
+
+ Local Variables
+
+ User-allocated variables
+
+ Lifetime = duration of 
+
+procedure activation (as long 
+as that method is active) 
+
+ Advantage: efficient storage 
+
+use.
+
+ Stack Allocation (all 
+
+variables allocated within 
+the procedure scope unless 
+declared static).
+
+ For example, parameter 
+passing during function 
+calls.
+
+ Lifetime = until the user deletes 
+
+it (or until it is garbage-
+collected)
+
+ Advantage: permits creation of 
+
+dynamic structures like trees, 
+linked lists etc.
+
+ Heap Allocation.
+ For example, linked lists.
+
+ The memory of a process is divided into the 
+
+following parts 
+ A space for the code of the program
+ A space for the data (global variables) 
+ The stack, for the local variables (static allocation)
+ The heap, for the dynamic variables (dynamic allocation)
+
+ The division between 1 and 2 is only logical: 
+
+physically the globals and the code are placed at the 
+base of the stack.
+
+1
+
+Logical Memory Components
+
+Memory of a Process
+
+Memory area for 
+storing a program 
+(application) and 
+global variables
+
+Memory area private to 
+
+Memory area available 
+
+each program for 
+
+to all programs for 
+
+storing local variables
+
+dynamic data structures
+
+Heap
+
+Stack A
+
+Stack B
+
+Stack C
+
+Program A
+
+Program B
+
+Program C
+
+Operating System
+
+Driver
+
+Driver
+
+Driver
+
+Driver
+
+Driver
+
+Logical View
+
+Physical Memory Mapping
+
+Heap (Dynamic Area)
+(Dynamic variables 
+
+go here)
+
+Stack (Static Area)
+
+(Local variables go here)
+
+Data (global variables)
+
+Stack (Static Area)
+
+(Local variables go here)
+
+Heap (Dynamic Area)
+(Dynamic variables 
+
+go here)
+
+Data (global variables)
+
+Module Code
+
+Module Code
+
+n
+
+:
+
+:
+
+:
+
+:
+
+0
+
+Why isnt static allocation 
+
+sufficient?
+
+ Recursive procedures 
+ Complex data structures 
+
+ If all storage must be reserved in advance (statically), 
+
+then it will be used inefficiently (enough will be reserved 
+to handle the worst possible case).
+
+OS cannot predict
+ how many jobs there will be or 
+ which programs will be run or 
+ when a process will come and ask for storage 
+
+space!!!!!!
+
+Dynamic Memory Management
+
+ Dynamic memory allocation is performed by the 
+operating system when the program is executing 
+and the program (user) sends a request for 
+additional memory.
+
+ Three issues need to be addressed by the operating 
+
+system: 
+ allocating variable-length dynamic storage when needed 
+
+ freeing up storage when requested 
+
+ managing the storage (e.g. reclaiming freed up memory 
+
+for later use) 
+
+Dynamic Storage Allocation 
+
+methods
+
+Stack-Based Allocation
+
+ Stack Allocation
+
+ Used to allocate local variables.
+
+ Grown and shrunk on procedure calls and returns.
+
+ Register allocation works best for stack-allocated objects.
+
+ Heap Allocation
+
+ Used to allocate dynamic objects.
+
+ Heap objects are accessed with pointers.
+
+ Never allocated to registers.
+
+ Memory allocation and freeing are partially 
+
+predictable.
+
+ Restricted but simple and efficient.
+
+ Allocation is hierarchical: Memory freed in 
+
+opposite order of allocation.
+
+ If alloc(A) then alloc(B) then alloc(C), then it 
+
+must be free(C) then free(B) then free(A).
+
+2
+
+Stack-Based Allocation: Example
+
+Stack-Based Allocation: Example
+
+ Procedure call:
+
+ Program calls Y, which calls X. Each call pushes 
+
+another stack frame on top of the stack. Each 
+stack frame has space for variable, parameters, 
+and return addresses.
+
+ Stacks are also useful for tree traversal, 
+
+expression evaluation, top-down recursive 
+parsers etc.
+
+ A stack-based organization keeps all the free 
+
+space together in one place.
+
+Local 
+
+variables
+
+Parameters
+
+Return 
+address
+
+Stack 
+
+Frame for Y
+
+Stack 
+
+Stack 
+
+Stack 
+
+Frame for X
+
+Frame for X
+
+Frame for X
+
+After call to X    after call to Y    after exiting Y  after exiting X
+
+Heap Organization
+
+Heap Organization
+
+ Allocation and release are unpredictable.
+
+ Heaps are used for arbitrary list structures, 
+
+complex data organizations.
+
+ More general, less efficient.
+
+ Example: payroll system.
+
+ Do not know when employees will join and leave the 
+
+company.
+
+ Must be able to keep track of all of them using the least 
+
+possible amount of storage.
+
+ Memory consists of 
+
+allocated areas and free 
+areas (holes).
+
+ Goal
+
+ Reuse the spaces in holes. 
+ Keep the no. of holes small. 
+ Keep the size of holes large.
+ Problem: Fragmentation!! 
+
+ Holes may be too small to be 
+
+useful for any allocation.
+
+ Inefficient use of memory.
+
+0
+
+. . . . 
+
+n
+
+Memory in use
+
+Memory not in use
+
+Fragmentation and Compaction
+
+Heap Allocation Methods
+
+ External fragmentation
+
+ Total memory space exists to satisfy a request, but 
+
+it is not contiguous. 
+ Internal fragmentation
+
+ Allocated memory may be slightly larger than 
+requested memory; holes in the memory block 
+allocated. 
+ Compaction
+
+ Reduce external fragmentation.
+ Shuffle memory contents to place all free memory 
+
+together in one large block. 
+
+ Typically, heap allocation schemes use a free list to keep 
+
+track of the storage that is not in use.
+
+ Algorithms differ in how they manage the free list
+ Best Fit
+
+ Keep linked list of free blocks.
+ Search the whole list on each allocation.
+ Choose block that comes closest to matching the needs of allocation.
+ Save excess for later.
+ Merge adjacent free blocks during release operations.
+
+ First Fit
+
+ Keep linked list of free blocks.
+ Scan the list for the first block that comes closest to matching the needs of 
+
+allocation.
+
+ Merge adjacent free blocks during release operations.
+
+3
+
+Example: Best Fit
+
+Example: First Fit
+
+Request for Memory
+
+35
+
+Request for Memory
+
+35
+
+8
+
+42
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+40
+
+24
+
+186
+
+8
+
+42
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+40
+
+24
+
+186
+
+8
+
+42
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+35
+
+5
+
+24
+
+186
+
+8
+
+35
+
+7
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+40
+
+24
+
+186
+
+Memory in use
+
+Memory not in use
+
+Memory in use
+
+Memory not in use
+
+Other Heap Allocation Methods
+
+Example: Worst Fit
+
+ Worst Fit
+
+ Keep linked list of free blocks.
+ Search the whole list on each allocation.
+ Choose block that worst matches the request. 
+ Save excess for later.
+ Merge adjacent free blocks during release operations.
+
+ Next Fit
+
+ Keep linked list of free blocks.
+ Start where the last search left off.
+ Scan the list for the first block that comes closest to matching the 
+
+needs of allocation.
+
+ Merge adjacent free blocks during release operations.
+
+Request for Memory
+
+35
+
+8
+
+42
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+40
+
+24
+
+186
+
+8
+
+42
+
+8
+
+35
+
+15
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+40
+
+24
+
+186
+
+Memory in use
+
+Memory not in use
+
+Example: Next Fit
+
+Bit Map
+
+Request for Memory
+
+35
+
+This is where the last search left off
+
+8
+
+42
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+48
+
+16
+
+16
+
+40
+
+24
+
+186
+
+ Bit Map
+
+ Used when allocation comes in fixed-size chunks (e. g. disk blocks, or 32-
+
+byte chunks).
+
+ Keep a large array of bits, one for every chunk
+
+ If bit is 0, chunk is in use.
+ If bit is 1, chunk is free.
+
+ No need to merge later operations.
+
+ Problem: Internal Fragmentation!!!
+
+Bit Map:
+
+1
+
+1
+
+0
+
+110
+
+0
+
+1
+
+00010
+
+01
+
+0
+
+01
+
+8
+
+42
+
+8
+
+50
+
+12
+
+16
+
+16
+
+16
+
+35
+
+13
+
+16
+
+16
+
+40
+
+24
+
+186
+
+Memory:
+
+Memory in use
+
+Memory not in use
+
+4
+
+Pools
+
+Reclamation Methods
+
+ Pools
+
+ Keep a separate allocation 
+
+pool for every size.
+
+ Allocation fast.
+ No fragmentation.
+
+ Any problems? 
+
+32
+
+64
+
+00100010001100110111001010110011
+
+0010111010110011
+
+ Inefficiency if some pools 
+
+0
+
+1
+
+0
+
+0
+
+1
+
+1
+
+0
+
+0
+
+run out of space while 
+others have a lot of free 
+space.
+ Solution?
+
+ Shuffle between pools.
+
+128
+
+256
+
+0
+
+1
+
+0
+
+0
+
+ How do we know when dynamically-allocated 
+
+memory can be freed?
+ Easy when chunk only used in one place.
+ Harder when information is shared (Pointers).
+
+ Problems 
+
+ Dangling Pointers
+ Memory Leaks
+
+ Solution
+
+ Reference Count 
+ Garbage Collection
+
+Reference Counter Method
+
+Reference Counter: Example
+
+ Reference Counts keep track of the number of 
+
+outstanding pointers for each chunk of memory.
+
+ The reference counts must be managed 
+
+automatically (by the system) so no mistakes are 
+made in incrementing and decrementing them.
+ Each time a new pointer refers to the block of memory, 
+
+the reference count of the block must be increased by 1. 
+
+ Each time a pointer that refers the block of memory is 
+
+changed so it no longer points to that sublist, the 
+reference count of the block must be decreased by 1. 
+
+ When reference count becomes zero, free the memory. 
+
+ Example: File descriptors in Unix.
+
+Process 1
+
+Process 2
+
+Process 3
+
+Process 4
+
+Memory
+
+2
+
+1
+
+3
+
+A
+
+B
+
+C
+
+Process 5
+
+Reference Counts
+
+Process 6
+
+Reference Counter: Example
+
+Reference Counter: Example
+
+Process 1
+
+Process 2
+
+Process 3
+
+Process 4
+
+Memory
+
+2
+
+1
+
+3
+
+A
+
+B
+
+C
+
+Process 5
+
+Reference Counts
+
+Process 6
+
+Process 6 does not need block C 
+
+anymore
+
+Process 1
+
+Process 2
+
+Process 3
+
+Process 4
+
+Memory
+
+2
+
+1
+
+2
+
+A
+
+B
+
+C
+
+Process 5
+
+Reference Counts
+
+Reference Count Updated!!!
+
+5
+
+Reference Counter Method
+
+Garbage Collection
+
+ Advantages:
+
+ Unused blocks of memory are returned to the available 
+
+list as soon as they are unused. 
+
+ Time spent for reclamation is being undertaken 
+
+continually (unlike garbage collection which happens 
+irregularly and takes more execution time when it does 
+happen). 
+
+ Disadvantages:  
+
+ Requires additional overheads (storage of the reference 
+
+count for each block, reference count updating algorithm 
+etc.
+
+ Is still time consuming for reference count updating etc.. 
+
+(but more dynamic than garbage collection). 
+
+ At all times, the heap may contain three kinds of 
+
+dynamic data structures (or memory blocks): 
+ Blocks that are in use.
+
+ Blocks that are not in use and are on the current list of 
+
+available memory space. 
+
+ Blocks that are not in use but are not on the list of 
+
+available memory space (garbage). 
+
+ The management (reclaiming and recycling) of 
+
+garbage nodes is called garbage collection.
+
+Garbage Collection
+
+Garbage Collection
+
+Blocks in use
+
+Blocks not in use and on the list of available space 
+
+Blocks not in use but are not on the list of available space (garbage)
+
+Blocks of type 2 and 3 should be 
+
+merged together!!!!
+
+ Garbage Collection 
+
+ No explicit free operation by the user.
+ When system needs storage, it searches through 
+
+all the pointers and collects things that arent 
+used.
+
+ Only way in circular structures.
+ Incredibly difficult to program and debug.
+
+ Must be able to find all pointers to objects.
+ Must be able to find all objects.
+
+Garbage Collection Mechanism
+
+Garbage Collection: Example
+
+ Initialization:
+
+ Initialize all memory blocks to be free. 
+
+ Pass 1: Mark 
+
+ Go through all statically-allocated and procedure-level 
+
+variables, looking for pointers.
+
+ Mark each object pointed to, and recursively mark all 
+
+objects it points to.
+
+ Pass 2: Sweep
+
+ Go through all objects, free up those that arent marked.
+
+ Problem: Expensive!!!
+
+Initial State of Memory
+
+Memory after Marking
+
+Memory after Garbage Collection
+
+Allocated
+
+Marked
+
+Freed
+
+6
+
+Questions?
+
+7
+

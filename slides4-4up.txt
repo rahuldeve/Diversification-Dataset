@@ -1,0 +1,413 @@
+Linked lists
+(cid:122) Low-level (concrete) data structure, used to implement higher-
+level structures
+(cid:190) Used to implement sequences/lists (see CList in Tapestry)
+(cid:190) Basis of common hash-table implementations (later)
+(cid:190) Similar to how trees are implemented, but simpler
+
+(cid:122) Linked lists as ADT
+
+(cid:190) Constant-time or O(1) insertion/deletion from anywhere in 
+
+list, but first must get to the list location
+
+(cid:190) Linear or O(n) time to find an element, sequential search
+(cid:190) Like a film or video tape: splicing possible, access slow
+
+(cid:122) Good for sparse structures: when data are scarce, allocate 
+
+exactly as many list elements as needed, no wasted 
+space/copying (e.g., what happens when vector grows?)
+
+Linked list applications
+(cid:122) Remove element from middle of a collection, maintain order, no 
+
+shifting. Add an element in the middle, no shifting
+(cid:190) Whats the problem with a vector (array)?
+(cid:190) Emacs visits several files, internally keeps a linked-list of 
+
+buffers
+
+(cid:190) Naively keep characters in a linked list, but in practice too 
+
+much storage, need more esoteric data structures
+
+(cid:122) Whats (3x5 + 2x3 + x + 5) + (2x4 + 5x3 + x2 +4x) ?
+
+(cid:190) As a vector (3, 0, 2, 0, 1, 5) and (0, 2, 5, 1, 4, 0)
+(cid:190) As a list ((3,5), (2,3), (1,1), (5,0)) and ________?
+(cid:190) Most polynomial operations sequentially visit terms, dont 
+
+need random access, do need splicing
+
+(cid:122) What about (3x100 + 5) ?
+
+CPS 100
+
+4.1
+
+CPS 100
+
+4.2
+
+Linked list applications continued
+(cid:122) If programming in C, there are no growable-arrays, so 
+
+typically linked lists used when # elements in a collection 
+varies, isnt known, cant be fixed at compile time
+(cid:190) Could grow array, potentially expensive/wasteful 
+
+especially if # elements is small.
+
+(cid:190) Also need # elements in array, requires extra parameter
+(cid:190) With linked list, one pointer used to access all the 
+
+elements in a collection
+
+(cid:122) Simulation/modelling of DNA gene-splicing
+
+(cid:190) Given list of millions of CGTA... for DNA strand, find 
+
+locations where new DNA/gene can be spliced in
+ Remove target sequence, insert new sequence
+
+CPS 100
+
+4.3
+
+Linked lists, CDT and ADT
+(cid:122) As an ADT
+
+(cid:190) A list is empty, or contains an element and a list
+(cid:190) ( ) or (x, (y, ( ) ) )
+
+(cid:122) As a picture
+
+p
+
+0
+
+(cid:122) As a CDT (concrete data type)
+
+struct Node
+{                           Node * p = new Node(); 
+
+string info;            p->info = hello;
+Node * next;            p->next = 0;  // NULL
+
+};
+
+CPS 100
+
+4.4
+
+Building linked lists
+(cid:122) Add words to the front of a list (draw a picture)
+
+(cid:190) Create new node with next pointing to list, reset start of list
+
+struct Node
+{
+
+string info;
+Node * next;
+Node(const string& s, Node * link)
+{ }
+
+: info(s), next(link)
+
+};
+// ... declarations here
+Node * list = 0;
+while (input >> word) {
+}
+
+list = new Node(word, list);
+
+Dissection of add-to-front
+
+(cid:122) List initially empty
+(cid:122) First node has first word
+
+list
+list
+
+A
+
+list = new Node(word,list);
+Node(const string& s, Node * link)
+: info(s), next(link)
+
+{ }
+
+B
+
+(cid:122) Each new word causes new 
+
+node to be created
+(cid:190) New node added to front
+(cid:122) Rhs of operator = completely 
+evaluated before assignment
+
+(cid:122) What about adding to the end of the list?
+
+CPS 100
+
+4.5
+
+CPS 100
+
+4.6
+
+Building linked lists continued
+(cid:122) What about adding a node to the end of the list?
+
+(cid:190) Can we search and find the end? 
+(cid:190) If we do this every time, whats complexity of building an 
+
+N-node list? Why?
+
+(cid:122) Alternatively, keep pointers to first and last nodes of list
+
+(cid:190) If we add node to end, which pointer changes?
+(cid:190) What about initially empty list: values of pointers?
+
+ Will lead to consideration of header node to avoid special cases
+
+in writing code
+
+(cid:122) What about keeping list in order, adding nodes by splicing into 
+
+list? Issues in writing code? When do we stop searching?
+
+Standard list processing (iterative)
+(cid:122) Visit all nodes once, e.g., count them
+
+int size(Node * list) 
+{
+
+int count = 0; 
+while (list != 0) {
+
+count++; 
+list = list->next; 
+
+} 
+return count; 
+
+}
+
+(cid:122) What changes in code above if we change what process means?
+
+(cid:190) Print nodes?
+(cid:190) Append s to all strings in list?
+
+CPS 100
+
+4.7
+
+CPS 100
+
+4.8
+
+Standard list processing (recursive)
+(cid:122) Visit all nodes once, e.g., count them
+int recsize(Node * list)
+{
+
+if (list == 0) return 0;
+return 1 + recsize(list->next);
+
+}
+
+Recursion with pictures
+
+(cid:122) Counting recursively
+int recsize(Node * list)
+{
+
+if (list == 0) return 0;
+return 1 + 
+recsize(list->next);
+
+}
+
+(cid:122) Base case is almost always empty list  NULL/0 node
+(cid:190) Must return correct value, perform correct action
+(cid:190) Recursive calls use this value/state to anchor recursion
+(cid:190) Sometimes one node list also used, two base cases
+(cid:190) Almost always using list->next as argument
+
+(cid:122) Recursive calls make progress towards base case
+
+ptr
+
+cout << recsize(ptr) << endl;
+
+recsize(Node * list)
+return 1+
+recsize(list->next)
+recsize(Node * list)
+return 1+
+recsize(list->next)
+recsize(Node * list)
+return 1+
+recsize(list->next)
+recsize(Node * list)
+return 1+
+recsize(list->next)
+
+CPS 100
+
+4.9
+
+CPS 100
+
+4.10
+
+Recursion and linked lists
+(cid:122) Print nodes in reverse order
+
+(cid:190) Print all but first node and...
+
+ Print first node before or after other printing?
+
+void Print(Node * list)
+{
+
+if (list != 0)
+{
+
+Print(list->next);
+cout << list->info << endl;
+
+cout << list->info << endl;
+Print(list->next);
+
+}
+
+}
+
+CPS 100
+
+Changing a linked list recursively
+(cid:122) Pass list to function, return altered list, assign to passed param
+list = Change(list, apple);
+Node * Change(Node * list, const string& key)
+{
+
+if (list != 0) {
+
+list->next = Change(list->next, key);
+if (list->info == key) return list->next;
+else                   return list;
+
+}
+return 0;
+
+}
+(cid:122) What does this code do? How can we reason about it?
+(cid:190) Empty list, one-node list, two-node list, n-node list
+(cid:190) Similar to proof by induction
+
+4.11
+
+CPS 100
+
+4.12
+
+Header (aka dummy) nodes
+(cid:122) Special cases in code lead to problems
+
+(cid:190) Permeate the code, hard to reason about correctness
+(cid:190) Avoid special cases when trade-offs permit
+
+ Space, time trade-offs
+
+(cid:122) In linked lists it is useful to have a header node, the empty list 
+
+is not NULL/0, but a single blank node
+(cid:190) Every node has a node before it, avoid special code for 
+
+(cid:190) Header node is skipped by some functions, e.g., count the 
+
+empty lists
+
+values in a list
+
+(cid:190) What about a special trailing node?
+(cid:190) What value is stored in the header node?
+
+Header Nodes example/motivation
+Node * addInOrder(Node * list, const string& s)
+// pre: list in order (or empty)
+// post: node with s added to list, list in order
+{
+
+return new Node(s,0);
+
+if (list == 0) {
+}
+if (s <= list->info) {
+}    
+// what does loop look like here?
+
+return new Node(s, list);
+
+}
+
+CPS 100
+
+4.13
+
+CPS 100
+
+4.14
+
+Circularly linked list
+(cid:122) If the last node points to NULL/0, the pointer is wasted
+(cid:122) Can make list circular, so it is easy to add to front or back
+
+(cid:190) Want only one pointer to list, should it point at first or last node?
+(cid:190) How to create first node?
+(cid:190) Potential problems? Failures?
+
+list
+
+// circularly linked, list points at last node
+Node * first = list->next;
+Node * current = first;
+do
+{
+
+Process(current);
+current = current->next;
+} while (current != first);
+
+CPS 100
+
+Eric Raymond
+
+(cid:122) Open source evangelist
+
+(cid:190) The Cathedral and the Bazaar
+http://ot.op.org/cathedral-bazaar.html
+
+(cid:190) How to construct software
+
+Good programmers know what to write. 
+Great ones know what to rewrite (and 
+reuse).
+
+(cid:122) How to convince someone that guns 
+
+are a good idea? Put this sign up:
+
+(cid:122) THIS HOME IS A GUN-FREE ZONE
+
+4.15
+
+CPS 100
+
+4.16
+
